@@ -78,7 +78,7 @@ export function InstallationForm() {
       <textarea id="endereco" value={endereco} onChange={e => setEndereco(e.target.value)} />
 
       <hr /> 
-      {/* TÍTULO ALTERADO AQUI */}
+      {/* O TÍTULO CORRETO ESTÁ AQUI */}
       <h3>Detalhes de Acesso do Rastreador</h3>
 
       <label htmlFor="usuario">Usuário</label>
