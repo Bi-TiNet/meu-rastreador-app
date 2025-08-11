@@ -23,7 +23,6 @@ interface Installation {
   horario?: string;
 }
 
-// ... (Componente ScheduleModal - sem alterações, mas incluído para o arquivo ser completo)
 interface ScheduleModalProps {
   installation: Installation;
   onClose: () => void;
@@ -58,18 +57,48 @@ function ScheduleModal({ installation, onClose, onSchedule }: ScheduleModalProps
   );
 }
 
-// Componente principal do Dashboard
 export function Dashboard() {
   const [installations, setInstallations] = useState<Installation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedInstallation, setSelectedInstallation] = useState<Installation | null>(null);
 
-  const fetchInstallations = async () => { /* ... (código existente, sem alterações) ... */ };
-  useEffect(() => { /* ... (código existente, sem alterações) ... */ }, []);
-  const handleSchedule = async (id: number, date: string, time: string) => { /* ... (código existente, sem alterações) ... */ };
+  const fetchInstallations = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('/.netlify/functions/get-installations');
+      if (!response.ok) throw new Error('Falha ao buscar dados.');
+      const data: Installation[] = await response.json();
+      setInstallations(data);
+    } catch (err) {
+      setError('Não foi possível carregar as instalações.');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // Função para copiar os dados formatados (ATUALIZADA com os nomes de colunas novos)
+  useEffect(() => {
+    fetchInstallations();
+  }, []);
+
+  const handleSchedule = async (id: number, date: string, time: string) => {
+    try {
+      const response = await fetch('/.netlify/functions/create-installation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, date, time }),
+      });
+      if (!response.ok) throw new Error('Falha ao agendar.');
+      alert('Agendado com sucesso!');
+      setSelectedInstallation(null);
+      fetchInstallations();
+    } catch (error) {
+      alert('Erro ao agendar.');
+      console.error(error);
+    }
+  };
+
   const handleCopy = (inst: Installation) => {
     const formattedText = `Veiculo ${inst.modelo?.split(' ')[0] || ''}
 Modelo: ${inst.modelo}
@@ -104,7 +133,6 @@ Bloqueio sim ( ${inst.bloqueio === 'Sim' ? 'X' : ' '} )  nao ( ${inst.bloqueio =
             </tr>
           </thead>
           <tbody>
-            {/* ATUALIZADO com os nomes de colunas novos */}
             {installations.map((inst) => (
               <tr key={inst.id}>
                 <td>{inst.nome_completo}</td>
