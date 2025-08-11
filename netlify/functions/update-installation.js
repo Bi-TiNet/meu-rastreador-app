@@ -16,43 +16,36 @@ exports.handler = async (event, context) => {
   }
 
   try {
-    // Pega o índice da linha e a data/hora enviadas pelo front-end
     const { rowIndex, dateTime } = JSON.parse(event.body);
-
     if (rowIndex === undefined || !dateTime) {
-      return { statusCode: 400, body: "Índice da linha e data/hora são obrigatórios." };
+      return { statusCode: 400, body: "Dados inválidos." };
     }
 
     await doc.loadInfo();
     const sheet = doc.sheetsByTitle['Solicitações de Instalação'];
     const rows = await sheet.getRows();
-
     const rowToUpdate = rows[rowIndex];
 
     if (!rowToUpdate) {
       return { statusCode: 404, body: "Linha não encontrada." };
     }
     
-    // Separa a data e a hora
     const [date, time] = dateTime.split('T');
 
-    // Atualiza as colunas na planilha
     rowToUpdate.set('DATA DA INSTALAÇÃO', date);
     rowToUpdate.set('HORÁRIO', time);
     rowToUpdate.set('STATUS', 'Agendado');
-    
-    // Salva as alterações
     await rowToUpdate.save();
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ message: "Agendamento atualizado com sucesso!" }),
+      body: JSON.stringify({ message: "Agendamento atualizado!" }),
     };
   } catch (error) {
-    console.error("Erro ao atualizar a planilha:", error);
+    console.error("Erro:", error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ message: "Erro ao atualizar a planilha." }),
+      body: JSON.stringify({ message: "Erro ao atualizar planilha." }),
     };
   }
 };
