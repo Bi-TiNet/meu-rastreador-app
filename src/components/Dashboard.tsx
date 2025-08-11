@@ -3,7 +3,6 @@ import { useEffect, useState, type FormEvent } from 'react';
 import './Dashboard.css';
 import './Modal.css';
 
-// ... (Interface Installation - sem alterações)
 interface Installation {
   'NOME COMPLETO': string;
   'Nº DE CONTATO': string;
@@ -16,7 +15,6 @@ interface Installation {
   [key: string]: string | number | undefined;
 }
 
-// ... (Componente ScheduleModal - sem alterações)
 interface ScheduleModalProps {
   installation: Installation;
   onClose: () => void;
@@ -25,12 +23,10 @@ interface ScheduleModalProps {
 
 function ScheduleModal({ installation, onClose, onSchedule }: ScheduleModalProps) {
   const [dateTime, setDateTime] = useState('');
-
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     onSchedule(installation.rowIndex, dateTime);
   };
-
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-content" onClick={e => e.stopPropagation()}>
@@ -52,28 +48,42 @@ function ScheduleModal({ installation, onClose, onSchedule }: ScheduleModalProps
   );
 }
 
-// Componente principal do Dashboard
 export function Dashboard() {
   const [installations, setInstallations] = useState<Installation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedInstallation, setSelectedInstallation] = useState<Installation | null>(null);
 
-  const fetchInstallations = async () => { /* ... (código igual) ... */ };
-  useEffect(() => { /* ... (código igual) ... */ }, []);
-  const handleCopy = (inst: Installation) => { /* ... (código igual) ... */ };
+  const fetchInstallations = async () => {
+    setLoading(true);
+    try {
+      // MUDANÇA IMPORTANTE: Apontando para a nova API do Google Apps Script
+      const response = await fetch(import.meta.env.VITE_GOOGLE_SCRIPT_URL);
+      if (!response.ok) throw new Error('Falha ao buscar dados.');
+      const data: Installation[] = await response.json();
+      setInstallations(data);
+    } catch (err) {
+      setError('Não foi possível carregar as instalações.');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // **** A CORREÇÃO ESTÁ AQUI ****
+  useEffect(() => {
+    fetchInstallations();
+  }, []);
+
   const handleSchedule = async (rowIndex: number, dateTime: string) => {
     if (!dateTime) return;
     try {
-      // Agora chamamos a mesma função 'create-installation', mas enviamos o rowIndex.
-      const response = await fetch('/.netlify/functions/create-installation', {
+      // MUDANÇA IMPORTANTE: Apontando para a nova API do Google Apps Script
+      await fetch(import.meta.env.VITE_GOOGLE_SCRIPT_URL, {
         method: 'POST',
+        mode: 'no-cors',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rowIndex, dateTime }), // Enviamos o índice e a data/hora
+        body: JSON.stringify({ rowIndex, dateTime }),
       });
-      if (!response.ok) throw new Error('Falha ao agendar.');
       alert('Agendado com sucesso!');
       setSelectedInstallation(null);
       fetchInstallations();
@@ -82,8 +92,25 @@ export function Dashboard() {
       console.error(error);
     }
   };
-  
-  // ... (Restante do código do Dashboard - sem alterações) ...
+
+  const handleCopy = (inst: Installation) => {
+    const brand = (inst['MODELO DO VEÍCULO'] as string)?.split(' ')[0] || '';
+    const formattedText = `Veiculo ${brand}
+Modelo: ${inst['MODELO DO VEÍCULO']}
+Ano Fabricação: ${inst['ANO DE FABRICAÇÃO'] || ''}
+Placa: ${inst['PLACA DO VEÍCULO']}
+Cor: ${inst['COR DO VEÍCULO'] || ''}
+Nome: ${inst['NOME COMPLETO']}
+Telefone: ${inst['Nº DE CONTATO']}
+usuario: ${inst['USUÁRIO']}
+senha: ${inst['SENHA'] || ''}
+BASE Atena ( ${inst['BASE'] === 'Atena' ? 'X' : ' '} )   Base Autocontrol ( ${inst['BASE'] === 'Autocontrol' ? 'X' : ' '} )
+Bloqueio sim ( ${inst['BLOQUEIO'] === 'Sim' ? 'X' : ' '} )  nao ( ${inst['BLOQUEIO'] === 'Nao' ? 'X' : ' '} )`;
+    navigator.clipboard.writeText(formattedText)
+      .then(() => alert('Informações copiadas!'))
+      .catch(() => alert('Erro ao copiar.'));
+  };
+
   if (loading) return <p>Carregando agendamentos...</p>;
   if (error) return <p style={{ color: 'red' }}>{error}</p>;
 
@@ -120,7 +147,6 @@ export function Dashboard() {
           </tbody>
         </table>
       </div>
-
       {selectedInstallation && (
         <ScheduleModal
           installation={selectedInstallation}
