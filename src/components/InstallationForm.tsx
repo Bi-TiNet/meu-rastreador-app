@@ -2,19 +2,17 @@ import { useState, type FormEvent } from 'react';
 import './InstallationForm.css';
 
 export function InstallationForm() {
+  // 3. Para cada campo do formulário, criamos um "estado" para guardar seu valor.
   const [nome, setNome] = useState('');
   const [contato, setContato] = useState('');
   const [placa, setPlaca] = useState('');
   const [modelo, setModelo] = useState('');
   const [endereco, setEndereco] = useState('');
-  const [usuario, setUsuario] = useState('');
-  const [senha, setSenha] = useState('');
-  const [base, setBase] = useState('Atena');
-  const [bloqueio, setBloqueio] = useState('Sim');
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
 
+    // Montamos um objeto com todos os dados do formulário.
     const data = {
       nome,
       contato,
@@ -40,17 +38,6 @@ export function InstallationForm() {
 
       await response.json();
       alert('Instalação cadastrada com sucesso!');
-      
-      // Limpa o formulário após o sucesso
-      setNome('');
-      setContato('');
-      setPlaca('');
-      setModelo('');
-      setEndereco('');
-      setUsuario('');
-      setSenha('');
-      setBase('Atena');
-      setBloqueio('Sim');
 
     } catch (error) {
       console.error('Erro ao enviar o formulário:', error);
@@ -75,29 +62,11 @@ export function InstallationForm() {
       <input id="modelo" type="text" value={modelo} onChange={e => setModelo(e.target.value)} />
       
       <label htmlFor="endereco">Endereço do Cliente</label>
-      <textarea id="endereco" value={endereco} onChange={e => setEndereco(e.target.value)} />
-
-      <hr /> 
-      {/* O TÍTULO CORRETO ESTÁ AQUI */}
-      <h3>Detalhes de Acesso do Rastreador</h3>
-
-      <label htmlFor="usuario">Usuário</label>
-      <input id="usuario" type="text" value={usuario} onChange={e => setUsuario(e.target.value)} />
-
-      <label htmlFor="senha">Senha</label>
-      <input id="senha" type="text" value={senha} onChange={e => setSenha(e.target.value)} />
-
-      <label htmlFor="base">Base</label>
-      <select id="base" value={base} onChange={e => setBase(e.target.value)}>
-        <option value="Atena">Base Atena</option>
-        <option value="Autocontrol">Base Autocontrol</option>
-      </select>
-
-      <label htmlFor="bloqueio">Bloqueio</label>
-      <select id="bloqueio" value={bloqueio} onChange={e => setBloqueio(e.target.value)}>
-        <option value="Sim">Sim</option>
-        <option value="Nao">Não</option>
-      </select>
+      <textarea
+        id="endereco"
+        value={endereco}
+        onChange={event => setEndereco(event.target.value)}
+      />
 
       <button type="submit">Cadastrar Instalação</button>
     </form>
