@@ -25,6 +25,7 @@ exports.handler = async (event, context) => {
     await doc.loadInfo();
     const sheet = doc.sheetsByTitle['Solicitações de Instalação'];
     const rows = await sheet.getRows();
+
     const rowToUpdate = rows[rowIndex];
 
     if (!rowToUpdate) {
@@ -35,10 +36,9 @@ exports.handler = async (event, context) => {
     const [date, time] = dateTime.split('T');
 
     // Atualiza as colunas na planilha.
-    // Verifique se os nomes das colunas aqui são IDÊNTICOS aos da sua planilha.
+    rowToUpdate.set('STATUS', 'Agendado');
     rowToUpdate.set('DATA DA INSTALAÇÃO', date);
     rowToUpdate.set('HORÁRIO', time);
-    rowToUpdate.set('STATUS', 'Agendado');
     
     await rowToUpdate.save(); // Salva as alterações
 
