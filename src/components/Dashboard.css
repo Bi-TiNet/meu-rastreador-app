@@ -1,47 +1,22 @@
-/* src/components/Dashboard.css */
-.dashboard {
-  max-width: 900px;
-  margin: 2rem auto;
-  padding: 1rem;
+/* Adicione no final de Dashboard.css */
+.actions-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px; /* Espaço entre os botões */
 }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 1rem;
-}
-
-thead {
-  background-color: #f2f2f2;
-}
-
-th, td {
-  border: 1px solid #ddd;
-  padding: 12px;
-  text-align: left;
-}
-
-th {
-  font-weight: bold;
-}
-
-tbody tr:nth-child(even) {
-  background-color: #f9f9f9;
-}
-
-tbody tr:hover {
-  background-color: #f1f1f1;
-}
-
-button {
-  padding: 8px 12px;
-  background-color: #28a745; /* Verde */
-  color: white;
-  border: none;
-  border-radius: 4px;
+.schedule-button {
+  position: relative;
   cursor: pointer;
+  font-size: 1.5rem; /* Tamanho do ícone de calendário */
 }
 
-button:hover {
-  background-color: #218838;
+.schedule-button input[type="datetime-local"] {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0; /* Deixa o input original invisível */
+  cursor: pointer;
 }
