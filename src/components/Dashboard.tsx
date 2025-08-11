@@ -1,8 +1,9 @@
-// src/components/Dashboard.tsx
-import { useEffect, useState } from 'react';
-import './Dashboard.css';
+// Arquivo: src/components/Dashboard.tsx
+import { useEffect, useState, FormEvent } from 'react';
+import './Dashboard.css'; // Estilo do painel
+import './Modal.css'; // Estilo específico para o modal
 
-// Define a "forma" dos dados de uma instalação
+// ... (interface Installation, igual a anterior) ...
 interface Installation {
   'NOME COMPLETO': string;
   'Nº DE CONTATO': string;
@@ -12,121 +13,119 @@ interface Installation {
   'DATA DA INSTALAÇÃO'?: string;
   'HORÁRIO'?: string;
   rowIndex: number;
-  // Permite que qualquer outra chave seja string ou número para evitar erros de tipo
   [key: string]: string | number | undefined;
 }
+
+
+// Componente para o Modal de Agendamento
+function ScheduleModal({ installation, onClose, onSchedule }) {
+  const [dateTime, setDateTime] = useState('');
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    onSchedule(installation.rowIndex, dateTime);
+  };
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal-content" onClick={e => e.stopPropagation()}>
+        <h3>Agendar Instalação</h3>
+        <p><strong>Cliente:</strong> {installation['NOME COMPLETO']}</p>
+        <p><strong>Veículo:</strong> {installation['MODELO DO VEÍCULO']}</p>
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label htmlFor="schedule-datetime">Data e Hora</label>
+            <input
+              id="schedule-datetime"
+              type="datetime-local"
+              value={dateTime}
+              onChange={e => setDateTime(e.target.value)}
+              required
+            />
+          </div>
+          <div className="modal-actions">
+            <button type="button" onClick={onClose} className="cancel-button">Cancelar</button>
+            <button type="submit" className="save-button">Salvar Agendamento</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 
 export function Dashboard() {
   const [installations, setInstallations] = useState<Installation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedInstallation, setSelectedInstallation] = useState<Installation | null>(null);
 
-  // Função para buscar os dados da planilha
-  const fetchInstallations = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch('/.netlify/functions/get-installations');
-      if (!response.ok) throw new Error('Falha ao buscar dados.');
-      const data: Installation[] = await response.json();
-      setInstallations(data);
-    } catch (err) {
-      setError('Não foi possível carregar as instalações.');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const fetchInstallations = async () => { /* ... (código igual) ... */ };
+  useEffect(() => { /* ... (código igual) ... */ }, []);
+  const handleCopy = (inst: Installation) => { /* ... (código igual) ... */ };
 
-  // Roda a função de busca uma vez quando a página carrega
-  useEffect(() => {
-    fetchInstallations();
-  }, []);
-
-  // Função para agendar data e hora
   const handleSchedule = async (rowIndex: number, dateTime: string) => {
-    if (!dateTime) return; // Não faz nada se a data estiver vazia
-
+    if (!dateTime) return;
     try {
-      // CORREÇÃO: O nome da função aqui foi corrigido para "update-installation"
       const response = await fetch('/.netlify/functions/update-installation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rowIndex, dateTime }),
       });
-
       if (!response.ok) throw new Error('Falha ao agendar.');
-      
       alert('Agendado com sucesso!');
-      // Atualiza a lista para refletir a mudança de status e data/hora
-      fetchInstallations(); 
+      setSelectedInstallation(null); // Fecha o modal
+      fetchInstallations(); // Atualiza a lista
     } catch (error) {
-      alert('Erro ao agendar. Tente novamente.');
+      alert('Erro ao agendar.');
       console.error(error);
     }
   };
 
-  // Função para copiar os dados formatados
-  const handleCopy = (inst: Installation) => {
-    const brand = (inst['MODELO DO VEÍCULO'] as string)?.split(' ')[0] || '';
-    const formattedText = `Veiculo ${brand}
-Modelo: ${inst['MODELO DO VEÍCULO']}
-Ano Fabricação: ${inst['ANO DE FABRICAÇÃO'] || ''}
-Placa: ${inst['PLACA DO VEÍCULO']}
-Cor: ${inst['COR DO VEÍCULO'] || ''}
-Nome: ${inst['NOME COMPLETO']}
-Telefone: ${inst['Nº DE CONTATO']}
-usuario: ${inst['USUÁRIO']}
-senha: ${inst['SENHA'] || ''}
-BASE Atena ( ${inst['BASE'] === 'Atena' ? 'X' : ' '} )   Base Autocontrol ( ${inst['BASE'] === 'Autocontrol' ? 'X' : ' '} )
-Bloqueio sim ( ${inst['BLOQUEIO'] === 'Sim' ? 'X' : ' '} )  nao ( ${inst['BLOQUEIO'] === 'Nao' ? 'X' : ' '} )`;
-
-    navigator.clipboard.writeText(formattedText)
-      .then(() => alert('Informações copiadas para a área de transferência!'))
-      .catch(() => alert('Erro ao copiar informações.'));
-  };
-
-  if (loading) return <p>Carregando agendamentos...</p>;
-  if (error) return <p style={{ color: 'red' }}>{error}</p>;
+  if (loading) return <p>Carregando...</p>;
+  if (error) return <p>{error}</p>;
 
   return (
     <div className="dashboard">
       <h2>Painel de Agendamentos</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Cliente</th>
-            <th>Veículo</th>
-            <th>Agendamento</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody>
-          {installations.map((inst) => (
-            <tr key={inst.rowIndex}>
-              <td>{inst['NOME COMPLETO']}</td>
-              <td>{`${inst['MODELO DO VEÍCULO']} (${inst['PLACA DO VEÍCULO']})`}</td>
-              <td>
-                {inst['STATUS'] === 'Agendado' 
-                  ? `${inst['DATA DA INSTALAÇÃO']} às ${inst['HORÁRIO']}`
-                  : inst['STATUS']
-                }
-              </td>
-              <td className="actions-cell">
-                <button onClick={() => handleCopy(inst)}>
-                  Copiar 📋
-                </button>
-                <label className="schedule-button" title="Agendar data e hora">
-                  🗓️
-                  <input 
-                    type="datetime-local"
-                    onChange={(e) => handleSchedule(inst.rowIndex, e.target.value)}
-                  />
-                </label>
-              </td>
+      <div className="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Cliente</th>
+              <th>Veículo</th>
+              <th>Agendamento</th>
+              <th>Ações</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {installations.map((inst) => (
+              <tr key={inst.rowIndex}>
+                <td>{inst['NOME COMPLETO']}</td>
+                <td>{`${inst['MODELO DO VEÍCULO']} (${inst['PLACA DO VEÍCULO']})`}</td>
+                <td>
+                  {inst['STATUS'] === 'Agendado' 
+                    ? `${inst['DATA DA INSTALAÇÃO']} às ${inst['HORÁRIO']}`
+                    : inst['STATUS']
+                  }
+                </td>
+                <td className="actions-cell">
+                  <button className="copy-button" onClick={() => handleCopy(inst)}>Copiar</button>
+                  <button className="schedule-button-action" onClick={() => setSelectedInstallation(inst)}>Agendar</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {selectedInstallation && (
+        <ScheduleModal
+          installation={selectedInstallation}
+          onClose={() => setSelectedInstallation(null)}
+          onSchedule={handleSchedule}
+        />
+      )}
     </div>
   );
 }

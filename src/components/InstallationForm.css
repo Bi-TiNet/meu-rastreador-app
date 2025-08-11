@@ -1,44 +1,60 @@
-/* Organiza o formulário usando Flexbox, com os itens em coluna */
-form {
+/* Arquivo: src/components/InstallationForm.css */
+.form-container {
+  max-width: 600px;
+  margin: 1rem auto;
+  padding: 2rem;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: var(--card-shadow);
+}
+
+.form-container h2, .form-container h3 {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  color: var(--primary-color);
+}
+
+.form-container h3 {
+  margin-top: 2rem;
+  border-top: 1px solid var(--border-color);
+  padding-top: 1.5rem;
+}
+
+.form-group {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem; /* Cria um pequeno espaço entre cada item do formulário */
-  max-width: 500px; /* Define uma largura máxima para o formulário */
-  margin: 2rem auto; /* Centraliza o formulário na página */
-  padding: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 8px;
+  margin-bottom: 1rem;
 }
 
-/* Estilo para os rótulos (labels) */
-label {
-  font-weight: bold;
-  margin-top: 0.5rem;
+.form-group label {
+  margin-bottom: 0.5rem;
+  font-weight: 500;
 }
 
-/* Estilo para os campos de input e textarea */
-input[type="text"],
-textarea {
+.form-group input,
+.form-group textarea,
+.form-group select {
   padding: 0.75rem;
-  border: 1px solid #ccc;
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   font-size: 1rem;
+  font-family: 'Roboto', sans-serif;
 }
 
-/* Estilo para o botão */
-button[type="submit"] {
+.form-container button {
+  width: 100%;
   margin-top: 1rem;
-  padding: 0.75rem;
-  background-color: #007bff; /* Azul */
+  padding: 0.8rem;
+  background-color: var(--primary-color);
   color: white;
   border: none;
   border-radius: 4px;
-  font-size: 1rem;
+  font-size: 1.1rem;
   font-weight: bold;
-  cursor: pointer; /* Muda o cursor para uma "mãozinha" */
+  cursor: pointer;
+  transition: background-color 0.2s;
 }
 
-/* Efeito ao passar o mouse sobre o botão */
-button[type="submit"]:hover {
-  background-color: #0056b3;
+.form-container button:hover {
+  background-color: var(--primary-hover);
 }

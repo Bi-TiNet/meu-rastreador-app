@@ -3,7 +3,7 @@ import { useState, type FormEvent } from 'react';
 import './InstallationForm.css';
 
 export function InstallationForm() {
-  // As declarações de estado para todos os campos, incluindo os que faltavam
+  // AS LINHAS ABAIXO ESTAVAM FALTANDO NA VERSÃO PUBLICADA
   const [nome, setNome] = useState('');
   const [contato, setContato] = useState('');
   const [placa, setPlaca] = useState('');
@@ -17,7 +17,6 @@ export function InstallationForm() {
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
 
-    // Agora as variáveis existem e podem ser usadas para criar o objeto 'data'
     const data = {
       nome,
       contato,
@@ -44,7 +43,7 @@ export function InstallationForm() {
       await response.json();
       alert('Instalação cadastrada com sucesso!');
       
-      // Limpa o formulário após o sucesso
+      // Limpa o formulário
       setNome('');
       setContato('');
       setPlaca('');
@@ -61,7 +60,6 @@ export function InstallationForm() {
     }
   }
 
-  // O JSX/HTML do formulário com todos os campos
   return (
     <form onSubmit={handleSubmit}>
       <h2>Cadastrar Nova Instalação</h2>
