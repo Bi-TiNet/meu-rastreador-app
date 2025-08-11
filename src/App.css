@@ -1,24 +1,26 @@
-/* Arquivo: src/App.css */
-@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
-
-:root {
-  --primary-color: #0056b3;
-  --primary-hover: #004494;
-  --secondary-color: #28a745;
-  --secondary-hover: #218838;
-  --light-gray: #f8f9fa;
-  --border-color: #dee2e6;
-  --text-color: #343a40;
-  --card-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-body {
-  margin: 0;
-  font-family: 'Roboto', sans-serif;
-  background-color: var(--light-gray);
-  color: var(--text-color);
-}
-
-main {
+/* Adicione no final de src/App.css */
+.main-nav {
+  display: flex;
+  justify-content: center;
   padding: 1rem;
+  background-color: #343a40;
+}
+
+.nav-link {
+  color: #f8f9fa;
+  margin: 0 1.5rem;
+  text-decoration: none;
+  font-weight: 500;
+  padding: 0.5rem 0;
+  border-bottom: 2px solid transparent;
+  transition: border-color 0.3s;
+}
+
+.nav-link:hover {
+  border-bottom-color: #007bff;
+}
+
+.nav-link.active {
+  color: #007bff;
+  border-bottom-color: #007bff;
 }
