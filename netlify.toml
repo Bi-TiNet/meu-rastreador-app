@@ -3,11 +3,3 @@
 [build]
   # O comando que o Netlify deve rodar para construir nosso site.
   command = "npm run build"
-  
-  # A pasta onde o site pronto (construído) será colocado.
-  # O Vite sempre coloca na pasta "dist".
-  publish = "dist"
-
-[functions]
-  # A pasta onde ficam nossas funções de back-end (API).
-  directory = "netlify/functions"
