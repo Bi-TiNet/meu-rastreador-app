@@ -1,6 +1,6 @@
 // src/App.tsx
 import { InstallationForm } from './components/InstallationForm'
-import { Dashboard } from './components/Dashboard' // Adicionamos a importação do Dashboard
+import { Dashboard } from './components/Dashboard'
 
 function App() {
   return (
