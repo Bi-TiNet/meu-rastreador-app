@@ -8,18 +8,11 @@ interface Installation {
   'Nº DE CONTATO': string;
   'PLACA DO VEÍCULO': string;
   'MODELO DO VEÍCULO': string;
-  'ENDEREÇO CLIENTE': string;
-  'USUÁRIO': string;
-  'SENHA'?: string;
-  'BASE': 'Atena' | 'Autocontrol';
-  'BLOQUEIO': 'Sim' | 'Nao';
   'STATUS': string;
-  'ANO DE FABRICAÇÃO'?: string;
-  'COR DO VEÍCULO'?: string;
   'DATA DA INSTALAÇÃO'?: string;
   'HORÁRIO'?: string;
   rowIndex: number;
-  // CORREÇÃO: Permite que qualquer outra chave seja string ou número
+  // Permite que qualquer outra chave seja string ou número para evitar erros de tipo
   [key: string]: string | number | undefined;
 }
 
@@ -28,9 +21,9 @@ export function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Função para buscar os dados
+  // Função para buscar os dados da planilha
   const fetchInstallations = async () => {
-    setLoading(true); // Mostra o carregando ao atualizar
+    setLoading(true);
     try {
       const response = await fetch('/.netlify/functions/get-installations');
       if (!response.ok) throw new Error('Falha ao buscar dados.');
@@ -44,15 +37,17 @@ export function Dashboard() {
     }
   };
 
+  // Roda a função de busca uma vez quando a página carrega
   useEffect(() => {
     fetchInstallations();
   }, []);
 
   // Função para agendar data e hora
   const handleSchedule = async (rowIndex: number, dateTime: string) => {
-    if (!dateTime) return;
+    if (!dateTime) return; // Não faz nada se a data estiver vazia
 
     try {
+      // CORREÇÃO: O nome da função aqui foi corrigido para "update-installation"
       const response = await fetch('/.netlify/functions/update-installation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -62,7 +57,7 @@ export function Dashboard() {
       if (!response.ok) throw new Error('Falha ao agendar.');
       
       alert('Agendado com sucesso!');
-      // Atualiza a lista para refletir a mudança
+      // Atualiza a lista para refletir a mudança de status e data/hora
       fetchInstallations(); 
     } catch (error) {
       alert('Erro ao agendar. Tente novamente.');
@@ -72,7 +67,7 @@ export function Dashboard() {
 
   // Função para copiar os dados formatados
   const handleCopy = (inst: Installation) => {
-    const brand = inst['MODELO DO VEÍCULO']?.split(' ')[0] || '';
+    const brand = (inst['MODELO DO VEÍCULO'] as string)?.split(' ')[0] || '';
     const formattedText = `Veiculo ${brand}
 Modelo: ${inst['MODELO DO VEÍCULO']}
 Ano Fabricação: ${inst['ANO DE FABRICAÇÃO'] || ''}
@@ -109,7 +104,7 @@ Bloqueio sim ( ${inst['BLOQUEIO'] === 'Sim' ? 'X' : ' '} )  nao ( ${inst['BLOQUE
           {installations.map((inst) => (
             <tr key={inst.rowIndex}>
               <td>{inst['NOME COMPLETO']}</td>
-              <td>{inst['MODELO DO VEÍCULO']} ({inst['PLACA DO VEÍCULO']})</td>
+              <td>{`${inst['MODELO DO VEÍCULO']} (${inst['PLACA DO VEÍCULO']})`}</td>
               <td>
                 {inst['STATUS'] === 'Agendado' 
                   ? `${inst['DATA DA INSTALAÇÃO']} às ${inst['HORÁRIO']}`
