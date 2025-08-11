@@ -1,8 +1,9 @@
 // Arquivo: src/components/InsuranceView.tsx
 import { useEffect, useState, useMemo } from 'react';
 import './InsuranceView.css';
+import './Modal.css'; // Reutilizamos o estilo do modal
 
-// Interface para os dados que vêm da API
+// Interface para os dados
 interface Installation {
   id: number;
   nome_completo: string;
@@ -15,8 +16,14 @@ interface Installation {
   status: string;
 }
 
+// CORREÇÃO: Definimos os tipos para as propriedades do Modal
+interface DetailsModalProps {
+  installation: Installation;
+  onClose: () => void;
+}
+
 // Componente para o Modal de Detalhes
-function DetailsModal({ installation, onClose }) {
+function DetailsModal({ installation, onClose }: DetailsModalProps) {
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-content" onClick={e => e.stopPropagation()}>
@@ -36,7 +43,6 @@ function DetailsModal({ installation, onClose }) {
     </div>
   );
 }
-
 
 export function InsuranceView() {
   const [allInstallations, setAllInstallations] = useState<Installation[]>([]);
