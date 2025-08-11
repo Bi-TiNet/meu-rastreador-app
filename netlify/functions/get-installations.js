@@ -2,7 +2,6 @@
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 
-// A autenticação é a mesma da outra função
 const serviceAccountAuth = new JWT({
   email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
   key: (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
@@ -12,31 +11,20 @@ const serviceAccountAuth = new JWT({
 const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID, serviceAccountAuth);
 
 exports.handler = async (event, context) => {
-  // Esta função só aceita requisições GET (busca de dados)
-  if (event.httpMethod !== 'GET') {
-    return { statusCode: 405, body: "Method Not Allowed" };
-  }
-  
   try {
-    // Carrega as informações da planilha
     await doc.loadInfo();
-    // Seleciona a aba correta pelo nome
     const sheet = doc.sheetsByTitle['Solicitações de Instalação'];
-    
-    // O comando .getRows() busca todas as linhas preenchidas da aba
     const rows = await sheet.getRows();
 
-    // Mapeamos as linhas para um formato JSON mais limpo
-    // ATUALIZAÇÃO IMPORTANTE: Adicionamos o 'rowIndex' para cada linha.
-    // O 'rowIndex' é o número da linha na planilha, o que nos permite editá-la depois.
-    const installations = rows.map((row, index) => {
+    // CORREÇÃO: Adicionamos o 'rowIndex' a cada objeto retornado.
+    // Isso é essencial para sabermos qual linha editar depois.
+    const installations = rows.map(row => {
       return {
-        ...row.toObject(), // Converte a linha em um objeto
-        rowIndex: row.rowIndex - 1 // Usamos o índice real da linha na coleção de linhas
+        ...row.toObject(), // Pega todos os dados da linha
+        rowIndex: row.rowIndex - 1 // Adiciona o número da linha (ajustado para índice 0)
       };
     });
 
-    // Retornamos a lista de instalações para quem chamou a API
     return {
       statusCode: 200,
       body: JSON.stringify(installations),

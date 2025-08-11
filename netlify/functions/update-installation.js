@@ -17,6 +17,7 @@ exports.handler = async (event, context) => {
 
   try {
     const { rowIndex, dateTime } = JSON.parse(event.body);
+
     if (rowIndex === undefined || !dateTime) {
       return { statusCode: 400, body: "Dados inválidos." };
     }
@@ -30,22 +31,26 @@ exports.handler = async (event, context) => {
       return { statusCode: 404, body: "Linha não encontrada." };
     }
     
+    // Separa a data e a hora que vêm do formulário
     const [date, time] = dateTime.split('T');
 
+    // Atualiza as colunas na planilha.
+    // Verifique se os nomes das colunas aqui são IDÊNTICOS aos da sua planilha.
     rowToUpdate.set('DATA DA INSTALAÇÃO', date);
     rowToUpdate.set('HORÁRIO', time);
     rowToUpdate.set('STATUS', 'Agendado');
-    await rowToUpdate.save();
+    
+    await rowToUpdate.save(); // Salva as alterações
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ message: "Agendamento atualizado!" }),
+      body: JSON.stringify({ message: "Agendamento atualizado com sucesso!" }),
     };
   } catch (error) {
-    console.error("Erro:", error);
+    console.error("Erro ao atualizar a planilha:", error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ message: "Erro ao atualizar planilha." }),
+      body: JSON.stringify({ message: "Erro ao atualizar a planilha." }),
     };
   }
 };
