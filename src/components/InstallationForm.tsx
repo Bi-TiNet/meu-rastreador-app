@@ -1,14 +1,15 @@
-// Arquivo: src/components/InstallationForm.tsx
+// src/components/InstallationForm.tsx
 import { useState, type FormEvent } from 'react';
 import './InstallationForm.css';
 
 export function InstallationForm() {
+  // As declarações de estado para todos os campos, incluindo os que faltavam
   const [nome, setNome] = useState('');
   const [contato, setContato] = useState('');
   const [placa, setPlaca] = useState('');
   const [modelo, setModelo] = useState('');
-  const [ano, setAno] = useState(''); // Adicionado
-  const [cor, setCor] = useState(''); // Adicionado
+  const [ano, setAno] = useState('');
+  const [cor, setCor] = useState('');
   const [endereco, setEndereco] = useState('');
   const [usuario, setUsuario] = useState('');
   const [senha, setSenha] = useState('');
@@ -17,25 +18,47 @@ export function InstallationForm() {
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    const data = { nome, contato, placa, modelo, ano, cor, endereco, usuario, senha, base, bloqueio };
+
+    // Agora as variáveis existem e podem ser usadas para criar o objeto 'data'
+    const data = {
+      nome,
+      contato,
+      placa,
+      modelo,
+      ano,
+      cor,
+      endereco,
+      usuario,
+      senha,
+      base,
+      bloqueio,
+    };
+
     try {
       const response = await fetch('/.netlify/functions/create-installation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-      if (!response.ok) throw new Error('Falha na resposta da rede.');
+
+      if (!response.ok) {
+        throw new Error('Falha na resposta da rede.');
+      }
+
       await response.json();
       alert('Instalação cadastrada com sucesso!');
-      // Limpa o formulário
+      
+      // Limpa o formulário após o sucesso
       setNome(''); setContato(''); setPlaca(''); setModelo(''); setAno(''); setCor('');
       setEndereco(''); setUsuario(''); setSenha(''); setBase('Atena'); setBloqueio('Sim');
+
     } catch (error) {
       console.error('Erro ao enviar o formulário:', error);
       alert('Erro ao cadastrar. Tente novamente.');
     }
   }
 
+  // O JSX/HTML do formulário com todos os campos
   return (
     <form className="form-container" onSubmit={handleSubmit}>
       <h2>Cadastrar Nova Instalação</h2>
