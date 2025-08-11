@@ -1,56 +1,87 @@
 /* Arquivo: src/components/TechnicianAgenda.css */
-.agenda-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 1rem;
-}
+ .agenda-container {
+   max-width: 960px;
+   margin: 2rem auto;
+   padding: 1.5rem;
+   background-color: #f8f9fa;
+   border-radius: 8px;
+   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+ }
 
-.agenda-header {
-  text-align: center;
-  margin-bottom: 2rem;
-  color: #0056b3;
-}
+ .agenda-header {
+   text-align: center;
+   margin-bottom: 2.5rem;
+   color: #2c3e50;
+ }
 
-.cards-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1.5rem;
-}
+ .agenda-header h1 {
+   font-size: 2.2rem;
+   margin-bottom: 0.5rem;
+ }
 
-.card {
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-  overflow: hidden; /* Garante que o cabeçalho fique contido */
-}
+ .cards-grid {
+   display: grid;
+   grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+   gap: 1.5rem;
+ }
 
-.card-header {
-  background-color: #0056b3;
-  color: white;
-  padding: 1rem;
-  font-size: 1.1rem;
-}
+ .card {
+   background-color: white;
+   border-radius: 6px;
+   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+   border: 1px solid #e0e0e0;
+   overflow: hidden;
+   display: flex;
+   flex-direction: column;
+ }
 
-.card-body {
-  padding: 1.5rem;
-}
+ .card-header {
+   background-color: #007bff; /* Cor primária mais vibrante */
+   color: white;
+   padding: 1rem;
+   font-size: 1.1rem;
+   font-weight: bold;
+   text-align: center;
+   border-bottom: 2px solid #0056b3; /* Linha de destaque */
+ }
 
-.card-body p {
-  margin: 0 0 0.8rem 0;
-  line-height: 1.6;
-}
+ .card-body {
+   padding: 1.5rem;
+   display: flex;
+   flex-direction: column;
+ }
 
-.card-body p:last-child {
-  margin-bottom: 0;
-}
+ .card-body h4 {
+   font-size: 1.2rem;
+   margin-bottom: 0.8rem;
+   color: #343a40;
+ }
 
-.status-message {
-  text-align: center;
-  font-size: 1.2rem;
-  color: #6c757d;
-  margin-top: 3rem;
-}
+ .card-body p {
+   margin-bottom: 0.6rem;
+   line-height: 1.6;
+   color: #495057;
+ }
 
-.status-message.error {
-  color: #dc3545;
-}
+ .card-body strong {
+   font-weight: 600;
+   color: #212529;
+   margin-right: 0.3rem;
+ }
+
+ .status-message {
+   text-align: center;
+   font-size: 1.1rem;
+   color: #6c757d;
+   margin-top: 3rem;
+ }
+
+ .status-message.error {
+   color: #dc3545;
+ }
+
+ /* Estilos específicos para as informações */
+ .card-header h3 {
+   font-size: 1.3rem;
+   margin: 0;
+ }
