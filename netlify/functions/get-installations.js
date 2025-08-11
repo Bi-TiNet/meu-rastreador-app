@@ -12,6 +12,11 @@ const serviceAccountAuth = new JWT({
 const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID, serviceAccountAuth);
 
 exports.handler = async (event, context) => {
+  // Esta função só aceita requisições GET (busca de dados)
+  if (event.httpMethod !== 'GET') {
+    return { statusCode: 405, body: "Method Not Allowed" };
+  }
+  
   try {
     // Carrega as informações da planilha
     await doc.loadInfo();
@@ -22,8 +27,13 @@ exports.handler = async (event, context) => {
     const rows = await sheet.getRows();
 
     // Mapeamos as linhas para um formato JSON mais limpo
-    const installations = rows.map(row => {
-      return row.toObject(); // Converte cada linha em um objeto simples
+    // ATUALIZAÇÃO IMPORTANTE: Adicionamos o 'rowIndex' para cada linha.
+    // O 'rowIndex' é o número da linha na planilha, o que nos permite editá-la depois.
+    const installations = rows.map((row, index) => {
+      return {
+        ...row.toObject(), // Converte a linha em um objeto
+        rowIndex: row.rowIndex - 1 // Usamos o índice real da linha na coleção de linhas
+      };
     });
 
     // Retornamos a lista de instalações para quem chamou a API
