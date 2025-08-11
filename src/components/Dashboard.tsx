@@ -89,6 +89,8 @@ export function Dashboard() {
   const handleSchedule = async (rowIndex: number, dateTime: string) => {
     if (!dateTime) return;
     try {
+      // **** CORREÇÃO ESTÁ AQUI ****
+      // O nome da função foi corrigido para "update-installation"
       const response = await fetch('/.netlify/functions/update-installation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -96,8 +98,8 @@ export function Dashboard() {
       });
       if (!response.ok) throw new Error('Falha ao agendar.');
       alert('Agendado com sucesso!');
-      setSelectedInstallation(null);
-      fetchInstallations();
+      setSelectedInstallation(null); // Fecha o modal
+      fetchInstallations(); // Atualiza a lista
     } catch (error) {
       alert('Erro ao agendar.');
       console.error(error);
