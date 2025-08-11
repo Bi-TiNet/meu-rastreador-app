@@ -1,9 +1,9 @@
 // Arquivo: src/components/Dashboard.tsx
-import { useEffect, useState, FormEvent } from 'react';
-import './Dashboard.css'; // Estilo do painel
-import './Modal.css'; // Estilo específico para o modal
+import { useEffect, useState, type FormEvent } from 'react';
+import './Dashboard.css';
+import './Modal.css';
 
-// ... (interface Installation, igual a anterior) ...
+// Define a "forma" (interface) dos dados de uma instalação
 interface Installation {
   'NOME COMPLETO': string;
   'Nº DE CONTATO': string;
@@ -16,9 +16,15 @@ interface Installation {
   [key: string]: string | number | undefined;
 }
 
+// Define os tipos das propriedades (props) para o nosso Modal
+interface ScheduleModalProps {
+  installation: Installation;
+  onClose: () => void;
+  onSchedule: (rowIndex: number, dateTime: string) => void;
+}
 
 // Componente para o Modal de Agendamento
-function ScheduleModal({ installation, onClose, onSchedule }) {
+function ScheduleModal({ installation, onClose, onSchedule }: ScheduleModalProps) {
   const [dateTime, setDateTime] = useState('');
 
   const handleSubmit = (e: FormEvent) => {
@@ -54,15 +60,31 @@ function ScheduleModal({ installation, onClose, onSchedule }) {
 }
 
 
+// Componente principal do Dashboard
 export function Dashboard() {
   const [installations, setInstallations] = useState<Installation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedInstallation, setSelectedInstallation] = useState<Installation | null>(null);
 
-  const fetchInstallations = async () => { /* ... (código igual) ... */ };
-  useEffect(() => { /* ... (código igual) ... */ }, []);
-  const handleCopy = (inst: Installation) => { /* ... (código igual) ... */ };
+  const fetchInstallations = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('/.netlify/functions/get-installations');
+      if (!response.ok) throw new Error('Falha ao buscar dados.');
+      const data: Installation[] = await response.json();
+      setInstallations(data);
+    } catch (err) {
+      setError('Não foi possível carregar as instalações.');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchInstallations();
+  }, []);
 
   const handleSchedule = async (rowIndex: number, dateTime: string) => {
     if (!dateTime) return;
@@ -74,16 +96,35 @@ export function Dashboard() {
       });
       if (!response.ok) throw new Error('Falha ao agendar.');
       alert('Agendado com sucesso!');
-      setSelectedInstallation(null); // Fecha o modal
-      fetchInstallations(); // Atualiza a lista
+      setSelectedInstallation(null);
+      fetchInstallations();
     } catch (error) {
       alert('Erro ao agendar.');
       console.error(error);
     }
   };
 
-  if (loading) return <p>Carregando...</p>;
-  if (error) return <p>{error}</p>;
+  const handleCopy = (inst: Installation) => {
+    const brand = (inst['MODELO DO VEÍCULO'] as string)?.split(' ')[0] || '';
+    const formattedText = `Veiculo ${brand}
+Modelo: ${inst['MODELO DO VEÍCULO']}
+Ano Fabricação: ${inst['ANO DE FABRICAÇÃO'] || ''}
+Placa: ${inst['PLACA DO VEÍCULO']}
+Cor: ${inst['COR DO VEÍCULO'] || ''}
+Nome: ${inst['NOME COMPLETO']}
+Telefone: ${inst['Nº DE CONTATO']}
+usuario: ${inst['USUÁRIO']}
+senha: ${inst['SENHA'] || ''}
+BASE Atena ( ${inst['BASE'] === 'Atena' ? 'X' : ' '} )   Base Autocontrol ( ${inst['BASE'] === 'Autocontrol' ? 'X' : ' '} )
+Bloqueio sim ( ${inst['BLOQUEIO'] === 'Sim' ? 'X' : ' '} )  nao ( ${inst['BLOQUEIO'] === 'Nao' ? 'X' : ' '} )`;
+
+    navigator.clipboard.writeText(formattedText)
+      .then(() => alert('Informações copiadas!'))
+      .catch(() => alert('Erro ao copiar.'));
+  };
+
+  if (loading) return <p>Carregando agendamentos...</p>;
+  if (error) return <p style={{ color: 'red' }}>{error}</p>;
 
   return (
     <div className="dashboard">
