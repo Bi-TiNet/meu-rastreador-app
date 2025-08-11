@@ -1,6 +1,6 @@
 // Arquivo: src/components/TechnicianAgenda.tsx
 import { useEffect, useState, useMemo } from 'react';
-import { Calendar, dateFnsLocalizer, Views } from 'react-big-calendar';
+import { Calendar, dateFnsLocalizer, Views, SlotInfo } from 'react-big-calendar';
 import format from 'date-fns/format';
 import parse from 'date-fns/parse';
 import startOfWeek from 'date-fns/startOfWeek';
@@ -27,7 +27,7 @@ interface CalendarEvent {
   title: string;
   start: Date;
   end: Date;
-  resource: Installation; // Guarda todos os dados originais da instalação
+  resource: Installation;
 }
 
 // Configuração para o calendário entender o formato de data em português
@@ -57,14 +57,14 @@ export function TechnicianAgenda() {
         const scheduled = allInstallations
           .filter(inst => inst.status === 'Agendado' && inst.data_instalacao && inst.horario)
           .map(inst => {
-            const [year, month, day] = inst.data_instalacao.split('-').map(Number);
-            const [hour, minute] = inst.horario.split(':').map(Number);
+            const [year, month, day] = (inst.data_instalacao as string).split('-').map(Number);
+            const [hour, minute] = (inst.horario as string).split(':').map(Number);
             const startDate = new Date(year, month - 1, day, hour, minute);
             
             return {
               title: `${inst.nome_completo} (${inst.placa})`,
               start: startDate,
-              end: new Date(startDate.getTime() + 60 * 60 * 1000), // Duração de 1h
+              end: new Date(startDate.getTime() + 60 * 60 * 1000),
               resource: inst,
             };
           });
@@ -78,7 +78,6 @@ export function TechnicianAgenda() {
     fetchScheduledInstallations();
   }, []);
 
-  // Filtra os agendamentos para o dia selecionado no calendário
   const appointmentsForSelectedDay = useMemo(() => 
     events.filter(event => 
       event.start.getFullYear() === selectedDate.getFullYear() &&
@@ -87,12 +86,12 @@ export function TechnicianAgenda() {
     ), 
   [events, selectedDate]);
 
-  const handleSelectSlot = (slotInfo) => {
+  const handleSelectSlot = (slotInfo: SlotInfo) => {
     setSelectedDate(slotInfo.start);
-    setSelectedInstallation(null); // Limpa a seleção de detalhes
+    setSelectedInstallation(null);
   };
 
-  const handleSelectEvent = (event) => {
+  const handleSelectEvent = (event: CalendarEvent) => {
     setSelectedInstallation(event.resource);
   };
 
