@@ -3,6 +3,7 @@ import { useState, type FormEvent } from 'react';
 import './InstallationForm.css';
 
 export function InstallationForm() {
+  // As declarações de estado para todos os campos, incluindo os que faltavam
   const [nome, setNome] = useState('');
   const [contato, setContato] = useState('');
   const [placa, setPlaca] = useState('');
@@ -17,25 +18,39 @@ export function InstallationForm() {
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    const data = { nome, contato, placa, modelo, ano, cor, endereco, usuario, senha, base, bloqueio };
+
+    // Agora as variáveis existem e podem ser usadas para criar o objeto 'data'
+    const data = {
+      nome,
+      contato,
+      placa,
+      modelo,
+      ano,
+      cor,
+      endereco,
+      usuario,
+      senha,
+      base,
+      bloqueio,
+    };
 
     try {
-      // CORREÇÃO: Removemos a variável 'response' que não estava a ser usada.
-      await fetch(import.meta.env.VITE_GOOGLE_SCRIPT_URL, {
+      const response = await fetch('/.netlify/functions/create-installation', {
         method: 'POST',
-        mode: 'no-cors',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
 
-      alert('Instalação enviada com sucesso!');
+      if (!response.ok) {
+        throw new Error('Falha na resposta da rede.');
+      }
+
+      await response.json();
+      alert('Instalação cadastrada com sucesso!');
       
-      // Limpa o formulário
+      // Limpa o formulário após o sucesso
       setNome(''); setContato(''); setPlaca(''); setModelo(''); setAno(''); setCor('');
       setEndereco(''); setUsuario(''); setSenha(''); setBase('Atena'); setBloqueio('Sim');
-      
-      // Recarrega a página para o dashboard atualizar
-      window.location.reload();
 
     } catch (error) {
       console.error('Erro ao enviar o formulário:', error);
@@ -43,7 +58,7 @@ export function InstallationForm() {
     }
   }
 
-  // O JSX/HTML do formulário
+  // O JSX/HTML do formulário com todos os campos
   return (
     <form className="form-container" onSubmit={handleSubmit}>
       <h2>Cadastrar Nova Instalação</h2>
