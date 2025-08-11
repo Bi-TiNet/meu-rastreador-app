@@ -1,11 +1,8 @@
 // Arquivo: src/components/TechnicianAgenda.tsx
 import { useEffect, useState, useMemo } from 'react';
-import { Calendar, dateFnsLocalizer, Views, SlotInfo } from 'react-big-calendar';
-import format from 'date-fns/format';
-import parse from 'date-fns/parse';
-import startOfWeek from 'date-fns/startOfWeek';
-import getDay from 'date-fns/getDay';
-import ptBR from 'date-fns/locale/pt-BR';
+import { Calendar, dateFnsLocalizer, Views, type SlotInfo } from 'react-big-calendar';
+import { format, parse, startOfWeek, getDay } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import './TechnicianAgenda.css';
 
@@ -30,7 +27,6 @@ interface CalendarEvent {
   resource: Installation;
 }
 
-// Configuração para o calendário entender o formato de data em português
 const locales = { 'pt-BR': ptBR };
 const localizer = dateFnsLocalizer({
   format,
@@ -57,14 +53,16 @@ export function TechnicianAgenda() {
         const scheduled = allInstallations
           .filter(inst => inst.status === 'Agendado' && inst.data_instalacao && inst.horario)
           .map(inst => {
-            const [year, month, day] = (inst.data_instalacao as string).split('-').map(Number);
-            const [hour, minute] = (inst.horario as string).split(':').map(Number);
+            const dateStr = inst.data_instalacao as string;
+            const timeStr = inst.horario as string;
+            const [year, month, day] = dateStr.split('-').map(Number);
+            const [hour, minute] = timeStr.split(':').map(Number);
             const startDate = new Date(year, month - 1, day, hour, minute);
             
             return {
               title: `${inst.nome_completo} (${inst.placa})`,
               start: startDate,
-              end: new Date(startDate.getTime() + 60 * 60 * 1000),
+              end: new Date(startDate.getTime() + 60 * 60 * 1000), // Duração de 1h
               resource: inst,
             };
           });
@@ -80,10 +78,8 @@ export function TechnicianAgenda() {
 
   const appointmentsForSelectedDay = useMemo(() => 
     events.filter(event => 
-      event.start.getFullYear() === selectedDate.getFullYear() &&
-      event.start.getMonth() === selectedDate.getMonth() &&
-      event.start.getDate() === selectedDate.getDate()
-    ), 
+      format(event.start, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd')
+    ).sort((a, b) => a.start.getTime() - b.start.getTime()),
   [events, selectedDate]);
 
   const handleSelectSlot = (slotInfo: SlotInfo) => {
@@ -116,6 +112,12 @@ export function TechnicianAgenda() {
           onSelectSlot={handleSelectSlot}
           onSelectEvent={handleSelectEvent}
           selectable
+          messages={{
+            today: 'Hoje',
+            previous: 'Anterior',
+            next: 'Próximo',
+            month: 'Mês',
+          }}
         />
       </div>
 
@@ -130,7 +132,7 @@ export function TechnicianAgenda() {
                   onClick={() => setSelectedInstallation(event.resource)}
                   className={selectedInstallation?.id === event.resource.id ? 'selected' : ''}
                 >
-                  {format(event.start, 'HH:mm')} - {event.resource.nome_completo} ({event.resource.placa})
+                  {format(event.start, 'HH:mm')} - {event.resource.nome_completo}
                 </li>
               ))}
             </ul>
@@ -143,11 +145,11 @@ export function TechnicianAgenda() {
           <h3>Detalhes da Instalação</h3>
           {selectedInstallation ? (
             <div className="details-content">
+              <p><strong>Horário:</strong> {selectedInstallation.horario}</p>
               <p><strong>Cliente:</strong> {selectedInstallation.nome_completo}</p>
               <p><strong>Contato:</strong> {selectedInstallation.contato}</p>
               <p><strong>Veículo:</strong> {selectedInstallation.modelo} ({selectedInstallation.placa})</p>
               <p><strong>Endereço:</strong> {selectedInstallation.endereco}</p>
-              <p><strong>Horário:</strong> {selectedInstallation.horario}</p>
             </div>
           ) : (
             <p>Selecione um agendamento para ver os detalhes.</p>
