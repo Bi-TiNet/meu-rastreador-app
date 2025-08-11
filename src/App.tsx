@@ -1,12 +1,17 @@
-// Importa nosso novo componente de formulário
+// src/App.tsx
 import { InstallationForm } from './components/InstallationForm'
+import { Dashboard } from './components/Dashboard' // Adicionamos a importação do Dashboard
 
 function App() {
   return (
-    <div>
-      {/* Aqui estamos renderizando o componente do formulário na tela */}
+    <main>
+      {/* O formulário continua aqui em cima */}
       <InstallationForm />
-    </div>
+
+      {/* Adicionamos uma linha divisória e o novo Dashboard embaixo */}
+      <hr style={{ maxWidth: '900px', margin: '2rem auto' }} />
+      <Dashboard />
+    </main>
   )
 }
 

@@ -2,7 +2,6 @@ import { useState, type FormEvent } from 'react';
 import './InstallationForm.css';
 
 export function InstallationForm() {
-  // Adicionamos os "estados" para os novos campos
   const [nome, setNome] = useState('');
   const [contato, setContato] = useState('');
   const [placa, setPlaca] = useState('');
@@ -10,13 +9,12 @@ export function InstallationForm() {
   const [endereco, setEndereco] = useState('');
   const [usuario, setUsuario] = useState('');
   const [senha, setSenha] = useState('');
-  const [base, setBase] = useState('Atena'); // Valor padrão
-  const [bloqueio, setBloqueio] = useState('Sim'); // Valor padrão
+  const [base, setBase] = useState('Atena');
+  const [bloqueio, setBloqueio] = useState('Sim');
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
 
-    // Adicionamos os novos campos ao objeto de dados
     const data = {
       nome,
       contato,
@@ -42,6 +40,7 @@ export function InstallationForm() {
 
       await response.json();
       alert('Instalação cadastrada com sucesso!');
+      
       // Limpa o formulário após o sucesso
       setNome('');
       setContato('');
@@ -79,7 +78,8 @@ export function InstallationForm() {
       <textarea id="endereco" value={endereco} onChange={e => setEndereco(e.target.value)} />
 
       <hr /> 
-      <h3>Dados para o Fornecedor</h3>
+      {/* O TÍTULO CORRETO ESTÁ AQUI */}
+      <h3>Detalhes de Acesso do Rastreador</h3>
 
       <label htmlFor="usuario">Usuário</label>
       <input id="usuario" type="text" value={usuario} onChange={e => setUsuario(e.target.value)} />
