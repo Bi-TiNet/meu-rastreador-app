@@ -11,6 +11,7 @@ interface Installation {
   endereco: string;
   data_instalacao?: string;
   horario?: string;
+  status: string; // CORREÇÃO: Adicionamos a propriedade 'status' que faltava
 }
 
 export function TechnicianAgenda() {
