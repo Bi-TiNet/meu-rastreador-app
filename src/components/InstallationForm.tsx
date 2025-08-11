@@ -1,4 +1,4 @@
-// Arquivo: src/components/InstallationForm.tsx
+// src/components/InstallationForm.tsx
 import { useState, type FormEvent } from 'react';
 import './InstallationForm.css';
 
@@ -20,23 +20,21 @@ export function InstallationForm() {
     const data = { nome, contato, placa, modelo, ano, cor, endereco, usuario, senha, base, bloqueio };
 
     try {
-      // MUDANÇA IMPORTANTE: Apontando para a nova API do Google Apps Script
-      const response = await fetch(import.meta.env.VITE_GOOGLE_SCRIPT_URL, {
+      // CORREÇÃO: Removemos a variável 'response' que não estava a ser usada.
+      await fetch(import.meta.env.VITE_GOOGLE_SCRIPT_URL, {
         method: 'POST',
-        // O modo 'no-cors' é necessário ao chamar o Google Apps Script desta forma
-        mode: 'no-cors', 
+        mode: 'no-cors',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
 
-      // Com 'no-cors', não podemos ler a resposta, mas sabemos que foi enviada.
       alert('Instalação enviada com sucesso!');
       
       // Limpa o formulário
       setNome(''); setContato(''); setPlaca(''); setModelo(''); setAno(''); setCor('');
       setEndereco(''); setUsuario(''); setSenha(''); setBase('Atena'); setBloqueio('Sim');
       
-      // Recarrega a página para o dashboard atualizar (solução simples e eficaz)
+      // Recarrega a página para o dashboard atualizar
       window.location.reload();
 
     } catch (error) {
@@ -45,6 +43,7 @@ export function InstallationForm() {
     }
   }
 
+  // O JSX/HTML do formulário
   return (
     <form className="form-container" onSubmit={handleSubmit}>
       <h2>Cadastrar Nova Instalação</h2>
