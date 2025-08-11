@@ -1,14 +1,75 @@
-/* Adicione no final de Dashboard.css */
+/* src/components/Dashboard.css */
+.dashboard {
+  max-width: 900px;
+  margin: 2rem auto;
+  padding: 1rem;
+  font-family: sans-serif; /* Adiciona uma fonte mais legível */
+}
+
+.dashboard h2 {
+  text-align: center; /* Centraliza o título do painel */
+  margin-bottom: 1.5rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse; /* Remove o espaçamento duplo das bordas */
+  margin-top: 1rem;
+  font-size: 0.9rem; /* Ajusta o tamanho da fonte */
+}
+
+thead {
+  background-color: #f4f6f8; /* Um cinza um pouco mais suave */
+}
+
+th, td {
+  border: 1px solid #ddd;
+  padding: 12px 15px; /* Aumenta o espaçamento interno */
+  text-align: left;
+  vertical-align: middle; /* Alinha o conteúdo verticalmente */
+}
+
+th {
+  font-weight: bold;
+  text-transform: uppercase; /* Deixa os títulos em maiúsculas */
+  font-size: 0.8rem;
+  letter-spacing: 0.5px;
+}
+
+tbody tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+tbody tr:hover {
+  background-color: #f1f1f1;
+}
+
+/* --- Seção de Ações --- */
 .actions-cell {
   display: flex;
   align-items: center;
-  gap: 10px; /* Espaço entre os botões */
+  gap: 10px;
+}
+
+.actions-cell button {
+  padding: 8px 12px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: background-color 0.2s;
+}
+
+.actions-cell button:hover {
+  background-color: #218838;
 }
 
 .schedule-button {
   position: relative;
   cursor: pointer;
-  font-size: 1.5rem; /* Tamanho do ícone de calendário */
+  font-size: 1.5rem;
 }
 
 .schedule-button input[type="datetime-local"] {
@@ -17,6 +78,6 @@
   left: 0;
   width: 100%;
   height: 100%;
-  opacity: 0; /* Deixa o input original invisível */
+  opacity: 0;
   cursor: pointer;
 }
