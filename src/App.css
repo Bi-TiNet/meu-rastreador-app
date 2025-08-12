@@ -1,43 +1,30 @@
 /* Arquivo: src/App.css */
-
-/* 1. Nova Paleta de Cores e Variáveis */
 :root {
-  --primary-color: #3B82F6; /* Azul moderno */
-  --primary-hover: #2563EB;
-  --dark-bg: #1F2937;      /* Fundo do menu (cinza-azulado escuro) */
-  --light-bg: #F9FAFB;     /* Fundo da página (cinza muito claro) */
-  --card-bg: #FFFFFF;      /* Fundo dos painéis e formulários */
-  --text-primary: #111827;   /* Texto principal */
-  --text-secondary: #6B7280; /* Texto secundário */
-  --border-color: #E5E7EB;  /* Cor de borda sutil */
-  --card-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --primary-color: #0d6efd;
+  --dark-bg: #212529;
+  --light-bg: #f8f9fa;
+  --text-color: #343a40;
+  --border-color: #dee2e6;
+  --card-shadow: 0 4px 12px rgba(0,0,0,0.08);
 }
-
-/* 2. Estilo Base com a Nova Fonte */
 body {
   margin: 0;
-  font-family: 'Poppins', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   background-color: var(--light-bg);
-  color: var(--text-primary);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  color: var(--text-color);
 }
-
 main {
   padding: 1rem 2rem;
 }
-
-/* 3. Novo Estilo do Menu de Navegação */
 .main-nav {
   display: flex;
   justify-content: center;
   padding: 0.5rem;
-  background-color: var(--card-bg);
+  background-color: #FFFFFF;
   border-bottom: 1px solid var(--border-color);
 }
-
 .nav-link {
-  color: var(--text-secondary);
+  color: #6B7280;
   margin: 0 1rem;
   text-decoration: none;
   font-weight: 500;
@@ -46,12 +33,10 @@ main {
   position: relative;
   transition: all 0.3s ease;
 }
-
 .nav-link:hover {
   color: var(--primary-color);
-  background-color: #EFF6FF; /* Fundo azul claro no hover */
+  background-color: #EFF6FF;
 }
-
 .nav-link.active {
   color: var(--primary-color);
   font-weight: 600;
