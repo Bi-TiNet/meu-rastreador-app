@@ -1,51 +1,58 @@
 /* Arquivo: src/App.css */
 
-/* 1. Paleta de Cores Tecnológica e Profissional */
+/* 1. Nova Paleta de Cores e Variáveis */
 :root {
-  --primary-color: #0d6efd; /* Azul vibrante para botões e links */
-  --dark-bg: #212529;      /* Fundo escuro para o menu */
-  --light-bg: #f8f9fa;     /* Fundo cinza claro para a página */
-  --text-color: #343a40;   /* Cor de texto principal, quase preto */
-  --border-color: #dee2e6;  /* Cor de borda sutil */
-  --card-shadow: 0 4px 12px rgba(0,0,0,0.08); /* Sombra suave para os painéis */
+  --primary-color: #3B82F6; /* Azul moderno */
+  --primary-hover: #2563EB;
+  --dark-bg: #1F2937;      /* Fundo do menu (cinza-azulado escuro) */
+  --light-bg: #F9FAFB;     /* Fundo da página (cinza muito claro) */
+  --card-bg: #FFFFFF;      /* Fundo dos painéis e formulários */
+  --text-primary: #111827;   /* Texto principal */
+  --text-secondary: #6B7280; /* Texto secundário */
+  --border-color: #E5E7EB;  /* Cor de borda sutil */
+  --card-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
 }
 
-/* 2. Estilo base e fonte para todo o site */
+/* 2. Estilo Base com a Nova Fonte */
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: 'Poppins', sans-serif;
   background-color: var(--light-bg);
-  color: var(--text-color);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 main {
-  padding: 1rem 2rem; /* Espaçamento para o conteúdo principal */
+  padding: 1rem 2rem;
 }
 
-/* 3. Estilo do Menu de Navegação */
+/* 3. Novo Estilo do Menu de Navegação */
 .main-nav {
   display: flex;
   justify-content: center;
-  padding: 1rem;
-  background-color: var(--dark-bg);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  padding: 0.5rem;
+  background-color: var(--card-bg);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .nav-link {
-  color: #f8f9fa;
-  margin: 0 1.5rem;
+  color: var(--text-secondary);
+  margin: 0 1rem;
   text-decoration: none;
   font-weight: 500;
-  padding: 0.5rem 0;
-  border-bottom: 2px solid transparent;
+  padding: 0.8rem 1rem;
+  border-radius: 6px;
+  position: relative;
   transition: all 0.3s ease;
 }
 
 .nav-link:hover {
   color: var(--primary-color);
+  background-color: #EFF6FF; /* Fundo azul claro no hover */
 }
 
 .nav-link.active {
   color: var(--primary-color);
-  border-bottom-color: var(--primary-color);
+  font-weight: 600;
 }
