@@ -1,6 +1,5 @@
 // Arquivo: src/components/InstallationForm.tsx
 import { useState, type FormEvent } from 'react';
-// Importa os componentes visuais do Chakra UI
 import {
   Box,
   Button,
@@ -12,7 +11,7 @@ import {
   Heading,
   SimpleGrid,
   Divider,
-  useToast, // Sistema de notificações
+  useToast,
 } from '@chakra-ui/react';
 
 export function InstallationForm() {
@@ -28,27 +27,55 @@ export function InstallationForm() {
   const [base, setBase] = useState('Atena');
   const [bloqueio, setBloqueio] = useState('Sim');
   const [isLoading, setIsLoading] = useState(false);
-  const toast = useToast(); // Hook para mostrar notificações
+  const toast = useToast();
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setIsLoading(true);
-    // ... (sua lógica de envio para o Supabase continua a mesma)
 
-    // Simulação de sucesso (substitua pela sua lógica real de fetch)
-    setTimeout(() => {
-      setIsLoading(false);
+    const data = {
+      nome, contato, placa, modelo, ano, cor,
+      endereco, usuario, senha, base, bloqueio
+    };
+
+    try {
+      // **** LÓGICA DE ENVIO REAL RESTAURADA ****
+      const response = await fetch('/.netlify/functions/create-installation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        // Tenta ler a mensagem de erro do Supabase se houver
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Falha na resposta da rede.');
+      }
+
       toast({
         title: 'Instalação Cadastrada.',
-        description: "Os dados foram salvos com sucesso.",
+        description: "Os dados foram salvos com sucesso no banco de dados.",
         status: 'success',
         duration: 5000,
         isClosable: true,
       });
-      // Limpar formulário
+
+      // Limpa o formulário
       setNome(''); setContato(''); setPlaca(''); setModelo(''); setAno('');
       setCor(''); setEndereco(''); setUsuario(''); setSenha('');
-    }, 1500);
+
+    } catch (error) {
+      toast({
+        title: 'Erro ao Cadastrar.',
+        description: error.message || "Não foi possível salvar os dados.",
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+      console.error('Erro ao enviar o formulário:', error);
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
@@ -65,7 +92,7 @@ export function InstallationForm() {
       <Heading as="h2" size="lg" textAlign="center" mb={6}>
         Cadastrar Nova Instalação
       </Heading>
-
+      
       <SimpleGrid columns={{ base: 1, md: 3 }} spacing={6}>
         <FormControl isRequired>
           <FormLabel>Nome Completo</FormLabel>
@@ -102,7 +129,7 @@ export function InstallationForm() {
       <Heading as="h3" size="md" textAlign="center" mb={6}>
         Detalhes de Acesso do Rastreador
       </Heading>
-
+      
       <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
         <FormControl>
           <FormLabel>Usuário</FormLabel>
