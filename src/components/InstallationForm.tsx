@@ -39,7 +39,6 @@ export function InstallationForm() {
     };
 
     try {
-      // **** LÓGICA DE ENVIO REAL RESTAURADA ****
       const response = await fetch('/.netlify/functions/create-installation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -47,7 +46,6 @@ export function InstallationForm() {
       });
 
       if (!response.ok) {
-        // Tenta ler a mensagem de erro do Supabase se houver
         const errorData = await response.json();
         throw new Error(errorData.message || 'Falha na resposta da rede.');
       }
@@ -60,14 +58,19 @@ export function InstallationForm() {
         isClosable: true,
       });
 
-      // Limpa o formulário
       setNome(''); setContato(''); setPlaca(''); setModelo(''); setAno('');
       setCor(''); setEndereco(''); setUsuario(''); setSenha('');
 
     } catch (error) {
+      // CORREÇÃO: Verificamos o tipo do erro antes de o usar
+      let errorMessage = "Não foi possível salvar os dados.";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: 'Erro ao Cadastrar.',
-        description: error.message || "Não foi possível salvar os dados.",
+        description: errorMessage,
         status: 'error',
         duration: 5000,
         isClosable: true,
