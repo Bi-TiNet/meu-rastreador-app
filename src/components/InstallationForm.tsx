@@ -70,7 +70,16 @@ export function InstallationForm() {
   }
 
   return (
-    <Box as="form" p={8} bg="white" borderRadius="lg" boxShadow="lg" onSubmit={handleSubmit}>
+    <Box 
+      as="form" 
+      p={8} 
+      bg="gray.800" // Cor de fundo do card para tema escuro
+      borderRadius="lg" 
+      boxShadow="xl" // Sombra mais pronunciada
+      onSubmit={handleSubmit}
+      maxW="1000px"
+      mx="auto"
+    >
       <Heading as="h2" size="lg" textAlign="center" mb={8}>
         Cadastrar Nova Instalação
       </Heading>
@@ -78,14 +87,14 @@ export function InstallationForm() {
       <SimpleGrid columns={{ base: 1, md: 3 }} spacing={6}>
         <FormControl isRequired><FormLabel>Nome Completo</FormLabel><Input value={nome} onChange={(e) => setNome(e.target.value)} /></FormControl>
         <FormControl isRequired><FormLabel>Número de Contato</FormLabel><Input value={contato} onChange={(e) => setContato(e.target.value)} /></FormControl>
-        <FormControl isRequired><FormLabel>Placa do Veículo</FormLabel><Input value={placa} onChange={(e) => setPlaca(e.target.value)} /></FormControl>
+        <FormControl isRequired><FormLabel>Placa do Veículo</FormLabel><Input value={placa} onChange={(e) => setPlaca(e.target.value.toUpperCase())} /></FormControl>
         <FormControl><FormLabel>Modelo do Veículo</FormLabel><Input value={modelo} onChange={(e) => setModelo(e.target.value)} /></FormControl>
         <FormControl><FormLabel>Ano de Fabricação</FormLabel><Input value={ano} onChange={(e) => setAno(e.target.value)} /></FormControl>
         <FormControl><FormLabel>Cor do Veículo</FormLabel><Input value={cor} onChange={(e) => setCor(e.target.value)} /></FormControl>
         <FormControl gridColumn="1 / -1"><FormLabel>Endereço do Cliente</FormLabel><Textarea value={endereco} onChange={(e) => setEndereco(e.target.value)} /></FormControl>
       </SimpleGrid>
 
-      <Divider my={8} />
+      <Divider my={8} borderColor="gray.700" />
 
       <Heading as="h3" size="md" textAlign="center" mb={6}>
         Detalhes de Acesso do Rastreador
@@ -98,7 +107,15 @@ export function InstallationForm() {
         <FormControl><FormLabel>Bloqueio</FormLabel><Select value={bloqueio} onChange={(e) => setBloqueio(e.target.value)}><option value="Sim">Sim</option><option value="Nao">Não</option></Select></FormControl>
       </SimpleGrid>
 
-      <Button mt={8} colorScheme="blue" size="lg" width="full" type="submit" isLoading={isLoading} loadingText="A Cadastrar...">
+      <Button 
+        mt={8} 
+        colorScheme="brand" // Usando a cor 'brand' do nosso tema
+        size="lg" 
+        width="full" 
+        type="submit" 
+        isLoading={isLoading} 
+        loadingText="A Cadastrar..."
+      >
         Cadastrar Instalação
       </Button>
     </Box>

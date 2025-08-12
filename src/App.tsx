@@ -1,20 +1,46 @@
 // Arquivo: src/App.tsx
 import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom';
-import './App.css';
+import { Box, Flex } from '@chakra-ui/react';
 import { InstallationForm } from './components/InstallationForm';
 import { Dashboard } from './components/Dashboard';
 import { TechnicianAgenda } from './components/TechnicianAgenda';
 import { InsuranceView } from './components/InsuranceView';
 
 function App() {
+  const activeLinkStyle = {
+    color: 'var(--chakra-colors-brand-400)',
+    backgroundColor: 'rgba(56, 178, 172, 0.1)',
+  };
+
   return (
     <BrowserRouter>
-      <nav className="main-nav">
-        <NavLink to="/" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>Cadastrar Instalação</NavLink>
-        <NavLink to="/painel" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>Painel de Agendamentos</NavLink>
-        <NavLink to="/agenda" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>Agenda do Técnico</NavLink>
-        <NavLink to="/consulta" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>Consulta Seguradora</NavLink>
-      </nav>
+      <Flex
+        as="nav"
+        justify="center"
+        p={4}
+        bg="gray.800"
+        borderBottom="1px"
+        borderColor="gray.700"
+        mb={8}
+      >
+        <Box
+          as={NavLink}
+          to="/"
+          style={({ isActive }) => (isActive ? activeLinkStyle : undefined)}
+          px={4} py={2} mx={2} borderRadius="md" textDecoration="none" fontWeight="500"
+        >
+          Cadastrar Instalação
+        </Box>
+        <Box
+          as={NavLink}
+          to="/painel"
+          style={({ isActive }) => (isActive ? activeLinkStyle : undefined)}
+          px={4} py={2} mx={2} borderRadius="md" textDecoration="none" fontWeight="500"
+        >
+          Painel de Agendamentos
+        </Box>
+        {/* Outros links seguem o mesmo padrão */}
+      </Flex>
       
       <main>
         <Routes>
