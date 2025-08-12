@@ -1,6 +1,19 @@
 // Arquivo: src/components/InstallationForm.tsx
 import { useState, type FormEvent } from 'react';
-import './InstallationForm.css'; // Importa o nosso novo estilo
+// Importa os componentes visuais do Chakra UI
+import {
+  Box,
+  Button,
+  FormControl,
+  FormLabel,
+  Input,
+  Select,
+  Textarea,
+  Heading,
+  SimpleGrid,
+  Divider,
+  useToast, // Sistema de notificações
+} from '@chakra-ui/react';
 
 export function InstallationForm() {
   const [nome, setNome] = useState('');
@@ -14,88 +27,118 @@ export function InstallationForm() {
   const [senha, setSenha] = useState('');
   const [base, setBase] = useState('Atena');
   const [bloqueio, setBloqueio] = useState('Sim');
+  const [isLoading, setIsLoading] = useState(false);
+  const toast = useToast(); // Hook para mostrar notificações
 
   async function handleSubmit(event: FormEvent) {
-    // A sua lógica de envio para o Supabase continua a mesma aqui
     event.preventDefault();
-    // ...
+    setIsLoading(true);
+    // ... (sua lógica de envio para o Supabase continua a mesma)
+
+    // Simulação de sucesso (substitua pela sua lógica real de fetch)
+    setTimeout(() => {
+      setIsLoading(false);
+      toast({
+        title: 'Instalação Cadastrada.',
+        description: "Os dados foram salvos com sucesso.",
+        status: 'success',
+        duration: 5000,
+        isClosable: true,
+      });
+      // Limpar formulário
+      setNome(''); setContato(''); setPlaca(''); setModelo(''); setAno('');
+      setCor(''); setEndereco(''); setUsuario(''); setSenha('');
+    }, 1500);
   }
 
   return (
-    // Usamos a classe principal "form-container"
-    <form className="form-container" onSubmit={handleSubmit}>
-      <h2>Cadastrar Nova Instalação</h2>
-      
-      {/* Primeira grelha para dados do cliente/veículo */}
-      <div className="form-grid">
-        <div className="form-group">
-          <label htmlFor="nome">Nome Completo</label>
-          <input id="nome" type="text" value={nome} onChange={e => setNome(e.target.value)} />
-        </div>
+    <Box
+      as="form"
+      maxWidth="1000px"
+      mx="auto"
+      p={8}
+      bg="white"
+      borderRadius="lg"
+      boxShadow="lg"
+      onSubmit={handleSubmit}
+    >
+      <Heading as="h2" size="lg" textAlign="center" mb={6}>
+        Cadastrar Nova Instalação
+      </Heading>
 
-        <div className="form-group">
-          <label htmlFor="contato">Número de Contato</label>
-          <input id="contato" type="text" value={contato} onChange={e => setContato(e.target.value)} />
-        </div>
+      <SimpleGrid columns={{ base: 1, md: 3 }} spacing={6}>
+        <FormControl isRequired>
+          <FormLabel>Nome Completo</FormLabel>
+          <Input value={nome} onChange={(e) => setNome(e.target.value)} />
+        </FormControl>
+        <FormControl isRequired>
+          <FormLabel>Número de Contato</FormLabel>
+          <Input value={contato} onChange={(e) => setContato(e.target.value)} />
+        </FormControl>
+        <FormControl isRequired>
+          <FormLabel>Placa do Veículo</FormLabel>
+          <Input value={placa} onChange={(e) => setPlaca(e.target.value)} />
+        </FormControl>
+        <FormControl>
+          <FormLabel>Modelo do Veículo</FormLabel>
+          <Input value={modelo} onChange={(e) => setModelo(e.target.value)} />
+        </FormControl>
+        <FormControl>
+          <FormLabel>Ano de Fabricação</FormLabel>
+          <Input value={ano} onChange={(e) => setAno(e.target.value)} />
+        </FormControl>
+        <FormControl>
+          <FormLabel>Cor do Veículo</FormLabel>
+          <Input value={cor} onChange={(e) => setCor(e.target.value)} />
+        </FormControl>
+        <FormControl gridColumn="1 / -1">
+          <FormLabel>Endereço do Cliente</FormLabel>
+          <Textarea value={endereco} onChange={(e) => setEndereco(e.target.value)} />
+        </FormControl>
+      </SimpleGrid>
 
-        <div className="form-group">
-          <label htmlFor="placa">Placa do Veículo</label>
-          <input id="placa" type="text" value={placa} onChange={e => setPlaca(e.target.value)} />
-        </div>
+      <Divider my={8} />
 
-        <div className="form-group">
-          <label htmlFor="modelo">Modelo do Veículo</label>
-          <input id="modelo" type="text" value={modelo} onChange={e => setModelo(e.target.value)} />
-        </div>
+      <Heading as="h3" size="md" textAlign="center" mb={6}>
+        Detalhes de Acesso do Rastreador
+      </Heading>
 
-        <div className="form-group">
-          <label htmlFor="ano">Ano de Fabricação</label>
-          <input id="ano" type="text" value={ano} onChange={e => setAno(e.target.value)} />
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="cor">Cor do Veículo</label>
-          <input id="cor" type="text" value={cor} onChange={e => setCor(e.target.value)} />
-        </div>
-        
-        <div className="form-group full-width">
-          <label htmlFor="endereco">Endereço do Cliente</label>
-          <textarea id="endereco" value={endereco} onChange={e => setEndereco(e.target.value)} />
-        </div>
-      </div>
-
-      <h3>Detalhes de Acesso do Rastreador</h3>
-
-      {/* Segunda grelha para dados de acesso */}
-      <div className="form-grid">
-        <div className="form-group">
-          <label htmlFor="usuario">Usuário</label>
-          <input id="usuario" type="text" value={usuario} onChange={e => setUsuario(e.target.value)} />
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="senha">Senha</label>
-          <input id="senha" type="text" value={senha} onChange={e => setSenha(e.target.value)} />
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="base">Base</label>
-          <select id="base" value={base} onChange={e => setBase(e.target.value)}>
+      <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
+        <FormControl>
+          <FormLabel>Usuário</FormLabel>
+          <Input value={usuario} onChange={(e) => setUsuario(e.target.value)} />
+        </FormControl>
+        <FormControl>
+          <FormLabel>Senha</FormLabel>
+          <Input value={senha} onChange={(e) => setSenha(e.target.value)} />
+        </FormControl>
+        <FormControl>
+          <FormLabel>Base</FormLabel>
+          <Select value={base} onChange={(e) => setBase(e.target.value)}>
             <option value="Atena">Base Atena</option>
             <option value="Autocontrol">Base Autocontrol</option>
-          </select>
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="bloqueio">Bloqueio</label>
-          <select id="bloqueio" value={bloqueio} onChange={e => setBloqueio(e.target.value)}>
+          </Select>
+        </FormControl>
+        <FormControl>
+          <FormLabel>Bloqueio</FormLabel>
+          <Select value={bloqueio} onChange={(e) => setBloqueio(e.target.value)}>
             <option value="Sim">Sim</option>
             <option value="Nao">Não</option>
-          </select>
-        </div>
-        
-        <button type="submit">Cadastrar Instalação</button>
-      </div>
-    </form>
+          </Select>
+        </FormControl>
+      </SimpleGrid>
+
+      <Button
+        mt={8}
+        colorScheme="blue"
+        size="lg"
+        width="full"
+        type="submit"
+        isLoading={isLoading}
+        loadingText="A Cadastrar..."
+      >
+        Cadastrar Instalação
+      </Button>
+    </Box>
   );
 }
