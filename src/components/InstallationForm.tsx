@@ -16,9 +16,9 @@ export function InstallationForm() {
   const [bloqueio, setBloqueio] = useState('Sim');
 
   async function handleSubmit(event: FormEvent) {
-    // A lógica de envio continua a mesma
+    // A sua lógica de envio para o Supabase continua a mesma aqui
     event.preventDefault();
-    // ... (o seu código de envio para o Supabase)
+    // ...
   }
 
   return (

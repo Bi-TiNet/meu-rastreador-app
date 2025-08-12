@@ -3,8 +3,8 @@
 .form-container {
   max-width: 1000px;
   margin: 2rem auto;
-  padding: 2.5rem; /* Mais espaçamento interno */
-  background-color: white;
+  padding: 2.5rem;
+  background-color: var(--card-bg);
   border-radius: 12px; /* Bordas mais suaves */
   box-shadow: var(--card-shadow);
   border: 1px solid var(--border-color);
@@ -13,8 +13,9 @@
 .form-container h2,
 .form-container h3 {
   text-align: center;
+  margin-top: 0;
   margin-bottom: 2rem;
-  color: var(--dark-text);
+  color: var(--text-primary);
   font-weight: 600;
   letter-spacing: 0.5px;
 }
@@ -38,7 +39,7 @@
   flex-direction: column;
 }
 
-/* Campo que ocupa a largura total */
+/* Campo que ocupa a largura total (como o endereço) */
 .full-width {
   grid-column: 1 / -1;
 }
@@ -46,15 +47,22 @@
 .form-container button {
   width: 100%;
   margin-top: 2rem;
-  padding: 1rem; /* Botão maior */
+  padding: 1rem; /* Botão maior e mais clicável */
   background-color: var(--primary-color);
   font-size: 1.1rem;
   font-weight: bold;
   letter-spacing: 1px;
   text-transform: uppercase;
+  border-radius: 8px;
   grid-column: 1 / -1; /* Botão ocupa a largura toda */
+  transition: background-color 0.3s ease, transform 0.1s ease;
 }
 
 .form-container button:hover {
-  background-color: #0b5ed7; /* Tom de azul um pouco mais escuro no hover */
+  background-color: var(--primary-hover);
+  transform: translateY(-2px); /* Efeito de elevação */
+}
+
+.form-container button:active {
+  transform: translateY(0);
 }
