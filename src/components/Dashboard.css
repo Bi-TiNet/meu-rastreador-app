@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 /* Arquivo: src/components/Dashboard.css */
 .dashboard {
   max-width: 1000px;
@@ -61,4 +62,69 @@ tbody tr:hover {
 .copy-button:hover { background-color: #5a6268; }
 
 .schedule-button-action { background-color: var(--secondary-color); }
+=======
+/* Arquivo: src/components/Dashboard.css */
+.dashboard {
+  max-width: 1000px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: var(--card-shadow);
+}
+
+.dashboard h2 {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  color: var(--primary-color);
+}
+
+.table-container {
+  overflow-x: auto; /* Garante que a tabela não quebre em telas pequenas */
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+th, td {
+  border-bottom: 1px solid var(--border-color);
+  padding: 12px 15px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+thead th {
+  background-color: var(--light-gray);
+  font-weight: 700;
+  color: var(--primary-color);
+}
+
+tbody tr:hover {
+  background-color: #e9ecef;
+}
+
+.actions-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.actions-cell button {
+  padding: 6px 10px;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: background-color 0.2s;
+}
+
+.copy-button { background-color: #6c757d; }
+.copy-button:hover { background-color: #5a6268; }
+
+.schedule-button-action { background-color: var(--secondary-color); }
+>>>>>>> Stashed changes
 .schedule-button-action:hover { background-color: var(--secondary-hover); }
