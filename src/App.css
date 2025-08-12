@@ -13,9 +13,7 @@ body {
   background-color: var(--light-bg);
   color: var(--text-color);
 }
-main {
-  padding: 1rem 2rem;
-}
+main { padding: 1rem 2rem; }
 .main-nav {
   display: flex;
   justify-content: center;
@@ -33,11 +31,5 @@ main {
   position: relative;
   transition: all 0.3s ease;
 }
-.nav-link:hover {
-  color: var(--primary-color);
-  background-color: #EFF6FF;
-}
-.nav-link.active {
-  color: var(--primary-color);
-  font-weight: 600;
-}
+.nav-link:hover { color: var(--primary-color); background-color: #EFF6FF; }
+.nav-link.active { color: var(--primary-color); font-weight: 600; }
