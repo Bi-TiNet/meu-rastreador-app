@@ -1,4 +1,5 @@
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 /* Arquivo: src/components/Dashboard.css */
 .dashboard {
   max-width: 1000px;
@@ -63,6 +64,8 @@ tbody tr:hover {
 
 .schedule-button-action { background-color: var(--secondary-color); }
 =======
+=======
+>>>>>>> Stashed changes
 /* Arquivo: src/components/Dashboard.css */
 .dashboard {
   max-width: 1000px;
@@ -126,5 +129,8 @@ tbody tr:hover {
 .copy-button:hover { background-color: #5a6268; }
 
 .schedule-button-action { background-color: var(--secondary-color); }
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 .schedule-button-action:hover { background-color: var(--secondary-hover); }
