@@ -9,7 +9,6 @@ import { InsuranceView } from './components/InsuranceView';
 function App() {
   return (
     <BrowserRouter>
-      {/* O menu de navegação foi atualizado para as novas páginas */}
       <nav className="main-nav">
         <NavLink to="/" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>Cadastrar Instalação</NavLink>
         <NavLink to="/painel" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>Painel de Agendamentos</NavLink>
@@ -18,7 +17,6 @@ function App() {
       </nav>
       
       <main>
-        {/* As rotas foram separadas */}
         <Routes>
           <Route path="/" element={<InstallationForm />} />
           <Route path="/painel" element={<Dashboard />} />
