@@ -1,11 +1,9 @@
-// Arquivo: src/components/InstallationForm.tsx
+// src/components/InstallationForm.tsx
 import { useState, type FormEvent } from 'react';
-import {
-  Box, Button, FormControl, FormLabel, Input, Select, Textarea,
-  Heading, SimpleGrid, Divider, useToast,
-} from '@chakra-ui/react';
+import { Box, Button, FormControl, FormLabel, Input, Select, Textarea, Heading, SimpleGrid, Divider, useToast } from '@chakra-ui/react';
 
 export function InstallationForm() {
+  // ... (toda a lógica de useState e handleSubmit que já funciona)
   const [nome, setNome] = useState('');
   const [contato, setContato] = useState('');
   const [placa, setPlaca] = useState('');
@@ -23,56 +21,30 @@ export function InstallationForm() {
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setIsLoading(true);
-
-    const data = {
-      nome, contato, placa, modelo, ano, cor,
-      endereco, usuario, senha, base, bloqueio
-    };
-
+    const data = { nome, contato, placa, modelo, ano, cor, endereco, usuario, senha, base, bloqueio };
     try {
-      // LÓGICA DE ENVIO REAL PARA O SUPABASE
       const response = await fetch('/.netlify/functions/create-installation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Falha na resposta do servidor.');
+        throw new Error(errorData.message || 'Falha na resposta da rede.');
       }
-
-      toast({
-        title: 'Instalação Cadastrada.',
-        description: "Os dados foram salvos com sucesso.",
-        status: 'success',
-        duration: 5000,
-        isClosable: true,
-        position: 'top',
-      });
-
-      // Limpar formulário
-      setNome(''); setContato(''); setPlaca(''); setModelo(''); setAno('');
-      setCor(''); setEndereco(''); setUsuario(''); setSenha('');
-      setBase('Atena'); setBloqueio('Sim');
-
+      toast({ title: 'Instalação Cadastrada.', description: "Os dados foram salvos com sucesso.", status: 'success', duration: 5000, isClosable: true, position: 'top-right' });
+      setNome(''); setContato(''); setPlaca(''); setModelo(''); setAno(''); setCor(''); setEndereco(''); setUsuario(''); setSenha('');
     } catch (error: any) {
-      toast({
-        title: 'Erro ao Cadastrar.',
-        description: error.message || "Não foi possível salvar os dados.",
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-        position: 'top',
-      });
+      toast({ title: 'Erro ao Cadastrar.', description: error.message || "Não foi possível salvar os dados.", status: 'error', duration: 5000, isClosable: true, position: 'top-right' });
     } finally {
       setIsLoading(false);
     }
   }
+  // Fim da lógica
 
   return (
-    <Box as="form" p={8} bg="var(--card-bg)" borderRadius="lg" boxShadow="var(--card-shadow)" onSubmit={handleSubmit}>
-      <Heading as="h2" size="lg" textAlign="center" mb={8}>
+    <Box as="form" p={8} bg="var(--card-bg)" borderRadius="lg" boxShadow="var(--shadow)" onSubmit={handleSubmit}>
+      <Heading as="h2" size="lg" textAlign="center" mb={8} color="var(--text-dark)">
         Cadastrar Nova Instalação
       </Heading>
       <SimpleGrid columns={{ base: 1, md: 3 }} spacing={6}>
@@ -85,7 +57,7 @@ export function InstallationForm() {
         <FormControl gridColumn="1 / -1"><FormLabel>Endereço do Cliente</FormLabel><Textarea value={endereco} onChange={(e) => setEndereco(e.target.value)} /></FormControl>
       </SimpleGrid>
       <Divider my={8} />
-      <Heading as="h3" size="md" textAlign="center" mb={6}>
+      <Heading as="h3" size="md" textAlign="center" mb={6} color="var(--text-dark)">
         Detalhes de Acesso do Rastreador
       </Heading>
       <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
@@ -94,7 +66,7 @@ export function InstallationForm() {
         <FormControl><FormLabel>Base</FormLabel><Select value={base} onChange={(e) => setBase(e.target.value)}><option value="Atena">Base Atena</option><option value="Autocontrol">Base Autocontrol</option></Select></FormControl>
         <FormControl><FormLabel>Bloqueio</FormLabel><Select value={bloqueio} onChange={(e) => setBloqueio(e.target.value)}><option value="Sim">Sim</option><option value="Nao">Não</option></Select></FormControl>
       </SimpleGrid>
-      <Button mt={8} colorScheme="blue" size="lg" width="full" type="submit" isLoading={isLoading} loadingText="A Cadastrar...">
+      <Button mt={8} bg="var(--primary)" color="white" _hover={{ bg: 'var(--primary-hover)' }} size="lg" width="full" type="submit" isLoading={isLoading} loadingText="A Cadastrar...">
         Cadastrar Instalação
       </Button>
     </Box>

@@ -1,35 +1,53 @@
-/* Arquivo: src/App.css */
+/* src/App.css */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 :root {
-  --primary-color: #0d6efd;
-  --dark-bg: #212529;
-  --light-bg: #f8f9fa;
-  --text-color: #343a40;
-  --border-color: #dee2e6;
-  --card-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --secondary: #6b7280;
+  --dark-bg: #111827;
+  --light-bg: #f9fafb;
+  --card-bg: #ffffff;
+  --text-dark: #1f2937;
+  --text-light: #f9fafb;
+  --border-color: #e5e7eb;
+  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
 }
+
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: 'Inter', sans-serif;
   background-color: var(--light-bg);
-  color: var(--text-color);
+  color: var(--text-dark);
 }
-main { padding: 1rem 2rem; }
+
+main { padding: 2rem; }
+
 .main-nav {
   display: flex;
   justify-content: center;
-  padding: 0.5rem;
-  background-color: #FFFFFF;
+  padding: 1rem;
+  background-color: var(--card-bg);
   border-bottom: 1px solid var(--border-color);
 }
+
 .nav-link {
-  color: #6B7280;
+  color: var(--secondary);
   margin: 0 1rem;
   text-decoration: none;
   font-weight: 500;
-  padding: 0.8rem 1rem;
+  padding: 0.5rem 1rem;
   border-radius: 6px;
-  position: relative;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease-in-out;
 }
-.nav-link:hover { color: var(--primary-color); background-color: #EFF6FF; }
-.nav-link.active { color: var(--primary-color); font-weight: 600; }
+
+.nav-link:hover {
+  color: var(--primary);
+  background-color: #eef2ff;
+}
+
+.nav-link.active {
+  color: var(--primary);
+  font-weight: 600;
+  background-color: #eef2ff;
+}
