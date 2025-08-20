@@ -142,7 +142,11 @@ export function TechnicianAgenda() {
                     </ListGroup.Item>
                   ))
                 ) : (
-                  <ListGroup.Item>Nenhum agendamento para esta data.</ListGroup.Item>
+                  <ListGroup.Item>
+                    <p className="text-muted mb-0 fst-italic">
+                      Nenhum agendamento para esta data.
+                    </p>
+                  </ListGroup.Item>
                 )}
             </ListGroup>
           </Card>
@@ -162,7 +166,10 @@ export function TechnicianAgenda() {
                   <p className="mb-0"><strong>Endereço:</strong> {selectedInstallation.endereco}</p>
                 </div>
               ) : (
-                <p className="text-muted">Selecione um agendamento para ver os detalhes.</p>
+                <div className="text-center text-muted">
+                  <i className="bi bi-cursor-fill fs-4"></i>
+                  <p className="mt-2">Selecione um agendamento para ver os detalhes.</p>
+                </div>
               )}
             </Card.Body>
           </Card>

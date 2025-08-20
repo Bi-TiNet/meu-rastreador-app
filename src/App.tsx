@@ -75,7 +75,7 @@ function AppNavbar({ session, userRole }: { session: Session | null, userRole: s
     return (
         <Navbar bg="light" variant="light" expand="lg" className="mb-4">
             <Container>
-                <Navbar.Brand as={NavLink} to={session ? "/" : "/login"} className="fw-bold">
+                <Navbar.Brand as={NavLink} to={session ? (userRole === 'admin' ? '/painel' : '/') : '/login'} className="fw-bold">
                     <i className="bi bi-geo-alt-fill me-2"></i>
                     Agenda de Instalações
                 </Navbar.Brand>

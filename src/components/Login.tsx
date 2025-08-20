@@ -16,17 +16,19 @@ export function Login() {
     setLoading(true);
     setError(null);
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data: { user }, error } = await supabase.auth.signInWithPassword({
       email: email,
       password: password,
     });
 
     if (error) {
       setError(error.message);
+      setLoading(false);
     } else {
-      navigate('/painel');
+      // Verifica a role do usuário e redireciona para a página correta
+      const userRole = user?.app_metadata?.role || 'admin';
+      navigate(userRole === 'admin' ? '/painel' : '/');
     }
-    setLoading(false);
   };
 
   return (
