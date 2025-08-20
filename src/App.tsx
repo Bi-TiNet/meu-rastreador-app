@@ -1,54 +1,38 @@
 // Arquivo: src/App.tsx
 import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom';
-import { Box, Flex } from '@chakra-ui/react';
+import { Container, Navbar, Nav } from 'react-bootstrap';
 import { InstallationForm } from './components/InstallationForm';
 import { Dashboard } from './components/Dashboard';
 import { TechnicianAgenda } from './components/TechnicianAgenda';
 import { InsuranceView } from './components/InsuranceView';
 
 function App() {
-  const activeLinkStyle = {
-    color: 'var(--chakra-colors-brand-400)',
-    backgroundColor: 'rgba(56, 178, 172, 0.1)',
-  };
-
   return (
     <BrowserRouter>
-      <Flex
-        as="nav"
-        justify="center"
-        p={4}
-        bg="gray.800"
-        borderBottom="1px"
-        borderColor="gray.700"
-        mb={8}
-      >
-        <Box
-          as={NavLink}
-          to="/"
-          style={({ isActive }) => (isActive ? activeLinkStyle : undefined)}
-          px={4} py={2} mx={2} borderRadius="md" textDecoration="none" fontWeight="500"
-        >
-          Cadastrar Instalação
-        </Box>
-        <Box
-          as={NavLink}
-          to="/painel"
-          style={({ isActive }) => (isActive ? activeLinkStyle : undefined)}
-          px={4} py={2} mx={2} borderRadius="md" textDecoration="none" fontWeight="500"
-        >
-          Painel de Agendamentos
-        </Box>
-        {/* Outros links seguem o mesmo padrão */}
-      </Flex>
+      <Navbar bg="dark" variant="dark" expand="lg" className="mb-4">
+        <Container>
+          <Navbar.Brand as={NavLink} to="/">Meu Rastreador</Navbar.Brand>
+          <Navbar.Toggle aria-controls="basic-navbar-nav" />
+          <Navbar.Collapse id="basic-navbar-nav">
+            <Nav className="me-auto">
+              <Nav.Link as={NavLink} to="/" end>Cadastrar Instalação</Nav.Link>
+              <Nav.Link as={NavLink} to="/painel">Painel de Agendamentos</Nav.Link>
+              <Nav.Link as={NavLink} to="/agenda">Agenda do Técnico</Nav.Link>
+              <Nav.Link as={NavLink} to="/consulta">Consulta</Nav.Link>
+            </Nav>
+          </Navbar.Collapse>
+        </Container>
+      </Navbar>
       
       <main>
-        <Routes>
-          <Route path="/" element={<InstallationForm />} />
-          <Route path="/painel" element={<Dashboard />} />
-          <Route path="/agenda" element={<TechnicianAgenda />} />
-          <Route path="/consulta" element={<InsuranceView />} />
-        </Routes>
+        <Container>
+          <Routes>
+            <Route path="/" element={<InstallationForm />} />
+            <Route path="/painel" element={<Dashboard />} />
+            <Route path="/agenda" element={<TechnicianAgenda />} />
+            <Route path="/consulta" element={<InsuranceView />} />
+          </Routes>
+        </Container>
       </main>
     </BrowserRouter>
   );

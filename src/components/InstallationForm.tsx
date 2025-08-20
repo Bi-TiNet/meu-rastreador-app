@@ -1,9 +1,6 @@
 // Arquivo: src/components/InstallationForm.tsx
 import { useState, type FormEvent } from 'react';
-import {
-  Box, Button, FormControl, FormLabel, Input, Select, Textarea,
-  Heading, SimpleGrid, Divider, useToast,
-} from '@chakra-ui/react';
+import { Button, Form, Row, Col, Card, FloatingLabel, Spinner, Alert } from 'react-bootstrap';
 
 export function InstallationForm() {
   const [nome, setNome] = useState('');
@@ -18,11 +15,12 @@ export function InstallationForm() {
   const [base, setBase] = useState('Atena');
   const [bloqueio, setBloqueio] = useState('Sim');
   const [isLoading, setIsLoading] = useState(false);
-  const toast = useToast();
+  const [message, setMessage] = useState<{type: 'success' | 'danger', text: string} | null>(null);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setIsLoading(true);
+    setMessage(null);
 
     const data = {
       nome, contato, placa, modelo, ano, cor,
@@ -41,14 +39,7 @@ export function InstallationForm() {
         throw new Error(errorData.message || 'Falha na resposta da rede.');
       }
 
-      toast({
-        title: 'Instalação Cadastrada.',
-        description: "Os dados foram salvos com sucesso.",
-        status: 'success',
-        duration: 5000,
-        isClosable: true,
-        position: 'top',
-      });
+      setMessage({type: 'success', text: 'Instalação cadastrada com sucesso!'});
 
       // Limpar formulário
       setNome(''); setContato(''); setPlaca(''); setModelo(''); setAno('');
@@ -56,68 +47,100 @@ export function InstallationForm() {
       setBase('Atena'); setBloqueio('Sim');
 
     } catch (error: any) {
-      toast({
-        title: 'Erro ao Cadastrar.',
-        description: error.message || "Não foi possível salvar os dados.",
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-        position: 'top',
-      });
+        setMessage({type: 'danger', text: error.message || "Não foi possível salvar os dados."});
     } finally {
       setIsLoading(false);
     }
   }
 
   return (
-    <Box 
-      as="form" 
-      p={8} 
-      bg="gray.800" // Cor de fundo do card para tema escuro
-      borderRadius="lg" 
-      boxShadow="xl" // Sombra mais pronunciada
-      onSubmit={handleSubmit}
-      maxW="1000px"
-      mx="auto"
-    >
-      <Heading as="h2" size="lg" textAlign="center" mb={8}>
-        Cadastrar Nova Instalação
-      </Heading>
-      
-      <SimpleGrid columns={{ base: 1, md: 3 }} spacing={6}>
-        <FormControl isRequired><FormLabel>Nome Completo</FormLabel><Input value={nome} onChange={(e) => setNome(e.target.value)} /></FormControl>
-        <FormControl isRequired><FormLabel>Número de Contato</FormLabel><Input value={contato} onChange={(e) => setContato(e.target.value)} /></FormControl>
-        <FormControl isRequired><FormLabel>Placa do Veículo</FormLabel><Input value={placa} onChange={(e) => setPlaca(e.target.value.toUpperCase())} /></FormControl>
-        <FormControl><FormLabel>Modelo do Veículo</FormLabel><Input value={modelo} onChange={(e) => setModelo(e.target.value)} /></FormControl>
-        <FormControl><FormLabel>Ano de Fabricação</FormLabel><Input value={ano} onChange={(e) => setAno(e.target.value)} /></FormControl>
-        <FormControl><FormLabel>Cor do Veículo</FormLabel><Input value={cor} onChange={(e) => setCor(e.target.value)} /></FormControl>
-        <FormControl gridColumn="1 / -1"><FormLabel>Endereço do Cliente</FormLabel><Textarea value={endereco} onChange={(e) => setEndereco(e.target.value)} /></FormControl>
-      </SimpleGrid>
+    <Card>
+      <Card.Header as="h4">Cadastrar Nova Instalação</Card.Header>
+      <Card.Body>
+        <Form onSubmit={handleSubmit}>
+          {message && <Alert variant={message.type}>{message.text}</Alert>}
+          <h5>Dados do Cliente e Veículo</h5>
+          <hr/>
+          <Row className="g-3">
+            <Col md={4}>
+              <FloatingLabel controlId="floatingNome" label="Nome Completo">
+                <Form.Control type="text" placeholder="Nome Completo" required value={nome} onChange={(e) => setNome(e.target.value)} />
+              </FloatingLabel>
+            </Col>
+            <Col md={4}>
+              <FloatingLabel controlId="floatingContato" label="Número de Contato">
+                <Form.Control type="text" placeholder="Número de Contato" required value={contato} onChange={(e) => setContato(e.target.value)} />
+              </FloatingLabel>
+            </Col>
+            <Col md={4}>
+              <FloatingLabel controlId="floatingPlaca" label="Placa do Veículo">
+                <Form.Control type="text" placeholder="Placa do Veículo" required value={placa} onChange={(e) => setPlaca(e.target.value.toUpperCase())} />
+              </FloatingLabel>
+            </Col>
+            <Col md={4}>
+              <FloatingLabel controlId="floatingModelo" label="Modelo do Veículo">
+                <Form.Control type="text" placeholder="Modelo do Veículo" value={modelo} onChange={(e) => setModelo(e.target.value)} />
+              </FloatingLabel>
+            </Col>
+            <Col md={4}>
+              <FloatingLabel controlId="floatingAno" label="Ano de Fabricação">
+                <Form.Control type="text" placeholder="Ano de Fabricação" value={ano} onChange={(e) => setAno(e.target.value)} />
+              </FloatingLabel>
+            </Col>
+            <Col md={4}>
+              <FloatingLabel controlId="floatingCor" label="Cor do Veículo">
+                <Form.Control type="text" placeholder="Cor do Veículo" value={cor} onChange={(e) => setCor(e.target.value)} />
+              </FloatingLabel>
+            </Col>
+            <Col md={12}>
+              <FloatingLabel controlId="floatingEndereco" label="Endereço do Cliente">
+                <Form.Control as="textarea" placeholder="Endereço do Cliente" style={{ height: '100px' }} value={endereco} onChange={(e) => setEndereco(e.target.value)} />
+              </FloatingLabel>
+            </Col>
+          </Row>
 
-      <Divider my={8} borderColor="gray.700" />
+          <h5 className="mt-4">Detalhes de Acesso do Rastreador</h5>
+          <hr/>
 
-      <Heading as="h3" size="md" textAlign="center" mb={6}>
-        Detalhes de Acesso do Rastreador
-      </Heading>
-      
-      <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
-        <FormControl><FormLabel>Usuário</FormLabel><Input value={usuario} onChange={(e) => setUsuario(e.target.value)} /></FormControl>
-        <FormControl><FormLabel>Senha</FormLabel><Input value={senha} onChange={(e) => setSenha(e.target.value)} /></FormControl>
-        <FormControl><FormLabel>Base</FormLabel><Select value={base} onChange={(e) => setBase(e.target.value)}><option value="Atena">Base Atena</option><option value="Autocontrol">Base Autocontrol</option></Select></FormControl>
-        <FormControl><FormLabel>Bloqueio</FormLabel><Select value={bloqueio} onChange={(e) => setBloqueio(e.target.value)}><option value="Sim">Sim</option><option value="Nao">Não</option></Select></FormControl>
-      </SimpleGrid>
+          <Row className="g-3">
+            <Col md={6}>
+              <FloatingLabel controlId="floatingUsuario" label="Usuário">
+                <Form.Control type="text" placeholder="Usuário" value={usuario} onChange={(e) => setUsuario(e.target.value)} />
+              </FloatingLabel>
+            </Col>
+            <Col md={6}>
+              <FloatingLabel controlId="floatingSenha" label="Senha">
+                <Form.Control type="password" placeholder="Senha" value={senha} onChange={(e) => setSenha(e.target.value)} />
+              </FloatingLabel>
+            </Col>
+            <Col md={6}>
+              <FloatingLabel controlId="floatingBase" label="Base">
+                <Form.Select value={base} onChange={(e) => setBase(e.target.value)}>
+                  <option value="Atena">Base Atena</option>
+                  <option value="Autocontrol">Base Autocontrol</option>
+                </Form.Select>
+              </FloatingLabel>
+            </Col>
+            <Col md={6}>
+              <FloatingLabel controlId="floatingBloqueio" label="Bloqueio">
+                <Form.Select value={bloqueio} onChange={(e) => setBloqueio(e.target.value)}>
+                  <option value="Sim">Sim</option>
+                  <option value="Nao">Não</option>
+                </Form.Select>
+              </FloatingLabel>
+            </Col>
+          </Row>
 
-      <Button 
-        mt={8} 
-        colorScheme="brand" // Usando a cor 'brand' do nosso tema
-        size="lg" 
-        width="full" 
-        type="submit" 
-        isLoading={isLoading} 
-        loadingText="A Cadastrar..."
-      >
-        Cadastrar Instalação
-      </Button>
-    </Box>
+          <Button 
+            variant="primary" 
+            type="submit" 
+            className="w-100 mt-4" 
+            disabled={isLoading}
+          >
+            {isLoading ? <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" /> : 'Cadastrar Instalação'}
+          </Button>
+        </Form>
+      </Card.Body>
+    </Card>
   );
 }

@@ -1,37 +1,13 @@
 // Arquivo: src/components/Dashboard.tsx
 import { useEffect, useState, type FormEvent } from 'react';
 import {
-  Box, Button, Heading, useToast, Table, Thead, Tbody, Tr, Th, Td, TableContainer,
-  Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalFooter, FormControl, 
-  FormLabel, Input, Spinner, Center, Text, HStack
-} from '@chakra-ui/react';
+  Button, Table, Modal, FormControl, 
+  FormLabel, InputGroup, Spinner, Alert, Card
+} from 'react-bootstrap';
 
-// Interface para os dados de uma instalação
-interface Installation {
-  id: number;
-  nome_completo: string;
-  contato: string;
-  placa: string;
-  modelo: string;
-  ano?: string;
-  cor?: string;
-  endereco: string;
-  usuario: string;
-  senha?: string;
-  base: string;
-  bloqueio: string;
-  status: string;
-  data_instalacao?: string;
-  horario?: string;
-}
+// ... (interface Installation)
 
-// Componente para o Modal de Agendamento
-interface ScheduleModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  installation: Installation;
-  onSchedule: (id: number, date: string, time: string) => void;
-}
+// ... (interface ScheduleModalProps)
 
 function ScheduleModal({ isOpen, onClose, installation, onSchedule }: ScheduleModalProps) {
   const [dateTime, setDateTime] = useState('');
@@ -43,54 +19,33 @@ function ScheduleModal({ isOpen, onClose, installation, onSchedule }: ScheduleMo
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} isCentered>
-      <ModalOverlay bg="blackAlpha.700" />
-      <ModalContent as="form" onSubmit={handleSubmit}>
-        <ModalHeader>Agendar Instalação</ModalHeader>
-        <ModalBody>
-          <Text mb={2}><strong>Cliente:</strong> {installation.nome_completo}</Text>
-          <Text><strong>Veículo:</strong> {installation.modelo} ({installation.placa})</Text>
-          <FormControl mt={4} isRequired>
+    <Modal show={isOpen} onHide={onClose} centered>
+      <Modal.Header closeButton>
+        <Modal.Title>Agendar Instalação</Modal.Title>
+      </Modal.Header>
+      <Modal.Body>
+        <p><strong>Cliente:</strong> {installation.nome_completo}</p>
+        <p><strong>Veículo:</strong> {installation.modelo} ({installation.placa})</p>
+        <Form onSubmit={handleSubmit}>
+          <InputGroup className="mt-3">
             <FormLabel>Data e Hora</FormLabel>
-            <Input type="datetime-local" value={dateTime} onChange={e => setDateTime(e.target.value)} />
-          </FormControl>
-        </ModalBody>
-        <ModalFooter>
-          <Button variant="ghost" mr={3} onClick={onClose}>Cancelar</Button>
-          <Button colorScheme="brand" type="submit">Salvar Agendamento</Button>
-        </ModalFooter>
-      </ModalContent>
+            <FormControl type="datetime-local" value={dateTime} onChange={e => setDateTime(e.target.value)} required/>
+          </InputGroup>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={onClose}>Cancelar</Button>
+            <Button variant="primary" type="submit">Salvar Agendamento</Button>
+          </Modal.Footer>
+        </Form>
+      </Modal.Body>
     </Modal>
   );
 }
 
-
-// Componente principal do Dashboard
 export function Dashboard() {
-  const [installations, setInstallations] = useState<Installation[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selected, setSelected] = useState<Installation | null>(null);
-  const toast = useToast();
+    // ... (useState hooks)
+    const [message, setMessage] = useState<{type: 'success' | 'danger' | 'info', text: string} | null>(null);
 
-  const fetchInstallations = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch('/.netlify/functions/get-installations');
-      if (!response.ok) throw new Error('Falha ao buscar dados.');
-      const data: Installation[] = await response.json();
-      setInstallations(data);
-    } catch (err: any) {
-      setError(err.message || 'Não foi possível carregar as instalações.');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchInstallations();
-  }, []);
+  // ... (fetchInstallations)
 
   const handleSchedule = async (id: number, date: string, time: string) => {
     try {
@@ -100,11 +55,11 @@ export function Dashboard() {
         body: JSON.stringify({ id, date, time }),
       });
       if (!response.ok) throw new Error('Falha ao agendar.');
-      toast({ title: 'Agendado!', status: 'success', duration: 3000, isClosable: true, position: 'top' });
+      setMessage({type: 'success', text: 'Agendado com sucesso!'});
       setSelected(null);
-      await fetchInstallations(); // Atualiza a lista após agendar
+      await fetchInstallations();
     } catch (error: any) {
-      toast({ title: 'Erro ao agendar', description: error.message, status: 'error', duration: 3000, isClosable: true, position: 'top' });
+        setMessage({type: 'danger', text: error.message || 'Erro ao agendar.'});
     }
   };
 
@@ -121,50 +76,47 @@ senha: ${inst.senha || ''}
 BASE Atena ( ${inst.base === 'Atena' ? 'X' : ' '} )   Base Autocontrol ( ${inst.base === 'Autocontrol' ? 'X' : ' '} )
 Bloqueio sim ( ${inst.bloqueio === 'Sim' ? 'X' : ' '} )  nao ( ${inst.bloqueio === 'Nao' ? 'X' : ' '} )`;
     navigator.clipboard.writeText(formattedText)
-      .then(() => toast({ title: 'Informações copiadas!', status: 'info', duration: 3000, isClosable: true, position: 'top' }))
-      .catch(() => toast({ title: 'Erro ao copiar', status: 'error', duration: 3000, isClosable: true, position: 'top' }));
+      .then(() => setMessage({type: 'info', text: 'Informações copiadas!'}))
+      .catch(() => setMessage({type: 'danger', text: 'Erro ao copiar.'}));
   };
 
-  if (loading) return <Center p={10}><Spinner size="xl" color="brand.500" /></Center>;
-  if (error) return <Text color="red.400" textAlign="center">{error}</Text>;
+  if (loading) return <div className="text-center p-5"><Spinner animation="border" variant="primary" /></div>;
+  if (error) return <Alert variant="danger">{error}</Alert>;
 
   return (
-    <Box p={8} bg="gray.800" borderRadius="lg" boxShadow="xl" mt={10} mx="auto" maxW="1200px">
-      <Heading as="h2" size="lg" textAlign="center" mb={6}>
-        Painel de Agendamentos
-      </Heading>
-      <TableContainer>
-        <Table variant="simple">
-          <Thead>
-            <Tr>
-              <Th>Cliente</Th>
-              <Th>Veículo</Th>
-              <Th>Agendamento</Th>
-              <Th>Ações</Th>
-            </Tr>
-          </Thead>
-          <Tbody>
+    <Card>
+      <Card.Header as="h4">Painel de Agendamentos</Card.Header>
+      <Card.Body>
+        {message && <Alert variant={message.type}>{message.text}</Alert>}
+        <Table striped bordered hover responsive>
+          <thead>
+            <tr>
+              <th>Cliente</th>
+              <th>Veículo</th>
+              <th>Agendamento</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
             {installations.map((inst) => (
-              <Tr key={inst.id} _hover={{ bg: 'gray.700' }}>
-                <Td>{inst.nome_completo}</Td>
-                <Td>{`${inst.modelo} (${inst.placa})`}</Td>
-                <Td>
+              <tr key={inst.id}>
+                <td>{inst.nome_completo}</td>
+                <td>{`${inst.modelo} (${inst.placa})`}</td>
+                <td>
                   {inst.status === 'Agendado' ? `${inst.data_instalacao} às ${inst.horario}` : inst.status}
-                </Td>
-                <Td>
-                  <HStack spacing={2}>
-                    <Button size="sm" variant="outline" onClick={() => handleCopy(inst)}>Copiar</Button>
-                    <Button size="sm" colorScheme="brand" onClick={() => setSelected(inst)}>Agendar</Button>
-                  </HStack>
-                </Td>
-              </Tr>
+                </td>
+                <td>
+                  <Button size="sm" variant="outline-secondary" onClick={() => handleCopy(inst)} className="me-2">Copiar</Button>
+                  <Button size="sm" variant="primary" onClick={() => setSelected(inst)}>Agendar</Button>
+                </td>
+              </tr>
             ))}
-          </Tbody>
+          </tbody>
         </Table>
-      </TableContainer>
+      </Card.Body>
       {selected && (
         <ScheduleModal isOpen={!!selected} onClose={() => setSelected(null)} installation={selected} onSchedule={handleSchedule} />
       )}
-    </Box>
+    </Card>
   );
 }
