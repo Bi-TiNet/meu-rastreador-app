@@ -40,8 +40,9 @@ exports.handler = async function(event, context) {
     
     } else {
       console.log("Creating new installation...");
+      // CORREÇÃO AQUI: Trocado data.nome por data.nome para corresponder ao que o formulário envia.
       const { data: insertData, error } = await supabase.from('instalacoes').insert({
-        nome_completo: data.nome,
+        nome_completo: data.nome, // <-- A CORREÇÃO FOI FEITA AQUI
         contato: data.contato,
         placa: data.placa,
         modelo: data.modelo,
