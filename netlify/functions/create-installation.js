@@ -1,28 +1,46 @@
-// Arquivo: netlify/functions/create-installation.js
 const { createClient } = require('@supabase/supabase-js');
 
 exports.handler = async function(event, context) {
+  console.log("Function 'create-installation' invoked.");
+
   const supabaseUrl = process.env.SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_KEY;
+
+  if (!supabaseUrl || !supabaseKey) {
+    console.error("Supabase URL or Key is missing.");
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ message: "Configuração do servidor incompleta. Variáveis de ambiente do Supabase não encontradas." }),
+    };
+  }
+  
+  console.log("Supabase environment variables found.");
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
+    console.log("Parsing event body...");
     const data = JSON.parse(event.body);
+    console.log("Body parsed successfully.");
 
-    // Se a requisição contiver um ID, é uma atualização (agendamento)
     if (data.id) {
+      console.log(`Updating installation with ID: ${data.id}`);
       const { id, date, time } = data;
-      const { error } = await supabase
+      const { data: updateData, error } = await supabase
         .from('instalacoes')
         .update({ data_instalacao: date, horario: time, status: 'Agendado' })
-        .eq('id', id);
+        .eq('id', id)
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase update error:", error);
+        throw error;
+      }
+      console.log("Update successful:", updateData);
       return { statusCode: 200, body: JSON.stringify({ message: 'Agendamento atualizado!' }) };
     
     } else {
-      // Se não, é um novo cadastro
-      const { error } = await supabase.from('instalacoes').insert({
+      console.log("Creating new installation...");
+      const { data: insertData, error } = await supabase.from('instalacoes').insert({
         nome_completo: data.nome,
         contato: data.contato,
         placa: data.placa,
@@ -35,13 +53,20 @@ exports.handler = async function(event, context) {
         base: data.base,
         bloqueio: data.bloqueio,
         status: 'A agendar'
-      });
+      }).select();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase insert error:", error);
+        throw error;
+      }
+      console.log("Insert successful:", insertData);
       return { statusCode: 200, body: JSON.stringify({ message: 'Instalação cadastrada!' }) };
     }
   } catch (error) {
-    console.error("Erro na função:", error);
-    return { statusCode: 500, body: JSON.stringify({ message: error.message }) };
+    console.error("Caught an error in the function:", error);
+    return { 
+      statusCode: 500, 
+      body: JSON.stringify({ message: error.message || "Ocorreu um erro interno no servidor." }) 
+    };
   }
 };

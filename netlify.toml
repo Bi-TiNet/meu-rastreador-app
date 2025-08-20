@@ -1,5 +1,6 @@
-# Arquivo de configuração para o Netlify
-
 [build]
-  # O comando que o Netlify deve rodar para construir nosso site.
   command = "npm run build"
+  publish = "dist"
+
+[functions]
+  directory = "netlify/functions"
