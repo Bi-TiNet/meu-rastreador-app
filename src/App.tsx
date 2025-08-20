@@ -1,5 +1,5 @@
 // src/App.tsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, NavLink, Navigate, useNavigate } from 'react-router-dom';
 import { Container, Navbar, Nav, Button } from 'react-bootstrap';
 import { InstallationForm } from './components/InstallationForm';
@@ -11,7 +11,7 @@ import { supabase } from './supabaseClient';
 import type { Session } from '@supabase/supabase-js';
 
 // Componente para proteger rotas
-function ProtectedRoute({ children }: { children: JSX.Element }) {
+function ProtectedRoute({ children }: { children: ReactNode }) { // <-- MUDANÇA AQUI
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
