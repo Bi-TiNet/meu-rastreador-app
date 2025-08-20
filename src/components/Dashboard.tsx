@@ -1,8 +1,7 @@
 // Arquivo: src/components/Dashboard.tsx
 import { useEffect, useState, type FormEvent } from 'react';
 import {
-  Button, Table, Modal, FormControl, 
-  FormLabel, InputGroup, Spinner, Alert, Card, Form, Badge
+  Button, Table, Modal, Spinner, Alert, Card, Form, Badge
 } from 'react-bootstrap';
 
 // Interface para os dados de uma instalação
