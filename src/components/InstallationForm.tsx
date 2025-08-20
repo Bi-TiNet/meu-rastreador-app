@@ -55,13 +55,17 @@ export function InstallationForm() {
 
   return (
     <Card>
-      <Card.Header as="h4">Cadastrar Nova Instalação</Card.Header>
-      <Card.Body>
+      <Card.Header as="h5">
+        <i className="bi bi-card-list me-2"></i>
+        Cadastrar Nova Instalação
+      </Card.Header>
+      <Card.Body className="p-4">
         <Form onSubmit={handleSubmit}>
           {message && <Alert variant={message.type}>{message.text}</Alert>}
-          <h5>Dados do Cliente e Veículo</h5>
-          <hr/>
-          <Row className="g-3">
+          
+          <h6 className="text-primary">DADOS DO CLIENTE E VEÍCULO</h6>
+          <hr className="mt-2"/>
+          <Row className="g-3 mb-4">
             <Col md={4}>
               <FloatingLabel controlId="floatingNome" label="Nome Completo">
                 <Form.Control type="text" placeholder="Nome Completo" required value={nome} onChange={(e) => setNome(e.target.value)} />
@@ -99,9 +103,9 @@ export function InstallationForm() {
             </Col>
           </Row>
 
-          <h5 className="mt-4">Detalhes de Acesso do Rastreador</h5>
-          <hr/>
-
+          <h6 className="text-primary">DETALHES DE ACESSO DO RASTREADOR</h6>
+          <hr className="mt-2"/>
+          
           <Row className="g-3">
             <Col md={6}>
               <FloatingLabel controlId="floatingUsuario" label="Usuário">
@@ -134,10 +138,10 @@ export function InstallationForm() {
           <Button 
             variant="primary" 
             type="submit" 
-            className="w-100 mt-4" 
+            className="w-100 mt-4 py-2" 
             disabled={isLoading}
           >
-            {isLoading ? <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" /> : 'Cadastrar Instalação'}
+            {isLoading ? <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" /> : <><i className="bi bi-check-circle me-2"></i>Cadastrar Instalação</>}
           </Button>
         </Form>
       </Card.Body>
