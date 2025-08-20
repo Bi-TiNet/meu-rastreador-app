@@ -1,7 +1,7 @@
 // Arquivo: src/components/Dashboard.tsx
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, useMemo, type FormEvent } from 'react';
 import {
-  Button, Table, Modal, Spinner, Alert, Card, Form, Badge
+  Button, Table, Modal, Spinner, Alert, Card, Form, Badge, InputGroup
 } from 'react-bootstrap';
 
 // Interface para os dados de uma instalação
@@ -70,6 +70,7 @@ export function Dashboard() {
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Installation | null>(null);
   const [message, setMessage] = useState<{type: 'success' | 'danger' | 'info', text: string} | null>(null);
+  const [searchTerm, setSearchTerm] = useState(''); // Estado para o termo de busca
 
   const fetchInstallations = async () => {
     setLoading(true);
@@ -89,6 +90,16 @@ export function Dashboard() {
   useEffect(() => {
     fetchInstallations();
   }, []);
+  
+  // Filtra as instalações com base no termo de busca
+  const filteredInstallations = useMemo(() =>
+    installations.filter(inst =>
+      inst.nome_completo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      inst.placa.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      inst.modelo.toLowerCase().includes(searchTerm.toLowerCase())
+    ),
+  [installations, searchTerm]);
+
 
   const handleSchedule = async (id: number, date: string, time: string) => {
     try {
@@ -133,7 +144,17 @@ Bloqueio sim ( ${inst.bloqueio === 'Sim' ? 'X' : ' '} )  nao ( ${inst.bloqueio =
         Painel de Agendamentos
       </Card.Header>
       <Card.Body>
+        <InputGroup className="mb-3">
+          <InputGroup.Text><i className="bi bi-search"></i></InputGroup.Text>
+          <Form.Control
+            placeholder="Buscar por cliente, placa ou modelo..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </InputGroup>
+        
         {message && <Alert variant={message.type} onClose={() => setMessage(null)} dismissible>{message.text}</Alert>}
+
         <Table striped bordered hover responsive>
           <thead className="table-light">
             <tr>
@@ -144,7 +165,7 @@ Bloqueio sim ( ${inst.bloqueio === 'Sim' ? 'X' : ' '} )  nao ( ${inst.bloqueio =
             </tr>
           </thead>
           <tbody>
-            {installations.map((inst: Installation) => (
+            {filteredInstallations.map((inst: Installation) => (
               <tr key={inst.id}>
                 <td>{inst.nome_completo}</td>
                 <td>{`${inst.modelo} (${inst.placa})`}</td>
@@ -163,6 +184,13 @@ Bloqueio sim ( ${inst.bloqueio === 'Sim' ? 'X' : ' '} )  nao ( ${inst.bloqueio =
             ))}
           </tbody>
         </Table>
+        
+        {filteredInstallations.length === 0 && (
+          <div className="text-center text-muted mt-3">
+            Nenhum resultado encontrado.
+          </div>
+        )}
+
       </Card.Body>
       {selected && (
         <ScheduleModal isOpen={!!selected} onClose={() => setSelected(null)} installation={selected} onSchedule={handleSchedule} />
