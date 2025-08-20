@@ -2,10 +2,26 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Form, Card, ListGroup, Badge, Modal, Button, Alert, Spinner } from 'react-bootstrap';
 
-// ... (interface Installation)
+// Interface para os dados
+interface Installation {
+  id: number;
+  nome_completo: string;
+  contato: string;
+  placa: string;
+  modelo: string;
+  endereco: string;
+  data_instalacao?: string;
+  horario?: string;
+  status: string;
+}
 
-// ... (interface DetailsModalProps)
+// CORREÇÃO: Definimos os tipos para as propriedades do Modal
+interface DetailsModalProps {
+  installation: Installation;
+  onClose: () => void;
+}
 
+// Componente para o Modal de Detalhes
 function DetailsModal({ installation, onClose }: DetailsModalProps) {
   return (
     <Modal show onHide={onClose} centered>
@@ -30,9 +46,37 @@ function DetailsModal({ installation, onClose }: DetailsModalProps) {
 }
 
 export function InsuranceView() {
-    // ... (useState hooks)
+  const [allInstallations, setAllInstallations] = useState<Installation[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selected, setSelected] = useState<Installation | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
-  // ... (useEffect e filteredInstallations)
+  useEffect(() => {
+    async function fetchInstallations() {
+      try {
+        const response = await fetch('/.netlify/functions/get-installations');
+        if (!response.ok) throw new Error('Falha ao buscar dados.');
+        const data: Installation[] = await response.json();
+        setAllInstallations(data);
+      } catch (err) {
+        setError('Não foi possível carregar os dados.');
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchInstallations();
+  }, []);
+
+  const filteredInstallations = useMemo(() => 
+    allInstallations.filter(inst => 
+      inst.nome_completo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      inst.placa.toLowerCase().includes(searchTerm.toLowerCase())
+    ), 
+  [allInstallations, searchTerm]);
+
+  const scheduled = filteredInstallations.filter(inst => inst.status === 'Agendado');
+  const pending = filteredInstallations.filter(inst => inst.status !== 'Agendado');
 
   if (loading) return <div className="text-center p-5"><Spinner animation="border" variant="primary" /></div>;
   if (error) return <Alert variant="danger">{error}</Alert>;
@@ -57,7 +101,7 @@ export function InsuranceView() {
             <Card.Header as="h5">Agendadas</Card.Header>
             <ListGroup variant="flush">
               {scheduled.length > 0 ? (
-                scheduled.map(inst => (
+                scheduled.map((inst: Installation) => (
                   <ListGroup.Item key={inst.id} action onClick={() => setSelected(inst)}>
                     <div className="d-flex justify-content-between align-items-center">
                       {inst.nome_completo} ({inst.placa})
@@ -75,7 +119,7 @@ export function InsuranceView() {
             <Card.Header as="h5">Pendentes</Card.Header>
             <ListGroup variant="flush">
               {pending.length > 0 ? (
-                pending.map(inst => (
+                pending.map((inst: Installation) => (
                   <ListGroup.Item key={inst.id} action onClick={() => setSelected(inst)}>
                     <div className="d-flex justify-content-between align-items-center">
                       {inst.nome_completo} ({inst.placa})

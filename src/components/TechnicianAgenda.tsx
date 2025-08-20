@@ -1,13 +1,29 @@
 // Arquivo: src/components/TechnicianAgenda.tsx
 import { useEffect, useState, useMemo } from 'react';
-import { Calendar, dateFnsLocalizer, Views, type SlotInfo } from 'react-big-calendar';
+import { Calendar, dateFnsLocalizer, Views, type SlotInfo, type Event } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { Card, Row, Col, ListGroup, Alert, Spinner } from 'react-bootstrap';
 
 
-// ... (interfaces)
+// Interface para os dados que vêm da API
+interface Installation {
+  id: number;
+  nome_completo: string;
+  contato: string;
+  placa: string;
+  modelo: string;
+  endereco: string;
+  data_instalacao?: string;
+  horario?: string;
+  status: string;
+}
+
+// Interface para os eventos que o calendário entende
+interface CalendarEvent extends Event {
+  resource: Installation;
+}
 
 const locales = { 'pt-BR': ptBR };
 const localizer = dateFnsLocalizer({
@@ -19,9 +35,59 @@ const localizer = dateFnsLocalizer({
 });
 
 export function TechnicianAgenda() {
-    // ... (useState hooks)
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedInstallation, setSelectedInstallation] = useState<Installation | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
-  // ... (useEffect, appointmentsForSelectedDay, handleSelectSlot, handleSelectEvent)
+  useEffect(() => {
+    async function fetchScheduledInstallations() {
+      try {
+        const response = await fetch('/.netlify/functions/get-installations');
+        if (!response.ok) throw new Error('Falha ao buscar dados.');
+        const allInstallations: Installation[] = await response.json();
+        
+        const scheduled = allInstallations
+          .filter(inst => inst.status === 'Agendado' && inst.data_instalacao && inst.horario)
+          .map(inst => {
+            const dateStr = inst.data_instalacao as string;
+            const timeStr = inst.horario as string;
+            const [year, month, day] = dateStr.split('-').map(Number);
+            const [hour, minute] = timeStr.split(':').map(Number);
+            const startDate = new Date(year, month - 1, day, hour, minute);
+            
+            return {
+              title: `${inst.nome_completo} (${inst.placa})`,
+              start: startDate,
+              end: new Date(startDate.getTime() + 60 * 60 * 1000), // Duração de 1h
+              resource: inst,
+            };
+          });
+        setEvents(scheduled);
+      } catch (err) {
+        setError('Não foi possível carregar a agenda.');
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchScheduledInstallations();
+  }, []);
+
+  const appointmentsForSelectedDay = useMemo(() => 
+    events.filter(event => 
+      format(event.start as Date, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd')
+    ).sort((a, b) => (a.start as Date).getTime() - (b.start as Date).getTime()),
+  [events, selectedDate]);
+
+  const handleSelectSlot = (slotInfo: SlotInfo) => {
+    setSelectedDate(slotInfo.start);
+    setSelectedInstallation(null);
+  };
+
+  const handleSelectEvent = (event: CalendarEvent) => {
+    setSelectedInstallation(event.resource);
+  };
 
   if (loading) return <div className="text-center p-5"><Spinner animation="border" variant="primary" /></div>;
   if (error) return <Alert variant="danger">{error}</Alert>;
@@ -59,14 +125,14 @@ export function TechnicianAgenda() {
             <Card.Header as="h5">Agendamentos para {format(selectedDate, 'dd/MM/yyyy')}</Card.Header>
             <ListGroup variant="flush">
               {appointmentsForSelectedDay.length > 0 ? (
-                  appointmentsForSelectedDay.map(event => (
+                  appointmentsForSelectedDay.map((event: CalendarEvent) => (
                     <ListGroup.Item 
                       key={event.resource.id} 
                       action
                       onClick={() => setSelectedInstallation(event.resource)}
                       active={selectedInstallation?.id === event.resource.id}
                     >
-                      {format(event.start, 'HH:mm')} - {event.resource.nome_completo}
+                      {format(event.start as Date, 'HH:mm')} - {event.resource.nome_completo}
                     </ListGroup.Item>
                   ))
                 ) : (

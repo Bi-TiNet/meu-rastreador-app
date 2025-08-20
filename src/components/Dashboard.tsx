@@ -2,12 +2,35 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import {
   Button, Table, Modal, FormControl, 
-  FormLabel, InputGroup, Spinner, Alert, Card
+  FormLabel, InputGroup, Spinner, Alert, Card, Form
 } from 'react-bootstrap';
 
-// ... (interface Installation)
+// Interface para os dados de uma instalação
+interface Installation {
+  id: number;
+  nome_completo: string;
+  contato: string;
+  placa: string;
+  modelo: string;
+  ano?: string;
+  cor?: string;
+  endereco: string;
+  usuario: string;
+  senha?: string;
+  base: string;
+  bloqueio: string;
+  status: string;
+  data_instalacao?: string;
+  horario?: string;
+}
 
-// ... (interface ScheduleModalProps)
+// Componente para o Modal de Agendamento
+interface ScheduleModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  installation: Installation;
+  onSchedule: (id: number, date: string, time: string) => void;
+}
 
 function ScheduleModal({ isOpen, onClose, installation, onSchedule }: ScheduleModalProps) {
   const [dateTime, setDateTime] = useState('');
@@ -41,11 +64,32 @@ function ScheduleModal({ isOpen, onClose, installation, onSchedule }: ScheduleMo
   );
 }
 
+// Componente principal do Dashboard
 export function Dashboard() {
-    // ... (useState hooks)
-    const [message, setMessage] = useState<{type: 'success' | 'danger' | 'info', text: string} | null>(null);
+  const [installations, setInstallations] = useState<Installation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Installation | null>(null);
+  const [message, setMessage] = useState<{type: 'success' | 'danger' | 'info', text: string} | null>(null);
 
-  // ... (fetchInstallations)
+  const fetchInstallations = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('/.netlify/functions/get-installations');
+      if (!response.ok) throw new Error('Falha ao buscar dados.');
+      const data: Installation[] = await response.json();
+      setInstallations(data);
+    } catch (err: any) {
+      setError(err.message || 'Não foi possível carregar as instalações.');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchInstallations();
+  }, []);
 
   const handleSchedule = async (id: number, date: string, time: string) => {
     try {
@@ -98,7 +142,7 @@ Bloqueio sim ( ${inst.bloqueio === 'Sim' ? 'X' : ' '} )  nao ( ${inst.bloqueio =
             </tr>
           </thead>
           <tbody>
-            {installations.map((inst) => (
+            {installations.map((inst: Installation) => (
               <tr key={inst.id}>
                 <td>{inst.nome_completo}</td>
                 <td>{`${inst.modelo} (${inst.placa})`}</td>
