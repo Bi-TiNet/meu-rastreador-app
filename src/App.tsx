@@ -78,6 +78,7 @@ function AppNavbar({ session, userRole }: { session: Session | null, userRole: s
                 <Navbar.Brand as={NavLink} to={session ? (userRole === 'admin' ? '/painel' : '/') : '/login'} className="fw-bold">
                     <i className="bi bi-geo-alt-fill me-2"></i>
                     Agenda de Instalações
+                    <link rel="icon" type="image/png" href="/meu-rastreador-app/public/logo.png" /> 
                 </Navbar.Brand>
                 <Navbar.Toggle aria-controls="basic-navbar-nav" />
                 <Navbar.Collapse id="basic-navbar-nav">
