@@ -76,15 +76,18 @@ function AppNavbar({ session, userRole }: { session: Session | null, userRole: s
     return (
         <Navbar bg="light" variant="light" expand="lg" className="mb-4">
             <Container>
-                <Navbar.Brand as={NavLink} to={session ? (userRole === 'admin' ? '/painel' : '/') : '/login'} className="fw-bold">
-                    {/* Alterado para usar o novo ícone */}
+                {/* LOGO E TEXTO ATUALIZADOS AQUI */}
+                <Navbar.Brand as={NavLink} to={session ? (userRole === 'admin' ? '/painel' : '/') : '/login'} className="d-flex align-items-center">
                     <img
-                      src="/logo.png"
-                      height="30"
+                      src="/logo-icon.png"
+                      height="40" // Altura aumentada para 40px
                       className="d-inline-block align-top me-2"
                       alt="Logo Autocontrol"
                     />
-                    Autocontrol
+                    <div className="d-flex flex-column lh-1">
+                        <span className="fw-bold fs-6">AUTOCONTROL</span>
+                        <small className="text-muted" style={{ fontSize: '0.65rem' }}>Rastreamento Veicular & Gestão de Frota</small>
+                    </div>
                 </Navbar.Brand>
                 <Navbar.Toggle aria-controls="basic-navbar-nav" />
                 <Navbar.Collapse id="basic-navbar-nav">
