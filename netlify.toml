@@ -4,3 +4,9 @@
 
 [functions]
   directory = "netlify/functions"
+
+# Adicione esta regra de redirecionamento abaixo
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
