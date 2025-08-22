@@ -80,13 +80,13 @@ function AppNavbar({ session, userRole }: { session: Session | null, userRole: s
                 <Navbar.Brand as={NavLink} to={session ? (userRole === 'admin' ? '/painel' : '/') : '/login'} className="d-flex align-items-center">
                     <img
                       src="/logo-icon.png"
-                      height="40" // Altura aumentada para 40px
+                      height="50" // Altura aumentada para 40px
                       className="d-inline-block align-top me-2"
                       alt="Logo Autocontrol"
                     />
                     <div className="d-flex flex-column lh-1">
-                        <span className="fw-bold fs-6">AUTOCONTROL</span>
-                        <small className="text-muted" style={{ fontSize: '0.65rem' }}>Rastreamento Veicular & Gestão de Frota</small>
+                        <span className="fw-bold fs-10">AUTOCONTROL</span>
+                        <small className="text-muted" style={{ fontSize: '0.45rem' }}>Rastreamento Veicular & Gestão de Frota</small>
                     </div>
                 </Navbar.Brand>
                 <Navbar.Toggle aria-controls="basic-navbar-nav" />
