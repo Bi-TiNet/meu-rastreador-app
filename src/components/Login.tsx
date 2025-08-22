@@ -25,7 +25,7 @@ export function Login() {
       setError(error.message);
       setLoading(false);
     } else {
-      // Verifica a role do usuário e redireciona para a página correta
+      // AJUSTE: Verifica a role do usuário e redireciona para a página correta
       const userRole = user?.app_metadata?.role || 'admin';
       navigate(userRole === 'admin' ? '/painel' : '/');
     }
