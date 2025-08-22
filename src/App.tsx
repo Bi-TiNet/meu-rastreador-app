@@ -77,8 +77,8 @@ function AppNavbar({ session, userRole }: { session: Session | null, userRole: s
         <Navbar bg="light" variant="light" expand="lg" className="mb-4">
             <Container>
                 <Navbar.Brand as={NavLink} to={session ? (userRole === 'admin' ? '/painel' : '/') : '/login'} className="fw-bold">
-                    <i className="bi bi-geo-alt-fill me-2"></i>
-                    Agenda de Instalações
+                    <img src="/logo.png" width="30" height="30" className="d-inline-block align-top me-2" alt="Logo Autocontrol" />
+                    Agenda Autocontrol
                 </Navbar.Brand>
                 <Navbar.Toggle aria-controls="basic-navbar-nav" />
                 <Navbar.Collapse id="basic-navbar-nav">
