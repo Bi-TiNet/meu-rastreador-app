@@ -1,6 +1,6 @@
 // src/components/Login.tsx
 import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { Card, Form, FloatingLabel, Button, Spinner, Alert, Container } from 'react-bootstrap';
 
@@ -25,7 +25,7 @@ export function Login() {
       setError(error.message);
       setLoading(false);
     } else {
-      // AJUSTE: Verifica a role do usuário e redireciona para a página correta
+      // Verifica a role do usuário e redireciona para a página correta
       const userRole = user?.app_metadata?.role || 'admin';
       navigate(userRole === 'admin' ? '/painel' : '/');
     }
@@ -70,6 +70,10 @@ export function Login() {
               {loading ? <Spinner as="span" animation="border" size="sm" /> : 'Entrar'}
             </Button>
           </Form>
+          {/* ADICIONADO AQUI */}
+          <div className="text-center mt-3">
+            <Link to="/update-password">Esqueceu sua senha?</Link>
+          </div>
         </Card.Body>
       </Card>
     </Container>
