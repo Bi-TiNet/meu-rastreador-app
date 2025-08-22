@@ -13,7 +13,7 @@ export function ResetPassword() {
 
   useEffect(() => {
     // Verifica se há um token de recuperação na URL quando a página carrega
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, _session) => { // <-- CORREÇÃO AQUI
       if (event === 'PASSWORD_RECOVERY') {
         // O Supabase já lidou com o token da URL e iniciou a sessão de recuperação
         setMessage({ type: 'success', text: 'Sessão de recuperação iniciada. Por favor, defina sua nova senha.' });
