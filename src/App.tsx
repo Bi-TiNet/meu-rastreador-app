@@ -79,7 +79,7 @@ function AppNavbar({ session, userRole }: { session: Session | null, userRole: s
                 <Navbar.Brand as={NavLink} to={session ? (userRole === 'admin' ? '/painel' : '/') : '/login'} className="fw-bold">
                     {/* Alterado para usar o novo ícone */}
                     <img
-                      src="/logo-icon.png"
+                      src="/logo.png"
                       height="30"
                       className="d-inline-block align-top me-2"
                       alt="Logo Autocontrol"
