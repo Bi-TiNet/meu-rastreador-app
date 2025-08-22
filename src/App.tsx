@@ -11,7 +11,7 @@ import { ResetPassword } from './components/ResetPassword';
 import { supabase } from './supabaseClient';
 import type { Session, User } from '@supabase/supabase-js';
 
-// ... (O código dos hooks e componentes de proteção de rota continua o mesmo)
+// Hook customizado para gerenciar o estado da sessão e do usuário
 function useAuth() {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
@@ -43,6 +43,8 @@ function useAuth() {
   return { session, user, userRole, loading };
 }
 
+
+// Componente para proteger rotas que TODOS os usuários logados podem ver
 function ProtectedRoute({ session, loading, children }: { session: Session | null, loading: boolean, children: ReactNode }) {
   if (loading) {
     return <div className="text-center p-5"><Spinner animation="border" /></div>;
@@ -50,6 +52,7 @@ function ProtectedRoute({ session, loading, children }: { session: Session | nul
   return session ? children : <Navigate to="/login" />;
 }
 
+// Componente para proteger rotas que APENAS administradores podem ver
 function AdminProtectedRoute({ session, userRole, loading, children }: { session: Session | null, userRole: string | null, loading: boolean, children: ReactNode }) {
   if (loading) {
     return <div className="text-center p-5"><Spinner animation="border" /></div>;
@@ -57,7 +60,7 @@ function AdminProtectedRoute({ session, userRole, loading, children }: { session
   if (!session) {
     return <Navigate to="/login" />;
   }
-  return userRole === 'admin' ? children : <Navigate to="/" />;
+  return userRole === 'admin' ? children : <Navigate to="/" />; // Redireciona seguradora para a página inicial
 }
 
 
@@ -73,11 +76,11 @@ function AppNavbar({ session, userRole }: { session: Session | null, userRole: s
     return (
         <Navbar bg="light" variant="light" expand="lg" className="mb-4">
             <Container>
-                {/* AJUSTE AQUI */}
                 <Navbar.Brand as={NavLink} to={session ? (userRole === 'admin' ? '/painel' : '/') : '/login'} className="fw-bold">
+                    {/* Alterado para usar o novo ícone */}
                     <img
-                      src="/logo.png"
-                      height="30" // Apenas a altura é definida
+                      src="/logo-icon.png"
+                      height="30"
                       className="d-inline-block align-top me-2"
                       alt="Logo Autocontrol"
                     />
@@ -87,9 +90,11 @@ function AppNavbar({ session, userRole }: { session: Session | null, userRole: s
                 <Navbar.Collapse id="basic-navbar-nav">
                     {session && (
                         <Nav className="me-auto">
+                            {/* Links para Seguradora e Admin */}
                             <Nav.Link as={NavLink} to="/"> <i className="bi bi-plus-circle me-1"></i> Cadastrar</Nav.Link>
                             <Nav.Link as={NavLink} to="/consulta"> <i className="bi bi-search me-1"></i> Consulta</Nav.Link>
                             
+                            {/* Links apenas para Admin */}
                             {userRole === 'admin' && (
                                 <>
                                     <Nav.Link as={NavLink} to="/painel"> <i className="bi bi-clipboard-data me-1"></i> Painel</Nav.Link>
