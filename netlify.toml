@@ -5,8 +5,14 @@
 [functions]
   directory = "netlify/functions"
 
-# Adicione esta regra de redirecionamento abaixo
+# Regra de redirecionamento para o React Router
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
+
+# Bloco de código para agendar a função keep-alive
+[functions."keep-alive"]
+  # A expressão cron "0 12 * * 1" significa:
+  # Às 12:00 (meio-dia), toda Segunda-feira.
+  schedule = "0 12 * * 1"
