@@ -7,6 +7,7 @@ import { Dashboard } from './components/Dashboard';
 import { TechnicianAgenda } from './components/TechnicianAgenda';
 import { InsuranceView } from './components/InsuranceView';
 import { Login } from './components/Login';
+import { ResetPassword } from './components/ResetPassword'; // Importe o novo componente
 import { supabase } from './supabaseClient';
 import type { Session, User } from '@supabase/supabase-js';
 
@@ -78,7 +79,6 @@ function AppNavbar({ session, userRole }: { session: Session | null, userRole: s
                 <Navbar.Brand as={NavLink} to={session ? (userRole === 'admin' ? '/painel' : '/') : '/login'} className="fw-bold">
                     <i className="bi bi-geo-alt-fill me-2"></i>
                     Agenda de Instalações
-                    <link rel="icon" type="image/png" href="/meu-rastreador-app/public/logo.png" /> 
                 </Navbar.Brand>
                 <Navbar.Toggle aria-controls="basic-navbar-nav" />
                 <Navbar.Collapse id="basic-navbar-nav">
@@ -122,6 +122,8 @@ function App() {
         <Container>
           <Routes>
             <Route path="/login" element={<Login />} />
+            {/* Adicione a nova rota aqui */}
+            <Route path="/update-password" element={<ResetPassword />} />
             
             {/* Rotas Acessíveis para Seguradora e Admin */}
             <Route path="/" element={<ProtectedRoute session={session} loading={loading}><InstallationForm /></ProtectedRoute>} />
