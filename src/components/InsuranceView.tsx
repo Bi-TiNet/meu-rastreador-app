@@ -1,10 +1,9 @@
 // Arquivo: src/components/InsuranceView.tsx
 import { useEffect, useState, useMemo } from 'react';
-// AQUI ESTÁ A CORREÇÃO: Removemos 'Row' e 'Col' que não estavam sendo usados.
 import { Form, Card, ListGroup, Badge, Modal, Button, Alert, Spinner, InputGroup, Table, Accordion } from 'react-bootstrap';
 import { supabase } from '../supabaseClient';
 
-// ... (O resto do arquivo permanece exatamente o mesmo) ...
+// ... (Interfaces e Modals não mudam) ...
 interface History {
   id: number;
   evento: string;
@@ -171,7 +170,8 @@ export function InsuranceView() {
         </Card.Body>
       </Card>
       
-      <Accordion defaultActiveKey={['0', '1', '2']} alwaysOpen>
+      {/* AQUI ESTÁ A MUDANÇA: 'defaultActiveKey' e 'alwaysOpen' foram removidos */}
+      <Accordion>
         <Accordion.Item eventKey="0" className="mb-3">
           <Accordion.Header><i className="bi bi-calendar-check me-2"></i>Agendadas ({scheduled.length})</Accordion.Header>
           <Accordion.Body className="p-0">

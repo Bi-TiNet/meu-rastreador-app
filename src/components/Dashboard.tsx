@@ -121,7 +121,9 @@ export function Dashboard() {
   const [historyTarget, setHistoryTarget] = useState<Installation | null>(null);
   const [message, setMessage] = useState<{type: 'success' | 'danger' | 'info', text: string} | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isListOpen, setIsListOpen] = useState(true); // Estado para controlar a visibilidade da lista
+  // --- AQUI ESTÁ A MUDANÇA: de true para false ---
+  const [isListOpen, setIsListOpen] = useState(false); 
+  // --- FIM DA MUDANÇA ---
 
   const fetchInstallations = async () => {
     setLoading(true);
@@ -217,7 +219,6 @@ Bloqueio sim ( ${inst.bloqueio === 'Sim' ? 'X' : ' '} )  nao ( ${inst.bloqueio =
 
   return (
     <Card>
-      {/* --- CABEÇALHO ATUALIZADO COM BOTÃO --- */}
       <Card.Header as="h5" className="d-flex justify-content-between align-items-center">
         <div>
             <i className="bi bi-clipboard-data me-2"></i>
@@ -233,9 +234,7 @@ Bloqueio sim ( ${inst.bloqueio === 'Sim' ? 'X' : ' '} )  nao ( ${inst.bloqueio =
           <i className={isListOpen ? "bi bi-chevron-up" : "bi bi-chevron-down"}></i>
         </Button>
       </Card.Header>
-      {/* --- FIM DA ATUALIZAÇÃO --- */}
       
-      {/* --- LISTA/TABELA DENTRO DO COMPONENTE COLLAPSE --- */}
       <Collapse in={isListOpen}>
         <div id="collapse-table">
             <Card.Body>
@@ -291,7 +290,6 @@ Bloqueio sim ( ${inst.bloqueio === 'Sim' ? 'X' : ' '} )  nao ( ${inst.bloqueio =
             </Card.Body>
         </div>
       </Collapse>
-      {/* --- FIM DO COLLAPSE --- */}
       
       {selected && (
         <ScheduleModal 
