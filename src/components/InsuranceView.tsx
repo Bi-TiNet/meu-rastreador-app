@@ -1,6 +1,6 @@
 // Arquivo: src/components/InsuranceView.tsx
 import { useEffect, useState, useMemo } from 'react';
-import { Form, Card, ListGroup, Badge, Modal, Button, Alert, Spinner, InputGroup, Row, Col, Table } from 'react-bootstrap';
+import { Form, Card, ListGroup, Badge, Modal, Button, Alert, Spinner, InputGroup, Row, Col, Table, Accordion } from 'react-bootstrap';
 import { supabase } from '../supabaseClient';
 
 // ... (Interfaces e Modals não mudam) ...
@@ -136,7 +136,6 @@ export function InsuranceView() {
   if (loading) return <div className="text-center p-5"><Spinner animation="border" variant="primary" /></div>;
   if (error) return <Alert variant="danger">{error}</Alert>;
 
-  // --- FUNÇÃO DE RENDERIZAÇÃO ATUALIZADA COM O NOVO LAYOUT ---
   const renderListItem = (inst: Installation, statusBadge: React.ReactNode) => (
     <ListGroup.Item 
       key={inst.id} 
@@ -153,7 +152,6 @@ export function InsuranceView() {
       </div>
     </ListGroup.Item>
   );
-  // --- FIM DA ALTERAÇÃO ---
 
   return (
     <div>
@@ -172,40 +170,42 @@ export function InsuranceView() {
         </Card.Body>
       </Card>
       
-      <Row>
-        <Col md={4} className="mb-3 mb-md-0">
-          <Card>
-            <Card.Header as="h5"><i className="bi bi-calendar-check me-2"></i>Agendadas</Card.Header>
+      {/* --- ESTRUTURA ATUALIZADA COM ACCORDION --- */}
+      <Accordion defaultActiveKey={['0', '1', '2']} alwaysOpen>
+        <Accordion.Item eventKey="0" className="mb-3">
+          <Accordion.Header><i className="bi bi-calendar-check me-2"></i>Agendadas ({scheduled.length})</Accordion.Header>
+          <Accordion.Body className="p-0">
             <ListGroup variant="flush">
               {scheduled.length > 0 ? (
                 scheduled.map((inst) => renderListItem(inst, <Badge bg="primary">{inst.data_instalacao ? new Date(inst.data_instalacao + 'T00:00:00').toLocaleDateString('pt-BR') : 'Agendado'}</Badge>))
               ) : <ListGroup.Item>Nenhuma instalação agendada encontrada.</ListGroup.Item>}
             </ListGroup>
-          </Card>
-        </Col>
+          </Accordion.Body>
+        </Accordion.Item>
 
-        <Col md={4} className="mb-3 mb-md-0">
-          <Card>
-            <Card.Header as="h5"><i className="bi bi-check-circle-fill me-2"></i>Concluídas</Card.Header>
+        <Accordion.Item eventKey="1" className="mb-3">
+          <Accordion.Header><i className="bi bi-check-circle-fill me-2"></i>Concluídas ({completed.length})</Accordion.Header>
+          <Accordion.Body className="p-0">
             <ListGroup variant="flush">
               {completed.length > 0 ? (
                 completed.map((inst) => renderListItem(inst, <Badge bg="success">Concluído</Badge>))
               ) : <ListGroup.Item>Nenhuma instalação concluída encontrada.</ListGroup.Item>}
             </ListGroup>
-          </Card>
-        </Col>
+          </Accordion.Body>
+        </Accordion.Item>
 
-        <Col md={4}>
-          <Card>
-            <Card.Header as="h5"><i className="bi bi-clock-history me-2"></i>Pendentes</Card.Header>
+        <Accordion.Item eventKey="2">
+          <Accordion.Header><i className="bi bi-clock-history me-2"></i>Pendentes ({pending.length})</Accordion.Header>
+          <Accordion.Body className="p-0">
             <ListGroup variant="flush">
               {pending.length > 0 ? (
                 pending.map((inst) => renderListItem(inst, <Badge bg="warning" text="dark">{inst.status}</Badge>))
               ) : <ListGroup.Item>Nenhuma instalação pendente encontrada.</ListGroup.Item>}
             </ListGroup>
-          </Card>
-        </Col>
-      </Row>
+          </Accordion.Body>
+        </Accordion.Item>
+      </Accordion>
+      {/* --- FIM DA ESTRUTURA --- */}
 
       {selected && <DetailsModal installation={selected} onClose={() => setSelected(null)} onViewHistory={setHistoryTarget} />}
       {historyTarget && <HistoryModal isOpen={!!historyTarget} installation={historyTarget} onClose={() => setHistoryTarget(null)} />}

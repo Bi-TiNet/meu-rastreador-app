@@ -1,19 +1,17 @@
 // Arquivo: src/components/Dashboard.tsx
 import { useEffect, useState, useMemo, type FormEvent } from 'react';
 import {
-  Button, Table, Modal, Spinner, Alert, Card, Form, Badge, InputGroup, Dropdown, ButtonGroup
+  Button, Table, Modal, Spinner, Alert, Card, Form, Badge, InputGroup, Dropdown, ButtonGroup, Collapse
 } from 'react-bootstrap';
-import { supabase } from '../supabaseClient'; // 1. IMPORTE O SUPABASE CLIENT
+import { supabase } from '../supabaseClient';
 
 // ... (Interfaces e Modals não mudam) ...
-// Interface para o histórico
 interface History {
   id: number;
   evento: string;
   data_evento: string;
 }
 
-// Interface para os dados de uma instalação
 interface Installation {
   id: number;
   nome_completo: string;
@@ -33,7 +31,6 @@ interface Installation {
   historico: History[];
 }
 
-// Componente para o Modal de Agendamento/Manutenção
 interface ScheduleModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -76,7 +73,6 @@ function ScheduleModal({ isOpen, onClose, installation, onSchedule, isMaintenanc
   );
 }
 
-// NOVO Componente para o Modal de Histórico
 interface HistoryModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -117,8 +113,6 @@ function HistoryModal({ isOpen, onClose, installation }: HistoryModalProps) {
     );
 }
 
-
-// Componente principal do Dashboard
 export function Dashboard() {
   const [installations, setInstallations] = useState<Installation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -127,11 +121,11 @@ export function Dashboard() {
   const [historyTarget, setHistoryTarget] = useState<Installation | null>(null);
   const [message, setMessage] = useState<{type: 'success' | 'danger' | 'info', text: string} | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isListOpen, setIsListOpen] = useState(true); // Estado para controlar a visibilidade da lista
 
   const fetchInstallations = async () => {
     setLoading(true);
     try {
-      // 2. ADICIONE O HEADER DE AUTORIZAÇÃO NA CHAMADA FETCH
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Usuário não autenticado.');
 
@@ -140,8 +134,6 @@ export function Dashboard() {
             'Authorization': `Bearer ${session.access_token}`,
         },
       });
-      // --- FIM DA ALTERAÇÃO ---
-
       if (!response.ok) throw new Error('Falha ao buscar dados.');
       const data: Installation[] = await response.json();
       setInstallations(data);
@@ -156,7 +148,6 @@ export function Dashboard() {
     fetchInstallations();
   }, []);
 
-  // ... (O resto do componente não muda) ...
   const filteredInstallations = useMemo(() =>
     installations.filter(inst =>
       inst.nome_completo.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -226,62 +217,82 @@ Bloqueio sim ( ${inst.bloqueio === 'Sim' ? 'X' : ' '} )  nao ( ${inst.bloqueio =
 
   return (
     <Card>
-      <Card.Header as="h5">
-        <i className="bi bi-clipboard-data me-2"></i>
-        Painel de Agendamentos
+      {/* --- CABEÇALHO ATUALIZADO COM BOTÃO --- */}
+      <Card.Header as="h5" className="d-flex justify-content-between align-items-center">
+        <div>
+            <i className="bi bi-clipboard-data me-2"></i>
+            Painel de Agendamentos
+        </div>
+        <Button
+          onClick={() => setIsListOpen(!isListOpen)}
+          aria-controls="collapse-table"
+          aria-expanded={isListOpen}
+          size="sm"
+          variant="outline-secondary"
+        >
+          <i className={isListOpen ? "bi bi-chevron-up" : "bi bi-chevron-down"}></i>
+        </Button>
       </Card.Header>
-      <Card.Body>
-        <InputGroup className="mb-3">
-          <InputGroup.Text><i className="bi bi-search"></i></InputGroup.Text>
-          <Form.Control placeholder="Buscar por cliente, placa ou modelo..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-        </InputGroup>
-        
-        {message && <Alert variant={message.type} onClose={() => setMessage(null)} dismissible>{message.text}</Alert>}
+      {/* --- FIM DA ATUALIZAÇÃO --- */}
+      
+      {/* --- LISTA/TABELA DENTRO DO COMPONENTE COLLAPSE --- */}
+      <Collapse in={isListOpen}>
+        <div id="collapse-table">
+            <Card.Body>
+                <InputGroup className="mb-3">
+                <InputGroup.Text><i className="bi bi-search"></i></InputGroup.Text>
+                <Form.Control placeholder="Buscar por cliente, placa ou modelo..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                </InputGroup>
+                
+                {message && <Alert variant={message.type} onClose={() => setMessage(null)} dismissible>{message.text}</Alert>}
 
-        <Table striped bordered hover responsive>
-          <thead className="table-light">
-            <tr>
-              <th>Cliente</th>
-              <th>Veículo</th>
-              <th>Agendamento</th>
-              <th>Status</th>
-              <th className="text-center">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredInstallations.map((inst: Installation) => (
-              <tr key={inst.id}>
-                <td>{inst.nome_completo}</td>
-                <td>{`${inst.modelo} (${inst.placa})`}</td>
-                <td>
-                  {(inst.status === 'Agendado' && inst.data_instalacao) ? `${new Date(inst.data_instalacao + 'T00:00:00').toLocaleDateString('pt-BR')} às ${inst.horario}`: 'N/A'}
-                </td>
-                <td>{getStatusBadge(inst.status)}</td>
-                <td className="text-center">
-                  <ButtonGroup>
-                    {inst.status === 'A agendar' && <Button size="sm" variant="primary" onClick={() => setSelected({installation: inst, isMaintenance: false})}>Agendar</Button>}
-                    {inst.status === 'Agendado' && <Button size="sm" variant="success" onClick={() => handleUpdate(inst.id, 'Concluído', { completionType: getCompletionType(inst) })}>Concluir</Button>}
-                    {inst.status === 'Concluído' && <Button size="sm" variant="warning" onClick={() => setSelected({installation: inst, isMaintenance: true})}>Agendar Manutenção</Button>}
-                    
-                    <Dropdown as={ButtonGroup}>
-                      <Dropdown.Toggle split variant={inst.status === 'Concluído' ? 'warning' : inst.status === 'Agendado' ? 'success' : 'primary'} size="sm" id="dropdown-split-basic" />
-                      <Dropdown.Menu>
-                        <Dropdown.Item onClick={() => setHistoryTarget(inst)}>Histórico</Dropdown.Item>
-                        <Dropdown.Item onClick={() => handleCopy(inst)}>Copiar Dados</Dropdown.Item>
-                        {inst.status !== 'A agendar' && <Dropdown.Divider />}
-                        {inst.status === 'Agendado' && <Dropdown.Item onClick={() => setSelected({installation: inst, isMaintenance: false})}>Reagendar</Dropdown.Item>}
-                      </Dropdown.Menu>
-                    </Dropdown>
-                  </ButtonGroup>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
-        
-        {filteredInstallations.length === 0 && <div className="text-center text-muted mt-3">Nenhum resultado encontrado.</div>}
-      </Card.Body>
-
+                <Table striped bordered hover responsive>
+                    <thead className="table-light">
+                        <tr>
+                        <th>Cliente</th>
+                        <th>Veículo</th>
+                        <th>Agendamento</th>
+                        <th>Status</th>
+                        <th className="text-center">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {filteredInstallations.map((inst: Installation) => (
+                        <tr key={inst.id}>
+                            <td>{inst.nome_completo}</td>
+                            <td>{`${inst.modelo} (${inst.placa})`}</td>
+                            <td>
+                            {(inst.status === 'Agendado' && inst.data_instalacao) ? `${new Date(inst.data_instalacao + 'T00:00:00').toLocaleDateString('pt-BR')} às ${inst.horario}`: 'N/A'}
+                            </td>
+                            <td>{getStatusBadge(inst.status)}</td>
+                            <td className="text-center">
+                            <ButtonGroup>
+                                {inst.status === 'A agendar' && <Button size="sm" variant="primary" onClick={() => setSelected({installation: inst, isMaintenance: false})}>Agendar</Button>}
+                                {inst.status === 'Agendado' && <Button size="sm" variant="success" onClick={() => handleUpdate(inst.id, 'Concluído', { completionType: getCompletionType(inst) })}>Concluir</Button>}
+                                {inst.status === 'Concluído' && <Button size="sm" variant="warning" onClick={() => setSelected({installation: inst, isMaintenance: true})}>Agendar Manutenção</Button>}
+                                
+                                <Dropdown as={ButtonGroup}>
+                                <Dropdown.Toggle split variant={inst.status === 'Concluído' ? 'warning' : inst.status === 'Agendado' ? 'success' : 'primary'} size="sm" id="dropdown-split-basic" />
+                                <Dropdown.Menu>
+                                    <Dropdown.Item onClick={() => setHistoryTarget(inst)}>Histórico</Dropdown.Item>
+                                    <Dropdown.Item onClick={() => handleCopy(inst)}>Copiar Dados</Dropdown.Item>
+                                    {inst.status !== 'A agendar' && <Dropdown.Divider />}
+                                    {inst.status === 'Agendado' && <Dropdown.Item onClick={() => setSelected({installation: inst, isMaintenance: false})}>Reagendar</Dropdown.Item>}
+                                </Dropdown.Menu>
+                                </Dropdown>
+                            </ButtonGroup>
+                            </td>
+                        </tr>
+                        ))}
+                    </tbody>
+                </Table>
+                
+                {filteredInstallations.length === 0 && <div className="text-center text-muted mt-3">Nenhum resultado encontrado.</div>}
+            </Card.Body>
+        </div>
+      </Collapse>
+      {/* --- FIM DO COLLAPSE --- */}
+      
       {selected && (
         <ScheduleModal 
             isOpen={!!selected} 
