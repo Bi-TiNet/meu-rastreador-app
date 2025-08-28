@@ -1,9 +1,10 @@
 // Arquivo: src/components/InsuranceView.tsx
 import { useEffect, useState, useMemo } from 'react';
-import { Form, Card, ListGroup, Badge, Modal, Button, Alert, Spinner, InputGroup, Row, Col, Table, Accordion } from 'react-bootstrap';
+// AQUI ESTÁ A CORREÇÃO: Removemos 'Row' e 'Col' que não estavam sendo usados.
+import { Form, Card, ListGroup, Badge, Modal, Button, Alert, Spinner, InputGroup, Table, Accordion } from 'react-bootstrap';
 import { supabase } from '../supabaseClient';
 
-// ... (Interfaces e Modals não mudam) ...
+// ... (O resto do arquivo permanece exatamente o mesmo) ...
 interface History {
   id: number;
   evento: string;
@@ -170,7 +171,6 @@ export function InsuranceView() {
         </Card.Body>
       </Card>
       
-      {/* --- ESTRUTURA ATUALIZADA COM ACCORDION --- */}
       <Accordion defaultActiveKey={['0', '1', '2']} alwaysOpen>
         <Accordion.Item eventKey="0" className="mb-3">
           <Accordion.Header><i className="bi bi-calendar-check me-2"></i>Agendadas ({scheduled.length})</Accordion.Header>
@@ -205,7 +205,6 @@ export function InsuranceView() {
           </Accordion.Body>
         </Accordion.Item>
       </Accordion>
-      {/* --- FIM DA ESTRUTURA --- */}
 
       {selected && <DetailsModal installation={selected} onClose={() => setSelected(null)} onViewHistory={setHistoryTarget} />}
       {historyTarget && <HistoryModal isOpen={!!historyTarget} installation={historyTarget} onClose={() => setHistoryTarget(null)} />}
