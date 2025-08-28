@@ -91,6 +91,17 @@ function DetailsModal({ installation, onClose, onViewHistory }: DetailsModalProp
   );
 }
 
+const getScheduledTaskInfo = (inst: Installation) => {
+    if (inst.status !== 'Agendado') {
+      return null;
+    }
+    const lastEvent = inst.historico?.slice().sort((a, b) => new Date(b.data_evento).getTime() - new Date(a.data_evento).getTime())[0];
+    
+    if (lastEvent?.evento.includes('Manutenção')) return { text: 'Manutenção', variant: 'warning' };
+    if (lastEvent?.evento.includes('Remoção')) return { text: 'Remoção', variant: 'danger' };
+    return { text: 'Instalação', variant: 'primary' };
+};
+
 export function InsuranceView() {
   const [allInstallations, setAllInstallations] = useState<Installation[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -136,22 +147,44 @@ export function InsuranceView() {
   if (loading) return <div className="text-center p-5"><Spinner animation="border" variant="primary" /></div>;
   if (error) return <Alert variant="danger">{error}</Alert>;
 
-  const renderListItem = (inst: Installation, statusBadge: React.ReactNode) => (
-    <ListGroup.Item 
-      key={inst.id} 
-      action 
-      onClick={() => setSelected(inst)}
-    >
-      <div className="fw-bold">{inst.nome_completo} ({inst.placa})</div>
-      <div className="mt-1">
-        <Badge pill bg={inst.base === 'Atena' ? 'secondary' : 'primary'}>
-          <i className="bi bi-hdd-stack me-1"></i>
-          {inst.base}
-        </Badge>
-        <span className="ms-2">{statusBadge}</span>
-      </div>
-    </ListGroup.Item>
-  );
+  const renderListItem = (inst: Installation) => {
+    const taskInfo = getScheduledTaskInfo(inst);
+    let statusContent;
+
+    switch(inst.status) {
+        case 'Agendado':
+            statusContent = (
+                <div>
+                    <Badge bg="primary" className="me-2">{inst.data_instalacao ? new Date(inst.data_instalacao + 'T00:00:00').toLocaleDateString('pt-BR') : 'Agendado'}</Badge>
+                    {taskInfo && <Badge bg={taskInfo.variant}>{taskInfo.text}</Badge>}
+                </div>
+            );
+            break;
+        case 'Concluído':
+            statusContent = <Badge bg="success">Concluído</Badge>;
+            break;
+        default:
+            statusContent = <Badge bg="warning" text="dark">{inst.status}</Badge>;
+            break;
+    }
+
+    return (
+        <ListGroup.Item 
+          key={inst.id} 
+          action 
+          onClick={() => setSelected(inst)}
+        >
+          <div className="fw-bold">{inst.nome_completo} ({inst.placa})</div>
+          <div className="d-flex justify-content-between align-items-center mt-1">
+            <Badge pill bg={inst.base === 'Atena' ? 'secondary' : 'primary'}>
+              <i className="bi bi-hdd-stack me-1"></i>
+              {inst.base}
+            </Badge>
+            {statusContent}
+          </div>
+        </ListGroup.Item>
+    );
+  }
 
   return (
     <div>
@@ -170,37 +203,31 @@ export function InsuranceView() {
         </Card.Body>
       </Card>
       
-      {/* AQUI ESTÁ A MUDANÇA: 'defaultActiveKey' e 'alwaysOpen' foram removidos */}
+      {/* --- ORDEM DAS LISTAS ATUALIZADA --- */}
       <Accordion>
         <Accordion.Item eventKey="0" className="mb-3">
-          <Accordion.Header><i className="bi bi-calendar-check me-2"></i>Agendadas ({scheduled.length})</Accordion.Header>
+          <Accordion.Header><i className="bi bi-clock-history me-2"></i>Pendentes ({pending.length})</Accordion.Header>
           <Accordion.Body className="p-0">
             <ListGroup variant="flush">
-              {scheduled.length > 0 ? (
-                scheduled.map((inst) => renderListItem(inst, <Badge bg="primary">{inst.data_instalacao ? new Date(inst.data_instalacao + 'T00:00:00').toLocaleDateString('pt-BR') : 'Agendado'}</Badge>))
-              ) : <ListGroup.Item>Nenhuma instalação agendada encontrada.</ListGroup.Item>}
+              {pending.length > 0 ? pending.map(renderListItem) : <ListGroup.Item>Nenhuma instalação pendente.</ListGroup.Item>}
             </ListGroup>
           </Accordion.Body>
         </Accordion.Item>
 
         <Accordion.Item eventKey="1" className="mb-3">
-          <Accordion.Header><i className="bi bi-check-circle-fill me-2"></i>Concluídas ({completed.length})</Accordion.Header>
+          <Accordion.Header><i className="bi bi-calendar-check me-2"></i>Agendadas ({scheduled.length})</Accordion.Header>
           <Accordion.Body className="p-0">
             <ListGroup variant="flush">
-              {completed.length > 0 ? (
-                completed.map((inst) => renderListItem(inst, <Badge bg="success">Concluído</Badge>))
-              ) : <ListGroup.Item>Nenhuma instalação concluída encontrada.</ListGroup.Item>}
+              {scheduled.length > 0 ? scheduled.map(renderListItem) : <ListGroup.Item>Nenhuma instalação agendada.</ListGroup.Item>}
             </ListGroup>
           </Accordion.Body>
         </Accordion.Item>
 
         <Accordion.Item eventKey="2">
-          <Accordion.Header><i className="bi bi-clock-history me-2"></i>Pendentes ({pending.length})</Accordion.Header>
+          <Accordion.Header><i className="bi bi-check-circle-fill me-2"></i>Concluídas ({completed.length})</Accordion.Header>
           <Accordion.Body className="p-0">
             <ListGroup variant="flush">
-              {pending.length > 0 ? (
-                pending.map((inst) => renderListItem(inst, <Badge bg="warning" text="dark">{inst.status}</Badge>))
-              ) : <ListGroup.Item>Nenhuma instalação pendente encontrada.</ListGroup.Item>}
+              {completed.length > 0 ? completed.map(renderListItem) : <ListGroup.Item>Nenhuma instalação concluída.</ListGroup.Item>}
             </ListGroup>
           </Accordion.Body>
         </Accordion.Item>

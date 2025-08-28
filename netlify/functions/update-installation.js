@@ -23,13 +23,27 @@ exports.handler = async function(event, context) {
     let updateData = { status };
 
     if (status === 'Concluído') {
-      eventoText = completionType === 'maintenance' ? 'Manutenção Concluída' : 'Instalação Concluída';
+      // --- LÓGICA ATUALIZADA AQUI ---
+      if (completionType === 'maintenance') {
+        eventoText = 'Manutenção Concluída';
+      } else if (completionType === 'removal') {
+        eventoText = 'Remoção Concluída';
+      } else {
+        eventoText = 'Instalação Concluída';
+      }
     } 
     else if (type === 'maintenance') {
       updateData.data_instalacao = date;
       updateData.horario = time;
       eventoText = 'Manutenção Agendada';
     } 
+    // --- NOVA LÓGICA PARA REMOÇÃO ---
+    else if (type === 'removal') {
+        updateData.data_instalacao = date;
+        updateData.horario = time;
+        eventoText = 'Remoção Agendada';
+    }
+    // --- FIM DA NOVA LÓGICA ---
     else if (status === 'Agendado') {
         updateData.data_instalacao = date;
         updateData.horario = time;
@@ -50,13 +64,9 @@ exports.handler = async function(event, context) {
           detalhes: date && time ? { agendado_para: `${date}T${time}` } : null
         };
         
-        // --- CORREÇÃO DO FUSO HORÁRIO APLICADA AQUI ---
-        // Se for um agendamento, anexa a informação de fuso horário (-03:00)
-        // para que o Supabase entenda que é o horário do Brasil.
         if (eventoText.includes('Agendada')) {
           historicoEntry.data_evento = `${date}T${time}:00-03:00`; 
         }
-        // --- FIM DA CORREÇÃO ---
 
         const { error: historyError } = await supabase.from('historico').insert(historicoEntry);
         if (historyError) throw historyError;
