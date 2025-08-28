@@ -3,8 +3,9 @@ import { useEffect, useState, useMemo, type FormEvent } from 'react';
 import {
   Button, Table, Modal, Spinner, Alert, Card, Form, Badge, InputGroup, Dropdown, ButtonGroup
 } from 'react-bootstrap';
+import { supabase } from '../supabaseClient'; // 1. IMPORTE O SUPABASE CLIENT
 
-// ... (Interfaces History, Installation, ScheduleModalProps, HistoryModalProps e os componentes de Modal não mudam) ...
+// ... (Interfaces e Modals não mudam) ...
 // Interface para o histórico
 interface History {
   id: number;
@@ -29,7 +30,7 @@ interface Installation {
   status: string;
   data_instalacao?: string;
   horario?: string;
-  historico: History[]; // Adicionado campo de histórico
+  historico: History[];
 }
 
 // Componente para o Modal de Agendamento/Manutenção
@@ -116,6 +117,7 @@ function HistoryModal({ isOpen, onClose, installation }: HistoryModalProps) {
     );
 }
 
+
 // Componente principal do Dashboard
 export function Dashboard() {
   const [installations, setInstallations] = useState<Installation[]>([]);
@@ -127,9 +129,19 @@ export function Dashboard() {
   const [searchTerm, setSearchTerm] = useState('');
 
   const fetchInstallations = async () => {
-    // setLoading(true); // Opcional: remover para um refresh mais suave
+    setLoading(true);
     try {
-      const response = await fetch('/.netlify/functions/get-installations');
+      // 2. ADICIONE O HEADER DE AUTORIZAÇÃO NA CHAMADA FETCH
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Usuário não autenticado.');
+
+      const response = await fetch('/.netlify/functions/get-installations', {
+        headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+        },
+      });
+      // --- FIM DA ALTERAÇÃO ---
+
       if (!response.ok) throw new Error('Falha ao buscar dados.');
       const data: Installation[] = await response.json();
       setInstallations(data);
@@ -143,7 +155,8 @@ export function Dashboard() {
   useEffect(() => {
     fetchInstallations();
   }, []);
-  
+
+  // ... (O resto do componente não muda) ...
   const filteredInstallations = useMemo(() =>
     installations.filter(inst =>
       inst.nome_completo.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -152,7 +165,6 @@ export function Dashboard() {
     ),
   [installations, searchTerm]);
 
-  // Função de Update ATUALIZADA
   const handleUpdate = async (id: number, status: string, options: { date?: string; time?: string; type?: 'maintenance'; completionType?: 'maintenance' | 'installation' } = {}) => {
     try {
       const { date, time, type, completionType } = options;
@@ -175,13 +187,12 @@ export function Dashboard() {
     }
   };
   
-  // NOVA função para determinar o tipo de conclusão
   const getCompletionType = (inst: Installation) => {
     const lastEvent = inst.historico?.slice().sort((a, b) => new Date(b.data_evento).getTime() - new Date(a.data_evento).getTime())[0];
     return lastEvent?.evento === 'Manutenção Agendada' ? 'maintenance' : 'installation';
   }
 
-  const getStatusBadge = (status: string) => { /* ... (sem alterações) ... */ 
+  const getStatusBadge = (status: string) => { 
     switch(status) {
         case 'Agendado':
             return <Badge bg="primary">{status}</Badge>;
@@ -193,7 +204,7 @@ export function Dashboard() {
     }
   }
 
-  const handleCopy = (inst: Installation) => { /* ... (sem alterações) ... */ 
+  const handleCopy = (inst: Installation) => { 
     const formattedText = `Veiculo ${inst.modelo?.split(' ')[0] || ''}
 Modelo: ${inst.modelo}
 Ano Fabricação: ${inst.ano || ''}
@@ -247,7 +258,6 @@ Bloqueio sim ( ${inst.bloqueio === 'Sim' ? 'X' : ' '} )  nao ( ${inst.bloqueio =
                 </td>
                 <td>{getStatusBadge(inst.status)}</td>
                 <td className="text-center">
-                  {/* --- LAYOUT DOS BOTÕES ATUALIZADO --- */}
                   <ButtonGroup>
                     {inst.status === 'A agendar' && <Button size="sm" variant="primary" onClick={() => setSelected({installation: inst, isMaintenance: false})}>Agendar</Button>}
                     {inst.status === 'Agendado' && <Button size="sm" variant="success" onClick={() => handleUpdate(inst.id, 'Concluído', { completionType: getCompletionType(inst) })}>Concluir</Button>}
@@ -263,7 +273,6 @@ Bloqueio sim ( ${inst.bloqueio === 'Sim' ? 'X' : ' '} )  nao ( ${inst.bloqueio =
                       </Dropdown.Menu>
                     </Dropdown>
                   </ButtonGroup>
-                  {/* --- FIM DO LAYOUT ATUALIZADO --- */}
                 </td>
               </tr>
             ))}

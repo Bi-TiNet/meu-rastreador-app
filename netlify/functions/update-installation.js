@@ -13,7 +13,6 @@ exports.handler = async function(event, context) {
 
   try {
     const data = JSON.parse(event.body);
-    // Agora recebemos também o 'completionType'
     const { id, status, date, time, type, completionType } = data;
 
     if (!id || !status) {
@@ -23,9 +22,7 @@ exports.handler = async function(event, context) {
     let eventoText = '';
     let updateData = { status };
 
-    // --- LÓGICA ATUALIZADA AQUI ---
     if (status === 'Concluído') {
-      // Se o tipo de conclusão for 'maintenance', o texto do evento muda.
       eventoText = completionType === 'maintenance' ? 'Manutenção Concluída' : 'Instalação Concluída';
     } 
     else if (type === 'maintenance') {
@@ -38,7 +35,6 @@ exports.handler = async function(event, context) {
         updateData.horario = time;
         eventoText = 'Instalação Agendada';
     }
-    // --- FIM DA LÓGICA ATUALIZADA ---
 
     const { error: updateError } = await supabase
       .from('instalacoes')
@@ -47,12 +43,22 @@ exports.handler = async function(event, context) {
 
     if (updateError) throw updateError;
 
-    if (eventoText) { // Apenas insere no histórico se houver um evento
-        const { error: historyError } = await supabase.from('historico').insert({
+    if (eventoText) {
+        const historicoEntry = {
           instalacao_id: id,
           evento: eventoText,
           detalhes: date && time ? { agendado_para: `${date}T${time}` } : null
-        });
+        };
+        
+        // --- CORREÇÃO DO FUSO HORÁRIO APLICADA AQUI ---
+        // Se for um agendamento, anexa a informação de fuso horário (-03:00)
+        // para que o Supabase entenda que é o horário do Brasil.
+        if (eventoText.includes('Agendada')) {
+          historicoEntry.data_evento = `${date}T${time}:00-03:00`; 
+        }
+        // --- FIM DA CORREÇÃO ---
+
+        const { error: historyError } = await supabase.from('historico').insert(historicoEntry);
         if (historyError) throw historyError;
     }
 

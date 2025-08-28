@@ -1,15 +1,15 @@
 // Arquivo: src/components/InsuranceView.tsx
 import { useEffect, useState, useMemo } from 'react';
 import { Form, Card, ListGroup, Badge, Modal, Button, Alert, Spinner, InputGroup, Row, Col, Table } from 'react-bootstrap';
+import { supabase } from '../supabaseClient';
 
-// Interface para o histórico
+// ... (Interfaces e Modals não mudam) ...
 interface History {
   id: number;
   evento: string;
   data_evento: string;
 }
 
-// Interface para os dados
 interface Installation {
   id: number;
   nome_completo: string;
@@ -17,19 +17,19 @@ interface Installation {
   placa: string;
   modelo: string;
   endereco: string;
+  base: string;
   data_instalacao?: string;
   horario?: string;
   status: string;
-  historico: History[]; // Adicionado o campo de histórico
+  historico: History[];
 }
 
-// Interface para as props do Modal de Detalhes
 interface DetailsModalProps {
   installation: Installation;
   onClose: () => void;
+  onViewHistory: (installation: Installation) => void;
 }
 
-// Componente para o Modal de Histórico
 function HistoryModal({ isOpen, installation, onClose }: { isOpen: boolean, installation: Installation, onClose: () => void }) {
     const sortedHistory = installation.historico ? [...installation.historico].sort((a, b) => new Date(b.data_evento).getTime() - new Date(a.data_evento).getTime()) : [];
 
@@ -64,9 +64,7 @@ function HistoryModal({ isOpen, installation, onClose }: { isOpen: boolean, inst
     );
 }
 
-// Componente para o Modal de Detalhes
-function DetailsModal({ installation, onClose }: DetailsModalProps) {
-  // ... (Este componente não muda)
+function DetailsModal({ installation, onClose, onViewHistory }: DetailsModalProps) {
   return (
     <Modal show onHide={onClose} centered>
       <Modal.Header closeButton>
@@ -77,12 +75,16 @@ function DetailsModal({ installation, onClose }: DetailsModalProps) {
         <p><strong>Contato:</strong> {installation.contato}</p>
         <p><strong>Veículo:</strong> {installation.modelo} ({installation.placa})</p>
         <p><strong>Endereço:</strong> {installation.endereco}</p>
+        <p><strong>Base:</strong> <Badge bg={installation.base === 'Atena' ? 'secondary' : 'primary'}>{installation.base}</Badge></p>
         <p><strong>Status:</strong> <Badge bg={installation.status === 'Agendado' ? 'primary' : installation.status === 'Concluído' ? 'success' : 'warning'} text={installation.status === 'A agendar' ? 'dark' : 'white'}>{installation.status}</Badge></p>
         {installation.status === 'Agendado' && installation.data_instalacao && (
           <p><strong>Agendado para:</strong> {new Date(installation.data_instalacao + 'T00:00:00').toLocaleDateString('pt-BR')} às {installation.horario}</p>
         )}
       </Modal.Body>
-      <Modal.Footer>
+      <Modal.Footer className="d-flex justify-content-between">
+        <Button variant="secondary" onClick={() => onViewHistory(installation)}>
+          <i className="bi bi-clock-history me-1"></i> Ver Histórico
+        </Button>
         <Button variant="primary" onClick={onClose}>Fechar</Button>
       </Modal.Footer>
     </Modal>
@@ -93,18 +95,25 @@ export function InsuranceView() {
   const [allInstallations, setAllInstallations] = useState<Installation[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selected, setSelected] = useState<Installation | null>(null);
-  const [historyTarget, setHistoryTarget] = useState<Installation | null>(null); // Estado para o modal de histórico
+  const [historyTarget, setHistoryTarget] = useState<Installation | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
   useEffect(() => {
     async function fetchInstallations() {
       try {
-        const response = await fetch('/.netlify/functions/get-installations');
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error('Usuário não autenticado.');
+
+        const response = await fetch('/.netlify/functions/get-installations', {
+          headers: { 'Authorization': `Bearer ${session.access_token}` },
+        });
+
         if (!response.ok) throw new Error('Falha ao buscar dados.');
         const data: Installation[] = await response.json();
         setAllInstallations(data);
-      } catch (err: any) {
+      } catch (err: any)
+      {
         setError('Não foi possível carregar os dados.');
       } finally {
         setLoading(false);
@@ -127,20 +136,24 @@ export function InsuranceView() {
   if (loading) return <div className="text-center p-5"><Spinner animation="border" variant="primary" /></div>;
   if (error) return <Alert variant="danger">{error}</Alert>;
 
-  // Função para renderizar um item da lista com os botões
-  const renderListItem = (inst: Installation, badge: React.ReactNode) => (
-    <ListGroup.Item key={inst.id} className="d-flex justify-content-between align-items-center">
-        <div onClick={() => setSelected(inst)} style={{ cursor: 'pointer', flexGrow: 1 }}>
-            {inst.nome_completo} ({inst.placa})
-        </div>
-        <div>
-            {badge}
-            <Button variant="outline-info" size="sm" className="ms-2" onClick={() => setHistoryTarget(inst)}>
-                <i className="bi bi-clock-history"></i>
-            </Button>
-        </div>
+  // --- FUNÇÃO DE RENDERIZAÇÃO ATUALIZADA COM O NOVO LAYOUT ---
+  const renderListItem = (inst: Installation, statusBadge: React.ReactNode) => (
+    <ListGroup.Item 
+      key={inst.id} 
+      action 
+      onClick={() => setSelected(inst)}
+    >
+      <div className="fw-bold">{inst.nome_completo} ({inst.placa})</div>
+      <div className="mt-1">
+        <Badge pill bg={inst.base === 'Atena' ? 'secondary' : 'primary'}>
+          <i className="bi bi-hdd-stack me-1"></i>
+          {inst.base}
+        </Badge>
+        <span className="ms-2">{statusBadge}</span>
+      </div>
     </ListGroup.Item>
   );
+  // --- FIM DA ALTERAÇÃO ---
 
   return (
     <div>
@@ -149,7 +162,12 @@ export function InsuranceView() {
         <Card.Body>
           <InputGroup>
             <InputGroup.Text><i className="bi bi-search"></i></InputGroup.Text>
-            <Form.Control type="text" placeholder="Buscar por nome ou placa..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+            <Form.Control 
+              type="text"
+              placeholder="Buscar por nome ou placa..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
           </InputGroup>
         </Card.Body>
       </Card>
@@ -160,7 +178,7 @@ export function InsuranceView() {
             <Card.Header as="h5"><i className="bi bi-calendar-check me-2"></i>Agendadas</Card.Header>
             <ListGroup variant="flush">
               {scheduled.length > 0 ? (
-                scheduled.map((inst) => renderListItem(inst, <Badge bg="primary" pill>{new Date(inst.data_instalacao + 'T00:00:00').toLocaleDateString('pt-BR')}</Badge>))
+                scheduled.map((inst) => renderListItem(inst, <Badge bg="primary">{inst.data_instalacao ? new Date(inst.data_instalacao + 'T00:00:00').toLocaleDateString('pt-BR') : 'Agendado'}</Badge>))
               ) : <ListGroup.Item>Nenhuma instalação agendada encontrada.</ListGroup.Item>}
             </ListGroup>
           </Card>
@@ -171,7 +189,7 @@ export function InsuranceView() {
             <Card.Header as="h5"><i className="bi bi-check-circle-fill me-2"></i>Concluídas</Card.Header>
             <ListGroup variant="flush">
               {completed.length > 0 ? (
-                completed.map((inst) => renderListItem(inst, <Badge bg="success" pill>Concluído</Badge>))
+                completed.map((inst) => renderListItem(inst, <Badge bg="success">Concluído</Badge>))
               ) : <ListGroup.Item>Nenhuma instalação concluída encontrada.</ListGroup.Item>}
             </ListGroup>
           </Card>
@@ -182,14 +200,14 @@ export function InsuranceView() {
             <Card.Header as="h5"><i className="bi bi-clock-history me-2"></i>Pendentes</Card.Header>
             <ListGroup variant="flush">
               {pending.length > 0 ? (
-                pending.map((inst) => renderListItem(inst, <Badge bg="warning" text="dark" pill>{inst.status}</Badge>))
+                pending.map((inst) => renderListItem(inst, <Badge bg="warning" text="dark">{inst.status}</Badge>))
               ) : <ListGroup.Item>Nenhuma instalação pendente encontrada.</ListGroup.Item>}
             </ListGroup>
           </Card>
         </Col>
       </Row>
 
-      {selected && <DetailsModal installation={selected} onClose={() => setSelected(null)} />}
+      {selected && <DetailsModal installation={selected} onClose={() => setSelected(null)} onViewHistory={setHistoryTarget} />}
       {historyTarget && <HistoryModal isOpen={!!historyTarget} installation={historyTarget} onClose={() => setHistoryTarget(null)} />}
     </div>
   );

@@ -5,8 +5,9 @@ import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { Card, Row, Col, ListGroup, Alert, Spinner } from 'react-bootstrap';
+import { supabase } from '../supabaseClient'; // 1. IMPORTE O SUPABASE CLIENT
 
-// Interface para os dados que vêm da API
+// ... (Interfaces Installation e CalendarEvent não mudam) ...
 interface Installation {
   id: number;
   nome_completo: string;
@@ -19,7 +20,6 @@ interface Installation {
   status: string;
 }
 
-// Interface para os eventos que o calendário entende
 interface CalendarEvent extends Event {
   resource: Installation;
 }
@@ -43,7 +43,17 @@ export function TechnicianAgenda() {
   useEffect(() => {
     async function fetchScheduledInstallations() {
       try {
-        const response = await fetch('/.netlify/functions/get-installations');
+        // 2. ADICIONE O HEADER DE AUTORIZAÇÃO NA CHAMADA FETCH
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error('Usuário não autenticado.');
+
+        const response = await fetch('/.netlify/functions/get-installations', {
+            headers: {
+                'Authorization': `Bearer ${session.access_token}`,
+            },
+        });
+        // --- FIM DA ALTERAÇÃO ---
+
         if (!response.ok) throw new Error('Falha ao buscar dados.');
         const allInstallations: Installation[] = await response.json();
         
