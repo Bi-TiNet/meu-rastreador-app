@@ -1,3 +1,4 @@
+// Arquivo: netlify/functions/get-installations.js
 const { createClient } = require('@supabase/supabase-js');
 
 exports.handler = async function(event, context) {
@@ -17,10 +18,18 @@ exports.handler = async function(event, context) {
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
-    console.log("Fetching installations from Supabase...");
+    console.log("Fetching installations and history from Supabase...");
+    // Modificação para buscar dados da tabela relacionada 'historico'
     const { data, error } = await supabase
       .from('instalacoes')
-      .select('*')
+      .select(`
+        *,
+        historico (
+          id,
+          evento,
+          data_evento
+        )
+      `)
       .order('created_at', { ascending: false });
 
     if (error) {
