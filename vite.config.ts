@@ -13,9 +13,11 @@ export default defineConfig({
         short_name: 'Autocontrol',
         description: 'Sistema de Agendamento de Instalações',
         theme_color: '#ffffff',
-        // --- PROPRIEDADES ADICIONADAS AQUI ---
         background_color: '#ffffff',
-        display: 'standalone', // <-- Esta é a linha mais importante!
+        display: 'standalone',
+        // --- PROPRIEDADES ADICIONADAS PARA MAIOR COMPATIBILIDADE ---
+        scope: '/',
+        start_url: '/',
         // --- FIM DA ADIÇÃO ---
         icons: [
           {
