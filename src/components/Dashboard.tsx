@@ -291,7 +291,7 @@ Bloqueio sim ( ${inst.bloqueio === 'Sim' ? 'X' : ' '} )  nao ( ${inst.bloqueio =
   return (
     <>
       <Card className="mb-4">
-        <Card.Header as="h5"><i className="bi bi-search me-2"></i>Buscar Instalação</Card.Header>
+        <Card.Header as="h5"><i className="bi bi-search me-2"></i>Painel de Agendamentos</Card.Header>
         <Card.Body>
           <InputGroup>
             <InputGroup.Text><i className="bi bi-search"></i></InputGroup.Text>
