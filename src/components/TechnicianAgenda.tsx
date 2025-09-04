@@ -2,12 +2,12 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
 import moment from 'moment';
-import 'moment/dist/locale/pt-br'; // Caminho corrigido para a localidade
+// A linha de importação da localidade foi REMOVIDA para corrigir o build
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { supabase } from '../supabaseClient';
 import { Alert, Spinner } from 'react-bootstrap';
 
-moment.locale('pt-br'); // Define o local para pt-br
+moment.locale('pt-br'); // Esta linha já configura o idioma para português do Brasil
 const localizer = momentLocalizer(moment);
 
 interface InstallationEvent {
@@ -15,7 +15,7 @@ interface InstallationEvent {
   title: string;
   start: Date;
   end: Date;
-  resource: any; 
+  resource: any;
 }
 
 export function TechnicianAgenda() {
