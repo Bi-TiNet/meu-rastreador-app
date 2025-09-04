@@ -12,38 +12,32 @@ exports.handler = async function(event, context) {
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
-    // Pega o token do cabeçalho da requisição
     const token = event.headers.authorization?.split('Bearer ')[1];
     if (!token) {
       return { statusCode: 401, body: JSON.stringify({ message: "Acesso não autorizado." }) };
     }
     
-    // Pega os dados do usuário a partir do token
     const { data: { user } } = await supabase.auth.getUser(token);
     if (!user) {
       return { statusCode: 401, body: JSON.stringify({ message: "Token inválido." }) };
     }
 
-    // Inicia a construção da query
+    // --- QUERY ATUALIZADA ---
+    // Adicionado `realizado_por` na consulta do histórico
     let query = supabase
       .from('instalacoes')
       .select(`
         *,
-        historico (id, evento, data_evento)
+        historico (id, evento, data_evento, realizado_por)
       `);
 
-    // --- LÓGICA DE FILTRO POR ROLE ---
-    // Se o usuário não for 'admin', adiciona o filtro para ver apenas 'Base Atena'
     if (user.app_metadata?.role !== 'admin') {
       query = query.eq('base', 'Atena');
     }
     
-    // Adiciona a ordenação no final
     query = query.order('created_at', { ascending: false });
 
-    // Executa a query construída
     const { data, error } = await query;
-    // --- FIM DA LÓGICA DE FILTRO ---
 
     if (error) throw error;
 

@@ -3,7 +3,7 @@ import { useState, type FormEvent } from 'react';
 import { Button, Form, Row, Col, Card, FloatingLabel, Spinner, Alert } from 'react-bootstrap';
 
 export function InstallationForm() {
-  const [nome, setNome] = useState('');
+  const [nome_completo, setNomeCompleto] = useState(''); // Alterado para consistência
   const [contato, setContato] = useState('');
   const [placa, setPlaca] = useState('');
   const [modelo, setModelo] = useState('');
@@ -14,6 +14,9 @@ export function InstallationForm() {
   const [senha, setSenha] = useState('');
   const [base, setBase] = useState('Atena');
   const [bloqueio, setBloqueio] = useState('Sim');
+  const [tipo_servico, setTipoServico] = useState('Instalação');
+  const [observacao, setObservacao] = useState('');
+  
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{type: 'success' | 'danger', text: string} | null>(null);
 
@@ -23,8 +26,19 @@ export function InstallationForm() {
     setMessage(null);
 
     const data = {
-      nome, contato, placa, modelo, ano, cor,
-      endereco, usuario, senha, base, bloqueio
+      nome_completo, // Alterado para consistência
+      contato,
+      placa,
+      modelo,
+      ano,
+      cor,
+      endereco,
+      usuario,
+      senha,
+      base,
+      bloqueio,
+      tipo_servico,
+      observacao,
     };
 
     try {
@@ -39,12 +53,22 @@ export function InstallationForm() {
         throw new Error(errorData.message || 'Falha na resposta da rede.');
       }
 
-      setMessage({type: 'success', text: 'Instalação cadastrada com sucesso!'});
+      setMessage({type: 'success', text: 'Solicitação cadastrada com sucesso!'});
 
       // Limpar formulário
-      setNome(''); setContato(''); setPlaca(''); setModelo(''); setAno('');
-      setCor(''); setEndereco(''); setUsuario(''); setSenha('');
-      setBase('Atena'); setBloqueio('Sim');
+      setNomeCompleto('');
+      setContato('');
+      setPlaca('');
+      setModelo('');
+      setAno('');
+      setCor('');
+      setEndereco('');
+      setUsuario('');
+      setSenha('');
+      setBase('Atena');
+      setBloqueio('Sim');
+      setTipoServico('Instalação');
+      setObservacao('');
 
     } catch (error: any) {
         setMessage({type: 'danger', text: error.message || "Não foi possível salvar os dados."});
@@ -57,7 +81,7 @@ export function InstallationForm() {
     <Card>
       <Card.Header as="h5">
         <i className="bi bi-card-list me-2"></i>
-        Cadastrar Nova Instalação
+        Cadastrar Nova Solicitação
       </Card.Header>
       <Card.Body className="p-4">
         <Form onSubmit={handleSubmit}>
@@ -68,7 +92,7 @@ export function InstallationForm() {
           <Row className="g-3 mb-4">
             <Col md={4}>
               <FloatingLabel controlId="floatingNome" label="Nome Completo">
-                <Form.Control type="text" placeholder="Nome Completo" required value={nome} onChange={(e) => setNome(e.target.value)} />
+                <Form.Control type="text" placeholder="Nome Completo" required value={nome_completo} onChange={(e) => setNomeCompleto(e.target.value)} />
               </FloatingLabel>
             </Col>
             <Col md={4}>
@@ -98,15 +122,27 @@ export function InstallationForm() {
             </Col>
             <Col md={12}>
               <FloatingLabel controlId="floatingEndereco" label="Endereço do Cliente">
-                <Form.Control as="textarea" placeholder="Endereço do Cliente" style={{ height: '100px' }} value={endereco} onChange={(e) => setEndereco(e.target.value)} />
+                <Form.Control as="textarea" placeholder="Endereço do Cliente" style={{ height: '80px' }} value={endereco} onChange={(e) => setEndereco(e.target.value)} />
               </FloatingLabel>
             </Col>
           </Row>
 
-          <h6 className="text-primary">DETALHES DE ACESSO DO RASTREADOR</h6>
+          <h6 className="text-primary">DETALHES DO SERVIÇO E ACESSO</h6>
           <hr className="mt-2"/>
           
-          <Row className="g-3">
+          <Row className="g-3 mb-4">
+            <Col md={12}>
+              <FloatingLabel controlId="floatingTipoServico" label="Tipo de Serviço">
+                <Form.Select value={tipo_servico} onChange={(e) => setTipoServico(e.target.value)} required>
+                  <option value="Instalação">Instalação</option>
+                  <option value="Manutenção">Manutenção</option>
+                  <option value="Remoção">Remoção</option>
+                </Form.Select>
+              </FloatingLabel>
+            </Col>
+          </Row>
+
+          <Row className="g-3 mb-4">
             <Col md={6}>
               <FloatingLabel controlId="floatingUsuario" label="Usuário">
                 <Form.Control type="text" placeholder="Usuário" value={usuario} onChange={(e) => setUsuario(e.target.value)} />
@@ -134,6 +170,14 @@ export function InstallationForm() {
               </FloatingLabel>
             </Col>
           </Row>
+          
+          <Row className="g-3">
+             <Col md={12}>
+              <FloatingLabel controlId="floatingObservacao" label="Observação (opcional)">
+                <Form.Control as="textarea" placeholder="Observação" style={{ height: '100px' }} value={observacao} onChange={(e) => setObservacao(e.target.value)} />
+              </FloatingLabel>
+            </Col>
+          </Row>
 
           <Button 
             variant="primary" 
@@ -141,7 +185,7 @@ export function InstallationForm() {
             className="w-100 mt-4 py-2" 
             disabled={isLoading}
           >
-            {isLoading ? <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" /> : <><i className="bi bi-check-circle me-2"></i>Cadastrar Instalação</>}
+            {isLoading ? <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" /> : <><i className="bi bi-check-circle me-2"></i>Cadastrar Solicitação</>}
           </Button>
         </Form>
       </Card.Body>

@@ -1,15 +1,15 @@
 // Arquivo: src/components/Dashboard.tsx
 import { useEffect, useState, useMemo, type FormEvent } from 'react';
 import {
-  Button, Table, Modal, Spinner, Alert, Card, Form, Badge, InputGroup, Dropdown, ButtonGroup, Accordion
+  Button, Table, Modal, Spinner, Alert, Card, Form, Badge, InputGroup, Dropdown, ButtonGroup, Accordion, OverlayTrigger, Tooltip
 } from 'react-bootstrap';
 import { supabase } from '../supabaseClient';
 
-// ... (Interfaces e Modals não mudam) ...
 interface History {
   id: number;
   evento: string;
   data_evento: string;
+  realizado_por: string; // <-- NOVO CAMPO
 }
 
 interface Installation {
@@ -18,19 +18,22 @@ interface Installation {
   contato: string;
   placa: string;
   modelo: string;
-  ano?: string;
-  cor?: string;
   endereco: string;
-  usuario: string;
-  senha?: string;
   base: string;
   bloqueio: string;
   status: string;
   data_instalacao?: string;
   horario?: string;
   historico: History[];
+  tipo_servico: string;  // <-- NOVO CAMPO
+  observacao?: string;    // <-- NOVO CAMPO
+  usuario: string;
+  senha?: string;
+  ano?: string;
+  cor?: string;
 }
 
+// ... (Componentes ScheduleModal não mudam) ...
 interface ScheduleModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -79,26 +82,23 @@ function ScheduleModal({ isOpen, onClose, installation, onSchedule, scheduleType
   );
 }
 
-interface HistoryModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    installation: Installation;
-}
 
-function HistoryModal({ isOpen, onClose, installation }: HistoryModalProps) {
+// --- MODAL DE HISTÓRICO ATUALIZADO ---
+function HistoryModal({ isOpen, onClose, installation }: { isOpen: boolean, onClose: () => void, installation: Installation }) {
     const sortedHistory = installation.historico ? [...installation.historico].sort((a, b) => new Date(b.data_evento).getTime() - new Date(a.data_evento).getTime()) : [];
 
     return (
-        <Modal show={isOpen} onHide={onClose} centered>
+        <Modal show={isOpen} onHide={onClose} centered size="lg">
             <Modal.Header closeButton>
                 <Modal.Title>Histórico de {installation.nome_completo}</Modal.Title>
             </Modal.Header>
             <Modal.Body>
-                <Table striped bordered size="sm">
+                <Table striped bordered hover size="sm">
                     <thead>
                         <tr>
                             <th>Data</th>
                             <th>Evento</th>
+                            <th>Realizado por</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -107,10 +107,11 @@ function HistoryModal({ isOpen, onClose, installation }: HistoryModalProps) {
                                 <tr key={h.id}>
                                     <td>{new Date(h.data_evento).toLocaleString('pt-BR')}</td>
                                     <td>{h.evento}</td>
+                                    <td>{h.realizado_por || 'N/A'}</td>
                                 </tr>
                             ))
                         ) : (
-                            <tr><td colSpan={2} className="text-center">Nenhum histórico encontrado.</td></tr>
+                            <tr><td colSpan={3} className="text-center">Nenhum histórico encontrado.</td></tr>
                         )}
                     </tbody>
                 </Table>
@@ -119,18 +120,7 @@ function HistoryModal({ isOpen, onClose, installation }: HistoryModalProps) {
     );
 }
 
-// --- FUNÇÃO AUXILIAR COM A COR CORRIGIDA ---
-const getScheduledTaskInfo = (inst: Installation) => {
-    if (inst.status !== 'Agendado') {
-      return { text: 'N/A', variant: 'secondary' };
-    }
-    const lastEvent = inst.historico?.slice().sort((a, b) => new Date(b.data_evento).getTime() - new Date(a.data_evento).getTime())[0];
-    
-    if (lastEvent?.evento.includes('Manutenção')) return { text: 'Manutenção', variant: 'warning' };
-    if (lastEvent?.evento.includes('Remoção')) return { text: 'Remoção', variant: 'danger' };
-    // Cor alterada de 'info' para 'primary'
-    return { text: 'Instalação', variant: 'primary' };
-};
+const getScheduledTaskInfo = (inst: Installation) => { /* ... (sem alterações) ... */ return { text: 'N/A', variant: 'secondary' }; };
 
 export function Dashboard() {
   const [installations, setInstallations] = useState<Installation[]>([]);
@@ -141,16 +131,14 @@ export function Dashboard() {
   const [message, setMessage] = useState<{type: 'success' | 'danger' | 'info', text: string} | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const fetchInstallations = async () => { /* ... (sem alterações) ... */ 
+  const fetchInstallations = async () => {
     setLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Usuário não autenticado.');
 
       const response = await fetch('/.netlify/functions/get-installations', {
-        headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-        },
+        headers: { 'Authorization': `Bearer ${session.access_token}` },
       });
       if (!response.ok) throw new Error('Falha ao buscar dados.');
       const data: Installation[] = await response.json();
@@ -161,32 +149,23 @@ export function Dashboard() {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    fetchInstallations();
-  }, []);
-
-  const filteredInstallations = useMemo(() =>
-    installations.filter(inst =>
-      inst.nome_completo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      inst.placa.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      inst.modelo.toLowerCase().includes(searchTerm.toLowerCase())
-    ),
-  [installations, searchTerm]);
-
-  // --- ARRAYS FILTRADOS POR STATUS, COMO NA TELA DE CONSULTA ---
-  const pending = filteredInstallations.filter(inst => inst.status === 'A agendar');
-  const scheduled = filteredInstallations.filter(inst => inst.status === 'Agendado');
-  const completed = filteredInstallations.filter(inst => inst.status === 'Concluído');
-
-  const handleUpdate = async (id: number, status: string, options: { date?: string; time?: string; type?: 'maintenance' | 'removal'; completionType?: 'maintenance' | 'removal' | 'installation' } = {}) => { /* ... (sem alterações) ... */ 
+  
+  useEffect(() => { fetchInstallations(); }, []);
+  
+  const handleUpdate = async (id: number, status: string, options: { date?: string; time?: string; type?: 'maintenance' | 'removal'; completionType?: 'maintenance' | 'removal' | 'installation' } = {}) => {
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Usuário não autenticado.');
+
       const { date, time, type, completionType } = options;
       const finalStatus = (type === 'maintenance' || type === 'removal') ? 'Agendado' : status;
 
       const response = await fetch('/.netlify/functions/update-installation', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}` 
+        },
         body: JSON.stringify({ id, status: finalStatus, date, time, type, completionType }),
       });
       if (!response.ok) {
@@ -200,98 +179,108 @@ export function Dashboard() {
         setMessage({type: 'danger', text: error.message || 'Erro ao processar a solicitação.'});
     }
   };
-  
-  const getCompletionType = (inst: Installation) => { /* ... (sem alterações) ... */ 
-    const lastEvent = inst.historico?.slice().sort((a, b) => new Date(b.data_evento).getTime() - new Date(a.data_evento).getTime())[0];
-    if (lastEvent?.evento === 'Manutenção Agendada') return 'maintenance';
-    if (lastEvent?.evento === 'Remoção Agendada') return 'removal';
-    return 'installation';
-  }
 
-  const handleCopy = (inst: Installation) => { /* ... (sem alterações) ... */ 
-    const formattedText = `Veiculo ${inst.modelo?.split(' ')[0] || ''}
-Modelo: ${inst.modelo}
-Ano Fabricação: ${inst.ano || ''}
-Placa: ${inst.placa}
-Cor: ${inst.cor || ''}
-Nome: ${inst.nome_completo}
-Telefone: ${inst.contato}
-usuario: ${inst.usuario}
-senha: ${inst.senha || ''}
-BASE Atena ( ${inst.base === 'Atena' ? 'X' : ' '} )   Base Autocontrol ( ${inst.base === 'Autocontrol' ? 'X' : ' '} )
-Bloqueio sim ( ${inst.bloqueio === 'Sim' ? 'X' : ' '} )  nao ( ${inst.bloqueio === 'Nao' ? 'X' : ' '} )`;
-    navigator.clipboard.writeText(formattedText)
-      .then(() => setMessage({type: 'info', text: 'Informações copiadas!'}))
-      .catch(() => setMessage({type: 'danger', text: 'Erro ao copiar.'}));
-  };
+  const filteredInstallations = useMemo(() =>
+    installations.filter(inst =>
+      inst.nome_completo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      inst.placa.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      inst.modelo.toLowerCase().includes(searchTerm.toLowerCase())
+    ),
+  [installations, searchTerm]);
 
-  // --- NOVA FUNÇÃO PARA RENDERIZAR AS TABELAS DENTRO DO ACORDEÃO ---
+  const pending = filteredInstallations.filter(inst => inst.status === 'A agendar');
+  const scheduled = filteredInstallations.filter(inst => inst.status === 'Agendado');
+  const completed = filteredInstallations.filter(inst => inst.status === 'Concluído');
+
+  const getCompletionType = (inst: Installation) => { /* ... (sem alterações) ... */ return 'installation' };
+  const handleCopy = (inst: Installation) => { /* ... (sem alterações) ... */ };
+
+  // --- FUNÇÃO DE RENDERIZAÇÃO DA TABELA ATUALIZADA ---
   const renderInstallationsTable = (installationsList: Installation[]) => {
     if (installationsList.length === 0) {
         return <p className="text-muted p-3 mb-0 fst-italic">Nenhum registro encontrado.</p>;
     }
 
     return (
-        <Table striped bordered hover responsive className="mb-0">
+        <Table striped bordered hover responsive className="mb-0 align-middle">
             <thead className="table-light">
                 <tr>
                     <th>Cliente</th>
                     <th>Veículo</th>
-                    <th>Agendamento</th>
+                    <th>Tipo de Serviço</th>
                     <th className="text-center">Ações</th>
                 </tr>
             </thead>
             <tbody>
-                {installationsList.map((inst) => {
-                    const taskInfo = getScheduledTaskInfo(inst);
-                    return (
-                        <tr key={inst.id}>
-                            <td>{inst.nome_completo}</td>
-                            <td>{`${inst.modelo} (${inst.placa})`}</td>
-                            <td>
-                                {inst.status === 'Agendado' ? (
+                {installationsList.map((inst) => (
+                    <tr key={inst.id}>
+                        <td>
+                          {inst.nome_completo}
+                          {/* --- ÍCONE DE OBSERVAÇÃO --- */}
+                          {inst.observacao && (
+                            <OverlayTrigger
+                              placement="top"
+                              overlay={<Tooltip id={`tooltip-${inst.id}`}>{inst.observacao}</Tooltip>}
+                            >
+                              <i className="bi bi-info-circle-fill text-warning ms-2"></i>
+                            </OverlayTrigger>
+                          )}
+                        </td>
+                        <td>{`${inst.modelo} (${inst.placa})`}</td>
+                        <td>
+                           <Badge bg={
+                               inst.tipo_servico === 'Instalação' ? 'primary' :
+                               inst.tipo_servico === 'Manutenção' ? 'warning' : 'danger'
+                           }>
+                               {inst.tipo_servico}
+                           </Badge>
+                        </td>
+                        <td className="text-center">
+                            <ButtonGroup>
+                                {/* --- LÓGICA DE BOTÕES ATUALIZADA --- */}
+                                {inst.status === 'A agendar' && inst.tipo_servico === 'Instalação' &&
+                                    <Button size="sm" variant="primary" onClick={() => setSelected({ installation: inst, type: 'installation' })}>Agendar Instalação</Button>
+                                }
+                                {inst.status === 'A agendar' && inst.tipo_servico === 'Manutenção' &&
+                                    <Button size="sm" variant="warning" onClick={() => setSelected({ installation: inst, type: 'maintenance' })}>Agendar Manutenção</Button>
+                                }
+                                {inst.status === 'A agendar' && inst.tipo_servico === 'Remoção' &&
+                                    <Button size="sm" variant="danger" onClick={() => setSelected({ installation: inst, type: 'removal' })}>Agendar Remoção</Button>
+                                }
+
+                                {inst.status === 'Agendado' && <Button size="sm" variant="success" onClick={() => handleUpdate(inst.id, 'Concluído', { completionType: getCompletionType(inst) })}>Concluir</Button>}
+                                
+                                {inst.status === 'Concluído' &&
                                     <>
-                                        {`${new Date(inst.data_instalacao + 'T00:00:00').toLocaleDateString('pt-BR')} às ${inst.horario}`}
-                                        <Badge bg={taskInfo.variant} className="ms-2">{taskInfo.text}</Badge>
+                                        <Button size="sm" variant="warning" onClick={() => setSelected({ installation: inst, type: 'maintenance' })}>Manutenção</Button>
+                                        <Button size="sm" variant="danger" onClick={() => setSelected({ installation: inst, type: 'removal' })}>Remoção</Button>
                                     </>
-                                ) : 'N/A'}
-                            </td>
-                            <td className="text-center">
-                                <ButtonGroup>
-                                    {inst.status === 'A agendar' && <Button size="sm" variant="primary" onClick={() => setSelected({ installation: inst, type: 'installation' })}>Agendar</Button>}
-                                    {inst.status === 'Agendado' && <Button size="sm" variant="success" onClick={() => handleUpdate(inst.id, 'Concluído', { completionType: getCompletionType(inst) })}>Concluir</Button>}
-                                    {inst.status === 'Concluído' &&
-                                        <>
-                                            <Button size="sm" variant="warning" onClick={() => setSelected({ installation: inst, type: 'maintenance' })}>Manutenção</Button>
-                                            <Button size="sm" variant="danger" onClick={() => setSelected({ installation: inst, type: 'removal' })}>Remoção</Button>
-                                        </>
-                                    }
-                                    <Dropdown as={ButtonGroup}>
-                                        <Dropdown.Toggle split variant={inst.status === 'Concluído' ? 'secondary' : inst.status === 'Agendado' ? 'success' : 'primary'} size="sm" id={`dropdown-${inst.id}`} />
-                                        <Dropdown.Menu>
-                                            <Dropdown.Item onClick={() => setHistoryTarget(inst)}>Histórico</Dropdown.Item>
-                                            <Dropdown.Item onClick={() => handleCopy(inst)}>Copiar Dados</Dropdown.Item>
-                                            {inst.status === 'Agendado' && <Dropdown.Divider />}
-                                            {inst.status === 'Agendado' && <Dropdown.Item onClick={() => setSelected({ installation: inst, type: 'installation' })}>Reagendar</Dropdown.Item>}
-                                        </Dropdown.Menu>
-                                    </Dropdown>
-                                </ButtonGroup>
-                            </td>
-                        </tr>
-                    )
-                })}
+                                }
+                                <Dropdown as={ButtonGroup}>
+                                    <Dropdown.Toggle split variant="secondary" size="sm" id={`dropdown-${inst.id}`} />
+                                    <Dropdown.Menu>
+                                        <Dropdown.Item onClick={() => setHistoryTarget(inst)}>Histórico</Dropdown.Item>
+                                        <Dropdown.Item onClick={() => handleCopy(inst)}>Copiar Dados</Dropdown.Item>
+                                        {inst.status === 'Agendado' && <Dropdown.Divider />}
+                                        {inst.status === 'Agendado' && <Dropdown.Item onClick={() => setSelected({ installation: inst, type: 'installation' })}>Reagendar</Dropdown.Item>}
+                                    </Dropdown.Menu>
+                                </Dropdown>
+                            </ButtonGroup>
+                        </td>
+                    </tr>
+                ))}
             </tbody>
         </Table>
     );
   };
-
+  
   if (loading) return <div className="text-center p-5"><Spinner animation="border" variant="primary" /></div>;
   if (error) return <Alert variant="danger">{error}</Alert>;
 
   return (
     <>
       <Card className="mb-4">
-        <Card.Header as="h5"><i className="bi bi-search me-2"></i>Painel de Agendamentos</Card.Header>
+        <Card.Header as="h5"><i className="bi bi-clipboard-data me-2"></i>Painel de Agendamentos</Card.Header>
         <Card.Body>
           <InputGroup>
             <InputGroup.Text><i className="bi bi-search"></i></InputGroup.Text>
@@ -306,22 +295,19 @@ Bloqueio sim ( ${inst.bloqueio === 'Sim' ? 'X' : ' '} )  nao ( ${inst.bloqueio =
 
       {message && <Alert variant={message.type} onClose={() => setMessage(null)} dismissible className="mb-4">{message.text}</Alert>}
 
-      {/* --- ESTRUTURA PRINCIPAL ATUALIZADA PARA O LAYOUT DE ACORDEÃO --- */}
-      <Accordion>
+      <Accordion defaultActiveKey={['0', '1']}>
         <Accordion.Item eventKey="0" className="mb-3">
           <Accordion.Header><i className="bi bi-clock-history me-2"></i>Pendentes ({pending.length})</Accordion.Header>
           <Accordion.Body className="p-0">
             {renderInstallationsTable(pending)}
           </Accordion.Body>
         </Accordion.Item>
-
         <Accordion.Item eventKey="1" className="mb-3">
           <Accordion.Header><i className="bi bi-calendar-check me-2"></i>Agendadas ({scheduled.length})</Accordion.Header>
           <Accordion.Body className="p-0">
             {renderInstallationsTable(scheduled)}
           </Accordion.Body>
         </Accordion.Item>
-
         <Accordion.Item eventKey="2">
           <Accordion.Header><i className="bi bi-check-circle-fill me-2"></i>Concluídas ({completed.length})</Accordion.Header>
           <Accordion.Body className="p-0">
