@@ -2,6 +2,7 @@
 const { createClient } = require('@supabase/supabase-js');
 
 exports.handler = async function(event) {
+  // ... (código de inicialização do Supabase permanece o mesmo)
   const supabaseUrl = process.env.SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_KEY;
 
@@ -22,13 +23,13 @@ exports.handler = async function(event) {
     }
 
     const data = JSON.parse(event.body);
-    const { id, status, date, time, type, completionType } = data;
+    const { id, status, date, time, type, completionType, tecnico_id } = data; // Adicionado tecnico_id
 
     if (!id) {
         return { statusCode: 400, headers: { "Access-Control-Allow-Origin": "*" }, body: JSON.stringify({ message: "ID da solicitação é obrigatório." }) };
     }
     
-    // Este bloco é para atualizações de STATUS (Agendar, Concluir, etc.)
+    // Bloco para atualizações de STATUS (Agendar, Concluir, etc.)
     if (status && !data.nome_completo) {
         let eventoText = '';
         let updateData = { status };
@@ -37,17 +38,24 @@ exports.handler = async function(event) {
             if (completionType === 'maintenance') eventoText = 'Manutenção Concluída';
             else if (completionType === 'removal') eventoText = 'Remoção Concluída';
             else eventoText = 'Instalação Concluída';
+            
+            // Ao concluir, limpamos o técnico para o próximo agendamento (opcional)
+            updateData.tecnico_id = null;
+
         } else if (type === 'maintenance') {
             updateData.data_instalacao = date;
             updateData.horario = time;
+            updateData.tecnico_id = tecnico_id; // Salva o técnico
             eventoText = 'Manutenção Agendada';
         } else if (type === 'removal') {
             updateData.data_instalacao = date;
             updateData.horario = time;
+            updateData.tecnico_id = tecnico_id; // Salva o técnico
             eventoText = 'Remoção Agendada';
         } else if (status === 'Agendado') {
             updateData.data_instalacao = date;
             updateData.horario = time;
+            updateData.tecnico_id = tecnico_id; // Salva o técnico
             eventoText = 'Instalação Agendada';
         }
 
@@ -66,7 +74,7 @@ exports.handler = async function(event) {
 
         return { statusCode: 200, headers: { "Access-Control-Allow-Origin": "*" }, body: JSON.stringify({ message: `Status atualizado para ${status}!` }) };
 
-    // Este bloco é para EDIÇÃO GERAL dos dados do formulário
+    // Bloco para EDIÇÃO GERAL dos dados
     } else {
         const {
             nome_completo, contato, placa, modelo, ano, cor, endereco,
@@ -75,13 +83,9 @@ exports.handler = async function(event) {
         
         const updatePayload = {
             nome_completo, contato, placa, modelo, ano, cor, endereco,
-            usuario, senha, base, bloqueio, tipo_servico, observacao,
-            // ### CORREÇÃO APLICADA AQUI ###
-            // Ao editar, o status volta para "A agendar" e limpamos a data/hora antigas
-            // para que o serviço possa ser agendado novamente no painel.
-            status: 'A agendar',
-            data_instalacao: null,
-            horario: null
+            usuario, senha, base, bloqueio, tipo_servico, observacao
+            // ### CORREÇÃO APLICADA ###
+            // Não alteramos mais o status ou a data ao editar.
         };
 
         const { error: updateError } = await supabase

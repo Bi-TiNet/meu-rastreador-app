@@ -2,7 +2,8 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
-import './App.css'; // Importe o novo arquivo CSS
+import 'bootstrap/dist/css/bootstrap.min.css'; // Importa o CSS do Bootstrap
+import './App.css'; 
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
