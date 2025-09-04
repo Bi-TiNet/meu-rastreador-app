@@ -11,6 +11,9 @@ import { ResetPassword } from './components/ResetPassword';
 import { supabase } from './supabaseClient';
 import type { Session, User } from '@supabase/supabase-js';
 
+// Adicionado para carregar os ícones do Bootstrap
+import 'bootstrap-icons/font/bootstrap-icons.css';
+
 // Hook customizado para gerenciar o estado da sessão e do usuário
 function useAuth() {
   const [session, setSession] = useState<Session | null>(null);
