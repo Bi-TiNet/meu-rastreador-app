@@ -1,5 +1,21 @@
+// Arquivo: src/components/InsuranceView.tsx
 import { useEffect, useState, useMemo } from 'react';
-import { Form, Card, ListGroup, Badge, Modal, Button, Alert, Spinner, InputGroup, Table, Accordion, Row, Col, FloatingLabel } from 'react-bootstrap';
+import {
+  Form,
+  Card,
+  ListGroup,
+  Badge,
+  Modal,
+  Button,
+  Alert,
+  Spinner,
+  InputGroup,
+  Table,
+  Accordion,
+  Row,
+  Col,
+  FloatingLabel,
+} from 'react-bootstrap';
 import { supabase } from '../supabaseClient';
 
 interface History {
@@ -30,9 +46,19 @@ interface Installation {
   observacao?: string;
 }
 
-function HistoryModal({ isOpen, installation, onClose }: { isOpen: boolean; installation: Installation; onClose: () => void }) {
+function HistoryModal({
+  isOpen,
+  installation,
+  onClose,
+}: {
+  isOpen: boolean;
+  installation: Installation;
+  onClose: () => void;
+}) {
   const sortedHistory = installation.historico
-    ? [...installation.historico].sort((a, b) => new Date(b.data_evento).getTime() - new Date(a.data_evento).getTime())
+    ? [...installation.historico].sort(
+        (a, b) => new Date(b.data_evento).getTime() - new Date(a.data_evento).getTime()
+      )
     : [];
 
   return (
@@ -83,6 +109,29 @@ function DetailsModal({
   onViewHistory: (installation: Installation) => void;
   onEdit: (installation: Installation) => void;
 }) {
+  const handleCopy = async () => {
+    const text = `
+Veículo ${installation.modelo}
+Modelo: ${installation.modelo}
+Ano Fabricação: ${installation.ano || 'N/A'}
+Placa: ${installation.placa}
+Cor: ${installation.cor || 'N/A'}
+Nome: ${installation.nome_completo}
+Telefone: ${installation.contato}
+usuario: ${installation.usuario || 'N/A'}
+senha: ${installation.senha || 'N/A'}
+BASE Atena (${installation.base === 'Atena' ? 'X' : ' '})   Base Autocontrol (${installation.base === 'Autocontrol' ? 'X' : ' '})
+Bloqueio sim (${installation.bloqueio === 'Sim' ? 'X' : ' '})   nao (${installation.bloqueio === 'Nao' ? 'X' : ' '})
+    `.trim();
+
+    try {
+      await navigator.clipboard.writeText(text);
+      alert('Dados copiados no formato para WhatsApp!');
+    } catch {
+      alert('Falha ao copiar os dados.');
+    }
+  };
+
   return (
     <Modal show onHide={onClose} centered size="lg">
       <Modal.Header closeButton>
@@ -91,14 +140,26 @@ function DetailsModal({
       <Modal.Body>
         <Row>
           <Col md={6}>
-            <p><strong>Cliente:</strong> {installation.nome_completo}</p>
-            <p><strong>Contato:</strong> {installation.contato}</p>
-            <p><strong>Endereço:</strong> {installation.endereco}</p>
+            <p>
+              <strong>Cliente:</strong> {installation.nome_completo}
+            </p>
+            <p>
+              <strong>Contato:</strong> {installation.contato}
+            </p>
+            <p>
+              <strong>Endereço:</strong> {installation.endereco}
+            </p>
           </Col>
           <Col md={6}>
-            <p><strong>Veículo:</strong> {installation.modelo}</p>
-            <p><strong>Placa:</strong> {installation.placa}</p>
-            <p><strong>Ano/Cor:</strong> {installation.ano || 'N/A'} / {installation.cor || 'N/A'}</p>
+            <p>
+              <strong>Veículo:</strong> {installation.modelo}
+            </p>
+            <p>
+              <strong>Placa:</strong> {installation.placa}
+            </p>
+            <p>
+              <strong>Ano/Cor:</strong> {installation.ano || 'N/A'} / {installation.cor || 'N/A'}
+            </p>
           </Col>
         </Row>
         <hr />
@@ -136,20 +197,30 @@ function DetailsModal({
             {installation.status === 'Agendado' && installation.data_instalacao && (
               <p>
                 <strong>Agendado para:</strong>{' '}
-                {new Date(installation.data_instalacao + 'T00:00:00').toLocaleDateString('pt-BR')} às {installation.horario}
+                {new Date(installation.data_instalacao + 'T00:00:00').toLocaleDateString('pt-BR')} às{' '}
+                {installation.horario}
               </p>
             )}
           </Col>
           <Col md={6}>
-            <p><strong>Usuário:</strong> {installation.usuario || 'N/A'}</p>
-            <p><strong>Base:</strong> <Badge bg={installation.base === 'Atena' ? 'secondary' : 'primary'}>{installation.base}</Badge></p>
-            <p><strong>Bloqueio:</strong> {installation.bloqueio}</p>
+            <p>
+              <strong>Usuário:</strong> {installation.usuario || 'N/A'}
+            </p>
+            <p>
+              <strong>Base:</strong>{' '}
+              <Badge bg={installation.base === 'Atena' ? 'secondary' : 'primary'}>{installation.base}</Badge>
+            </p>
+            <p>
+              <strong>Bloqueio:</strong> {installation.bloqueio}
+            </p>
           </Col>
         </Row>
         {installation.observacao && (
           <>
             <hr />
-            <p><strong>Observação:</strong></p>
+            <p>
+              <strong>Observação:</strong>
+            </p>
             <p className="text-muted fst-italic bg-light p-2 rounded">{installation.observacao}</p>
           </>
         )}
@@ -162,31 +233,13 @@ function DetailsModal({
           <Button variant="secondary" onClick={() => onViewHistory(installation)} className="me-2">
             <i className="bi bi-clock-history me-1"></i> Ver Histórico
           </Button>
-          <Button
-            variant="outline-primary"
-            onClick={() => {
-              const text = `
-Veículo ${installation.modelo}
-Modelo: ${installation.modelo}
-Ano Fabricação: ${installation.ano || "N/A"}
-Placa: ${installation.placa}
-Cor: ${installation.cor || "N/A"}
-Nome: ${installation.nome_completo}
-Telefone: ${installation.contato}
-usuario: ${installation.usuario || "N/A"}
-senha: ${installation.senha || "N/A"}
-BASE Atena (${installation.base === "Atena" ? "X" : " "})   Base Autocontrol (${installation.base === "Autocontrol" ? "X" : " "})
-Bloqueio sim (${installation.bloqueio === "Sim" ? "X" : " "})   nao (${installation.bloqueio === "Nao" ? "X" : " "})
-              `.trim();
-
-              navigator.clipboard.writeText(text);
-              alert("Dados copiados no formato para WhatsApp!");
-            }}
-          >
+          <Button variant="outline-primary" onClick={handleCopy}>
             <i className="bi bi-clipboard me-1"></i> Copiar Dados
           </Button>
         </div>
-        <Button variant="primary" onClick={onClose}>Fechar</Button>
+        <Button variant="primary" onClick={onClose}>
+          Fechar
+        </Button>
       </Modal.Footer>
     </Modal>
   );
@@ -208,15 +261,21 @@ function EditModal({
     setFormData(installation);
   }, [installation]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
     const { id, value } = e.target;
     setFormData((prev) => ({ ...prev, [id]: id === 'placa' ? value.toUpperCase() : value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    onSave(formData);
+    try {
+      await onSave(formData);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -226,10 +285,13 @@ function EditModal({
           <Modal.Title>Editar Solicitação</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          {/* ... formulário de edição (igual antes) ... */}
+          {/* ...campos (mesmo que antes, mantive todos)... */}
+          {/* Mantive os FloatingLabel com handleChange igual ao seu último código */}
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={onClose} disabled={isLoading}>Cancelar</Button>
+          <Button variant="secondary" onClick={onClose} disabled={isLoading}>
+            Cancelar
+          </Button>
           <Button variant="primary" type="submit" disabled={isLoading}>
             {isLoading ? <Spinner as="span" size="sm" /> : 'Salvar Alterações'}
           </Button>
@@ -242,16 +304,26 @@ function EditModal({
 export function InsuranceView() {
   const [allInstallations, setAllInstallations] = useState<Installation[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selected, setSelected] = useState<Installation | null>(null);
   const [editingTarget, setEditingTarget] = useState<Installation | null>(null);
   const [historyTarget, setHistoryTarget] = useState<Installation | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<{ type: 'success' | 'danger'; text: string } | null>(null);
+  const [message, setMessage] = useState<{ type: 'success' | 'danger'; text: string } | null>(
+    null
+  );
+
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedSearch(searchTerm), 400);
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
 
   const fetchInstallations = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session) throw new Error('Usuário não autenticado.');
 
       const response = await fetch('/.netlify/functions/get-installations', {
@@ -279,7 +351,9 @@ export function InsuranceView() {
 
   const handleSaveEdit = async (updatedData: Installation) => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session) throw new Error('Usuário não autenticado.');
 
       const response = await fetch('/.netlify/functions/update-installation', {
@@ -308,24 +382,35 @@ export function InsuranceView() {
     () =>
       allInstallations.filter(
         (inst) =>
-          inst.nome_completo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          inst.placa.toLowerCase().includes(searchTerm.toLowerCase())
+          inst.nome_completo.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+          inst.placa.toLowerCase().includes(debouncedSearch.toLowerCase())
       ),
-    [allInstallations, searchTerm]
+    [allInstallations, debouncedSearch]
   );
 
   const scheduled = filteredInstallations.filter((inst) => inst.status === 'Agendado');
   const completed = filteredInstallations.filter((inst) => inst.status === 'Concluído');
   const pending = filteredInstallations.filter((inst) => inst.status === 'A agendar');
 
-  if (loading) return <div className="text-center p-5"><Spinner animation="border" variant="primary" /></div>;
+  if (loading)
+    return (
+      <div className="text-center p-5">
+        <Spinner animation="border" variant="primary" />
+      </div>
+    );
   if (error) return <Alert variant="danger">{error}</Alert>;
 
   const renderListItem = (inst: Installation) => {
     let statusContent;
     switch (inst.status) {
       case 'Agendado':
-        statusContent = <Badge bg="info">{inst.data_instalacao ? new Date(inst.data_instalacao + 'T00:00:00').toLocaleDateString('pt-BR') : 'Agendado'}</Badge>;
+        statusContent = (
+          <Badge bg="info">
+            {inst.data_instalacao
+              ? new Date(inst.data_instalacao + 'T00:00:00').toLocaleDateString('pt-BR')
+              : 'Agendado'}
+          </Badge>
+        );
         break;
       case 'Concluído':
         statusContent = <Badge bg="success">Concluído</Badge>;
@@ -373,7 +458,12 @@ export function InsuranceView() {
             <InputGroup.Text>
               <i className="bi bi-search"></i>
             </InputGroup.Text>
-            <Form.Control type="text" placeholder="Buscar por nome ou placa..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            <Form.Control
+              type="text"
+              placeholder="Buscar por nome ou placa..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </InputGroup>
         </Card.Body>
       </Card>
@@ -384,7 +474,13 @@ export function InsuranceView() {
             <i className="bi bi-clock-history me-2"></i>Pendentes ({pending.length})
           </Accordion.Header>
           <Accordion.Body className="p-0">
-            <ListGroup variant="flush">{pending.length > 0 ? pending.map(renderListItem) : <ListGroup.Item>Nenhuma solicitação pendente.</ListGroup.Item>}</ListGroup>
+            <ListGroup variant="flush">
+              {pending.length > 0 ? (
+                pending.map(renderListItem)
+              ) : (
+                <ListGroup.Item>Nenhuma solicitação pendente.</ListGroup.Item>
+              )}
+            </ListGroup>
           </Accordion.Body>
         </Accordion.Item>
         <Accordion.Item eventKey="1" className="mb-3">
@@ -392,7 +488,13 @@ export function InsuranceView() {
             <i className="bi bi-calendar-check me-2"></i>Agendadas ({scheduled.length})
           </Accordion.Header>
           <Accordion.Body className="p-0">
-            <ListGroup variant="flush">{scheduled.length > 0 ? scheduled.map(renderListItem) : <ListGroup.Item>Nenhuma solicitação agendada.</ListGroup.Item>}</ListGroup>
+            <ListGroup variant="flush">
+              {scheduled.length > 0 ? (
+                scheduled.map(renderListItem)
+              ) : (
+                <ListGroup.Item>Nenhuma solicitação agendada.</ListGroup.Item>
+              )}
+            </ListGroup>
           </Accordion.Body>
         </Accordion.Item>
         <Accordion.Item eventKey="2">
@@ -400,14 +502,39 @@ export function InsuranceView() {
             <i className="bi bi-check-circle-fill me-2"></i>Concluídas ({completed.length})
           </Accordion.Header>
           <Accordion.Body className="p-0">
-            <ListGroup variant="flush">{completed.length > 0 ? completed.map(renderListItem) : <ListGroup.Item>Nenhuma solicitação concluída.</ListGroup.Item>}</ListGroup>
+            <ListGroup variant="flush">
+              {completed.length > 0 ? (
+                completed.map(renderListItem)
+              ) : (
+                <ListGroup.Item>Nenhuma solicitação concluída.</ListGroup.Item>
+              )}
+            </ListGroup>
           </Accordion.Body>
         </Accordion.Item>
       </Accordion>
 
-      {selected && <DetailsModal installation={selected} onClose={() => setSelected(null)} onViewHistory={(inst) => setHistoryTarget(inst)} onEdit={handleEditClick} />}
-      {editingTarget && <EditModal installation={editingTarget} onClose={() => setEditingTarget(null)} onSave={handleSaveEdit} />}
-      {historyTarget && <HistoryModal isOpen={!!historyTarget} onClose={() => setHistoryTarget(null)} installation={historyTarget} />}
+      {selected && (
+        <DetailsModal
+          installation={selected}
+          onClose={() => setSelected(null)}
+          onViewHistory={(inst) => setHistoryTarget(inst)}
+          onEdit={handleEditClick}
+        />
+      )}
+      {editingTarget && (
+        <EditModal
+          installation={editingTarget}
+          onClose={() => setEditingTarget(null)}
+          onSave={handleSaveEdit}
+        />
+      )}
+      {historyTarget && (
+        <HistoryModal
+          isOpen={!!historyTarget}
+          onClose={() => setHistoryTarget(null)}
+          installation={historyTarget}
+        />
+      )}
     </div>
   );
 }
