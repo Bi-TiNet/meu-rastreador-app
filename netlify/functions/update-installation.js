@@ -28,6 +28,7 @@ exports.handler = async function(event) {
         return { statusCode: 400, headers: { "Access-Control-Allow-Origin": "*" }, body: JSON.stringify({ message: "ID da solicitação é obrigatório." }) };
     }
     
+    // Este bloco é para atualizações de STATUS (Agendar, Concluir, etc.)
     if (status && !data.nome_completo) {
         let eventoText = '';
         let updateData = { status };
@@ -65,6 +66,7 @@ exports.handler = async function(event) {
 
         return { statusCode: 200, headers: { "Access-Control-Allow-Origin": "*" }, body: JSON.stringify({ message: `Status atualizado para ${status}!` }) };
 
+    // Este bloco é para EDIÇÃO GERAL dos dados do formulário
     } else {
         const {
             nome_completo, contato, placa, modelo, ano, cor, endereco,
@@ -73,7 +75,13 @@ exports.handler = async function(event) {
         
         const updatePayload = {
             nome_completo, contato, placa, modelo, ano, cor, endereco,
-            usuario, senha, base, bloqueio, tipo_servico, observacao
+            usuario, senha, base, bloqueio, tipo_servico, observacao,
+            // ### CORREÇÃO APLICADA AQUI ###
+            // Ao editar, o status volta para "A agendar" e limpamos a data/hora antigas
+            // para que o serviço possa ser agendado novamente no painel.
+            status: 'A agendar',
+            data_instalacao: null,
+            horario: null
         };
 
         const { error: updateError } = await supabase
