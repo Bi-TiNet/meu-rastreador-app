@@ -8,7 +8,7 @@ import { TechnicianAgenda } from './components/TechnicianAgenda';
 import { InsuranceView } from './components/InsuranceView';
 import { Login } from './components/Login';
 import { ResetPassword } from './components/ResetPassword';
-import { UserManagement } from './components/UserManagement'; // Importa o novo componente
+import { UserManagement } from './components/UserManagement';
 import { supabase } from './supabaseClient';
 import type { Session, User } from '@supabase/supabase-js';
 
@@ -24,7 +24,6 @@ function useAuth() {
       const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
       setUser(session?.user ?? null);
-      // Acessa a role de app_metadata
       setUserRole(session?.user?.app_metadata?.role || null);
       setLoading(false);
     };
@@ -62,8 +61,20 @@ function AdminProtectedRoute({ session, userRole, loading, children }: { session
   if (!session) {
     return <Navigate to="/login" />;
   }
-  // Redireciona qualquer usuário que não seja 'admin'
   return userRole === 'admin' ? children : <Navigate to="/" />;
+}
+
+// *** NOVO COMPONENTE DE ROTA ***
+// Protege rotas para administradores e técnicos
+function AdminOrTechnicianRoute({ session, userRole, loading, children }: { session: Session | null, userRole: string | null, loading: boolean, children: ReactNode }) {
+  if (loading) {
+    return <div className="text-center p-5"><Spinner animation="border" /></div>;
+  }
+  if (!session) {
+    return <Navigate to="/login" />;
+  }
+  // Permite o acesso se o usuário for 'admin' OU 'tecnico'
+  return (userRole === 'admin' || userRole === 'tecnico') ? children : <Navigate to="/" />;
 }
 
 
@@ -79,7 +90,7 @@ function AppNavbar({ session, userRole }: { session: Session | null, userRole: s
     return (
         <Navbar expand="lg" className="mb-4 shadow-sm">
             <Container>
-                <Navbar.Brand as={NavLink} to={session ? (userRole === 'admin' ? '/painel' : '/') : '/login'} className="d-flex align-items-center">
+                <Navbar.Brand as={NavLink} to={session ? "/" : "/login"} className="d-flex align-items-center">
                     <img
                       src="/logo-icon.png"
                       height="40"
@@ -99,14 +110,19 @@ function AppNavbar({ session, userRole }: { session: Session | null, userRole: s
                             <Nav.Link as={NavLink} to="/"><i className="bi bi-plus-circle me-1"></i> Cadastrar</Nav.Link>
                             <Nav.Link as={NavLink} to="/consulta"><i className="bi bi-search me-1"></i> Consulta</Nav.Link>
                             
+                            {/* Links para Admin e Técnico */}
+                            {(userRole === 'admin' || userRole === 'tecnico') && (
+                                <Nav.Link as={NavLink} to="/painel"><i className="bi bi-clipboard-data me-1"></i> Painel</Nav.Link>
+                            )}
+                            
                             {/* Links apenas para Admin */}
                             {userRole === 'admin' && (
                                 <>
-                                    <Nav.Link as={NavLink} to="/painel"><i className="bi bi-clipboard-data me-1"></i> Painel</Nav.Link>
                                     <Nav.Link as={NavLink} to="/agenda"><i className="bi bi-calendar-week me-1"></i> Agenda</Nav.Link>
                                     <Nav.Link as={NavLink} to="/usuarios"><i className="bi bi-people-fill me-1"></i> Usuários</Nav.Link>
                                 </>
                             )}
+                            
                             {/* Link da Agenda para Técnicos */}
                              {userRole === 'tecnico' && (
                                 <Nav.Link as={NavLink} to="/agenda"><i className="bi bi-calendar-week me-1"></i> Minha Agenda</Nav.Link>
@@ -138,12 +154,10 @@ function ThemeToggleButton({ theme, toggleTheme }: { theme: string, toggleTheme:
 function App() {
   const { session, userRole, loading } = useAuth();
   const [theme, setTheme] = useState(() => {
-    // Lê o tema do localStorage ou usa 'light' como padrão
     return localStorage.getItem('theme') || 'light';
   });
 
   useEffect(() => {
-    // Aplica o tema ao elemento <html> e salva a preferência
     document.documentElement.setAttribute('data-bs-theme', theme);
     localStorage.setItem('theme', theme);
   }, [theme]);
@@ -166,8 +180,10 @@ function App() {
               <Route path="/" element={<ProtectedRoute session={session} loading={loading}><InstallationForm /></ProtectedRoute>} />
               <Route path="/consulta" element={<ProtectedRoute session={session} loading={loading}><InsuranceView /></ProtectedRoute>} />
               
-              {/* Rotas Protegidas apenas para ADMIN */}
-              <Route path="/painel" element={<AdminProtectedRoute session={session} userRole={userRole} loading={loading}><Dashboard /></AdminProtectedRoute>} />
+              {/* Rota do Painel para ADMIN e TÉCNICO */}
+              <Route path="/painel" element={<AdminOrTechnicianRoute session={session} userRole={userRole} loading={loading}><Dashboard /></AdminOrTechnicianRoute>} />
+              
+              {/* Rota de Usuários apenas para ADMIN */}
               <Route path="/usuarios" element={<AdminProtectedRoute session={session} userRole={userRole} loading={loading}><UserManagement /></AdminProtectedRoute>} />
               
               {/* Rota da Agenda para ADMIN e TÉCNICO */}

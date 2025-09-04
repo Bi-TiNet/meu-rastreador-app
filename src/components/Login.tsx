@@ -25,9 +25,14 @@ export function Login() {
       setError(error.message);
       setLoading(false);
     } else {
-      // Verifica a role do usuário e redireciona para a página correta
-      const userRole = user?.app_metadata?.role || 'admin';
-      navigate(userRole === 'admin' ? '/painel' : '/');
+      // *** LÓGICA DE REDIRECIONAMENTO ATUALIZADA ***
+      const userRole = user?.app_metadata?.role;
+      // Se for admin OU tecnico, redireciona para o painel. Senão, para a página inicial.
+      if (userRole === 'admin' || userRole === 'tecnico') {
+        navigate('/painel');
+      } else {
+        navigate('/');
+      }
     }
   };
 

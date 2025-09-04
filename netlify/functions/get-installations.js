@@ -3,7 +3,7 @@ const { createClient } = require('@supabase/supabase-js');
 
 exports.handler = async function(event) {
   const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_KEY; // Usamos a chave anon aqui
+  const supabaseKey = process.env.SUPABASE_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
     return { statusCode: 500, body: JSON.stringify({ message: "Configuração do servidor incompleta." }) };
@@ -21,21 +21,37 @@ exports.handler = async function(event) {
       return { statusCode: 401, body: JSON.stringify({ message: "Acesso não autorizado." }) };
     }
     
-    // Apenas verificamos o usuário, as regras de acesso (RLS) farão o filtro no banco
     const { data: { user } } = await supabase.auth.getUser(token);
     if (!user) {
       return { statusCode: 401, body: JSON.stringify({ message: "Token inválido." }) };
     }
 
-    // A query agora busca também o nome do técnico associado (da tabela profiles)
-    let { data, error } = await supabase
+    // Pega a role do usuário a partir dos metadados
+    const userRole = user.app_metadata?.role;
+
+    // Inicia a query base
+    let query = supabase
       .from('instalacoes')
       .select(`
         *,
         historico (id, evento, data_evento, realizado_por),
         profiles:tecnico_id (full_name)
-      `)
-      .order('created_at', { ascending: false });
+      `);
+
+    // *** LÓGICA DE FILTRO ADICIONADA ***
+    // Se o usuário for um técnico, filtra as instalações pelo seu ID
+    if (userRole === 'tecnico') {
+      query = query.eq('tecnico_id', user.id);
+    }
+    
+    // Para administradores ou outros (se houver), a query continua sem o filtro extra,
+    // trazendo todos os resultados (respeitando as RLS, se houver).
+
+    // Adiciona a ordenação no final
+    query = query.order('created_at', { ascending: false });
+    
+    // Executa a query construída
+    let { data, error } = await query;
 
     if (error) throw error;
 
