@@ -35,6 +35,7 @@ export function UserManagement() {
     fetchUsers();
   }, [fetchUsers]);
 
+  // Separa os usuários por função para as abas
   const { admins, technicians, insurances } = useMemo(() => {
     const admins: Profile[] = [];
     const technicians: Profile[] = [];
@@ -76,7 +77,6 @@ export function UserManagement() {
   };
 
   const handleResetPassword = async (userEmail: string | null) => {
-    // CORREÇÃO 1: Adicionada verificação para garantir que userEmail não é nulo
     if (!userEmail || !window.confirm(`Tem certeza que deseja enviar um link de recuperação de senha para ${userEmail}?`)) {
         return;
     }
@@ -111,7 +111,8 @@ export function UserManagement() {
                         <div className="fw-bold">{user.full_name || 'Nome não definido'}</div>
                         <div className="text-muted small">{user.email}</div>
                     </div>
-                    <Button variant="outline-secondary" size="sm" onClick={() => handleResetPassword(user.email)}>
+                    {/* CORREÇÃO APLICADA AQUI: Adicionado '|| null' para garantir o tipo correto */}
+                    <Button variant="outline-secondary" size="sm" onClick={() => handleResetPassword(user.email || null)}>
                         <i className="bi bi-key-fill me-1"></i> Redefinir Senha
                     </Button>
                 </ListGroup.Item>
@@ -162,7 +163,6 @@ export function UserManagement() {
                       <Tab eventKey="technicians" title={<><Badge bg="success" pill className="me-2">{technicians.length}</Badge> Técnicos</>}>
                           {renderUserList(technicians)}
                       </Tab>
-                      {/* CORREÇÃO 2: Removido o atributo 'pill' duplicado */}
                       <Tab eventKey="insurances" title={<><Badge className="badge-purple me-2" pill>{insurances.length}</Badge> Seguradoras</>}>
                           {renderUserList(insurances)}
                       </Tab>
