@@ -1,192 +1,205 @@
 // Arquivo: src/components/InstallationForm.tsx
-import { useState, type FormEvent } from 'react';
-import { Button, Form, Row, Col, Card, FloatingLabel, Spinner, Alert } from 'react-bootstrap';
+import { useState } from 'react';
+import { Form, Button, Card, Row, Col, FloatingLabel, Spinner, Alert } from 'react-bootstrap';
+import { supabase } from '../supabaseClient';
 
-export function InstallationForm() {
-  const [nome_completo, setNomeCompleto] = useState(''); // Alterado para consistência
-  const [contato, setContato] = useState('');
-  const [placa, setPlaca] = useState('');
-  const [modelo, setModelo] = useState('');
-  const [ano, setAno] = useState('');
-  const [cor, setCor] = useState('');
-  const [endereco, setEndereco] = useState('');
-  const [usuario, setUsuario] = useState('');
-  const [senha, setSenha] = useState('');
-  const [base, setBase] = useState('Atena');
-  const [bloqueio, setBloqueio] = useState('Sim');
-  const [tipo_servico, setTipoServico] = useState('Instalação');
-  const [observacao, setObservacao] = useState('');
-  
-  const [isLoading, setIsLoading] = useState(false);
-  const [message, setMessage] = useState<{type: 'success' | 'danger', text: string} | null>(null);
+interface InstallationFormProps {
+  onSuccess?: () => void;
+}
 
-  async function handleSubmit(event: FormEvent) {
-    event.preventDefault();
-    setIsLoading(true);
+export function InstallationForm({ onSuccess }: InstallationFormProps) {
+  const [formData, setFormData] = useState({
+    nome_completo: '',
+    contato: '',
+    placa: '',
+    modelo: '',
+    ano: '',
+    cor: '',
+    endereco: '',
+    usuario: '',
+    senha: '',
+    base: 'Atena',
+    bloqueio: 'Sim',
+    tipo_servico: 'Instalação',
+    observacao: '',
+  });
+
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'danger'; text: string } | null>(null);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { id, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [id]: id === 'placa' ? value.toUpperCase() : value,
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
     setMessage(null);
 
-    const data = {
-      nome_completo, // Alterado para consistência
-      contato,
-      placa,
-      modelo,
-      ano,
-      cor,
-      endereco,
-      usuario,
-      senha,
-      base,
-      bloqueio,
-      tipo_servico,
-      observacao,
-    };
-
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Usuário não autenticado.');
+
       const response = await fetch('/.netlify/functions/create-installation', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify(formData),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Falha na resposta da rede.');
+        throw new Error(errorData.message || 'Erro ao criar instalação.');
       }
 
-      setMessage({type: 'success', text: 'Solicitação cadastrada com sucesso!'});
+      setMessage({ type: 'success', text: 'Instalação cadastrada com sucesso!' });
+      setFormData({
+        nome_completo: '',
+        contato: '',
+        placa: '',
+        modelo: '',
+        ano: '',
+        cor: '',
+        endereco: '',
+        usuario: '',
+        senha: '',
+        base: 'Atena',
+        bloqueio: 'Sim',
+        tipo_servico: 'Instalação',
+        observacao: '',
+      });
 
-      // Limpar formulário
-      setNomeCompleto('');
-      setContato('');
-      setPlaca('');
-      setModelo('');
-      setAno('');
-      setCor('');
-      setEndereco('');
-      setUsuario('');
-      setSenha('');
-      setBase('Atena');
-      setBloqueio('Sim');
-      setTipoServico('Instalação');
-      setObservacao('');
-
+      if (onSuccess) onSuccess();
     } catch (error: any) {
-        setMessage({type: 'danger', text: error.message || "Não foi possível salvar os dados."});
+      setMessage({ type: 'danger', text: error.message });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <Card>
       <Card.Header as="h5">
-        <i className="bi bi-card-list me-2"></i>
-        Cadastrar Nova Solicitação
+        <i className="bi bi-plus-circle me-2"></i>Nova Solicitação
       </Card.Header>
-      <Card.Body className="p-4">
+      <Card.Body>
+        {message && (
+          <Alert variant={message.type} onClose={() => setMessage(null)} dismissible>
+            {message.text}
+          </Alert>
+        )}
+
         <Form onSubmit={handleSubmit}>
-          {message && <Alert variant={message.type}>{message.text}</Alert>}
-          
           <h6 className="text-primary">DADOS DO CLIENTE E VEÍCULO</h6>
-          <hr className="mt-2"/>
+          <hr className="mt-2" />
+
           <Row className="g-3 mb-4">
-            <Col md={4}>
-              <FloatingLabel controlId="floatingNome" label="Nome Completo">
-                <Form.Control type="text" placeholder="Nome Completo" required value={nome_completo} onChange={(e) => setNomeCompleto(e.target.value)} />
+            <Col md={6}>
+              <FloatingLabel label="Nome Completo">
+                <Form.Control id="nome_completo" value={formData.nome_completo} onChange={handleChange} required />
+              </FloatingLabel>
+            </Col>
+            <Col md={6}>
+              <FloatingLabel label="Contato">
+                <Form.Control id="contato" value={formData.contato} onChange={handleChange} required />
               </FloatingLabel>
             </Col>
             <Col md={4}>
-              <FloatingLabel controlId="floatingContato" label="Número de Contato">
-                <Form.Control type="text" placeholder="Número de Contato" required value={contato} onChange={(e) => setContato(e.target.value)} />
+              <FloatingLabel label="Placa">
+                <Form.Control id="placa" value={formData.placa} onChange={handleChange} required />
               </FloatingLabel>
             </Col>
             <Col md={4}>
-              <FloatingLabel controlId="floatingPlaca" label="Placa do Veículo">
-                <Form.Control type="text" placeholder="Placa do Veículo" required value={placa} onChange={(e) => setPlaca(e.target.value.toUpperCase())} />
+              <FloatingLabel label="Modelo">
+                <Form.Control id="modelo" value={formData.modelo} onChange={handleChange} />
               </FloatingLabel>
             </Col>
-            <Col md={4}>
-              <FloatingLabel controlId="floatingModelo" label="Modelo do Veículo">
-                <Form.Control type="text" placeholder="Modelo do Veículo" value={modelo} onChange={(e) => setModelo(e.target.value)} />
+            <Col md={2}>
+              <FloatingLabel label="Ano">
+                <Form.Control id="ano" value={formData.ano} onChange={handleChange} />
               </FloatingLabel>
             </Col>
-            <Col md={4}>
-              <FloatingLabel controlId="floatingAno" label="Ano de Fabricação">
-                <Form.Control type="text" placeholder="Ano de Fabricação" value={ano} onChange={(e) => setAno(e.target.value)} />
-              </FloatingLabel>
-            </Col>
-            <Col md={4}>
-              <FloatingLabel controlId="floatingCor" label="Cor do Veículo">
-                <Form.Control type="text" placeholder="Cor do Veículo" value={cor} onChange={(e) => setCor(e.target.value)} />
+            <Col md={2}>
+              <FloatingLabel label="Cor">
+                <Form.Control id="cor" value={formData.cor} onChange={handleChange} />
               </FloatingLabel>
             </Col>
             <Col md={12}>
-              <FloatingLabel controlId="floatingEndereco" label="Endereço do Cliente">
-                <Form.Control as="textarea" placeholder="Endereço do Cliente" style={{ height: '80px' }} value={endereco} onChange={(e) => setEndereco(e.target.value)} />
+              <FloatingLabel label="Endereço">
+                <Form.Control
+                  as="textarea"
+                  style={{ height: '80px' }}
+                  id="endereco"
+                  value={formData.endereco}
+                  onChange={handleChange}
+                />
               </FloatingLabel>
             </Col>
           </Row>
 
           <h6 className="text-primary">DETALHES DO SERVIÇO E ACESSO</h6>
-          <hr className="mt-2"/>
-          
-          <Row className="g-3 mb-4">
-            <Col md={12}>
-              <FloatingLabel controlId="floatingTipoServico" label="Tipo de Serviço">
-                <Form.Select value={tipo_servico} onChange={(e) => setTipoServico(e.target.value)} required>
-                  <option value="Instalação">Instalação</option>
-                  <option value="Manutenção">Manutenção</option>
-                  <option value="Remoção">Remoção</option>
-                </Form.Select>
-              </FloatingLabel>
-            </Col>
-          </Row>
+          <hr className="mt-2" />
 
-          <Row className="g-3 mb-4">
-            <Col md={6}>
-              <FloatingLabel controlId="floatingUsuario" label="Usuário">
-                <Form.Control type="text" placeholder="Usuário" value={usuario} onChange={(e) => setUsuario(e.target.value)} />
-              </FloatingLabel>
-            </Col>
-            <Col md={6}>
-              <FloatingLabel controlId="floatingSenha" label="Senha">
-                <Form.Control type="password" placeholder="Senha" value={senha} onChange={(e) => setSenha(e.target.value)} />
-              </FloatingLabel>
-            </Col>
-            <Col md={6}>
-              <FloatingLabel controlId="floatingBase" label="Base">
-                <Form.Select value={base} onChange={(e) => setBase(e.target.value)}>
-                  <option value="Atena">Base Atena</option>
-                  <option value="Autocontrol">Base Autocontrol</option>
-                </Form.Select>
-              </FloatingLabel>
-            </Col>
-            <Col md={6}>
-              <FloatingLabel controlId="floatingBloqueio" label="Bloqueio">
-                <Form.Select value={bloqueio} onChange={(e) => setBloqueio(e.target.value)}>
-                  <option value="Sim">Sim</option>
-                  <option value="Nao">Não</option>
-                </Form.Select>
-              </FloatingLabel>
-            </Col>
-          </Row>
-          
           <Row className="g-3">
-             <Col md={12}>
-              <FloatingLabel controlId="floatingObservacao" label="Observação (opcional)">
-                <Form.Control as="textarea" placeholder="Observação" style={{ height: '100px' }} value={observacao} onChange={(e) => setObservacao(e.target.value)} />
+            <Col md={6}>
+              <FloatingLabel label="Tipo de Serviço">
+                <Form.Select id="tipo_servico" value={formData.tipo_servico} onChange={handleChange}>
+                  <option>Instalação</option>
+                  <option>Manutenção</option>
+                  <option>Remoção</option>
+                </Form.Select>
+              </FloatingLabel>
+            </Col>
+            <Col md={6}>
+              <FloatingLabel label="Base">
+                <Form.Select id="base" value={formData.base} onChange={handleChange}>
+                  <option>Atena</option>
+                  <option>Autocontrol</option>
+                </Form.Select>
+              </FloatingLabel>
+            </Col>
+            <Col md={6}>
+              <FloatingLabel label="Usuário">
+                <Form.Control id="usuario" value={formData.usuario} onChange={handleChange} />
+              </FloatingLabel>
+            </Col>
+            <Col md={6}>
+              <FloatingLabel label="Senha">
+                <Form.Control type="text" id="senha" value={formData.senha} onChange={handleChange} />
+              </FloatingLabel>
+            </Col>
+            <Col md={6}>
+              <FloatingLabel label="Bloqueio">
+                <Form.Select id="bloqueio" value={formData.bloqueio} onChange={handleChange}>
+                  <option>Sim</option>
+                  <option>Nao</option>
+                </Form.Select>
+              </FloatingLabel>
+            </Col>
+            <Col md={12}>
+              <FloatingLabel label="Observação">
+                <Form.Control
+                  as="textarea"
+                  style={{ height: '100px' }}
+                  id="observacao"
+                  value={formData.observacao}
+                  onChange={handleChange}
+                />
               </FloatingLabel>
             </Col>
           </Row>
 
-          <Button 
-            variant="primary" 
-            type="submit" 
-            className="w-100 mt-4 py-2" 
-            disabled={isLoading}
-          >
-            {isLoading ? <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" /> : <><i className="bi bi-check-circle me-2"></i>Cadastrar Solicitação</>}
-          </Button>
+          <div className="mt-4 text-end">
+            <Button variant="primary" type="submit" disabled={loading}>
+              {loading ? <Spinner as="span" size="sm" /> : 'Cadastrar'}
+            </Button>
+          </div>
         </Form>
       </Card.Body>
     </Card>

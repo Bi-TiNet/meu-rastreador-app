@@ -1,5 +1,5 @@
 // Arquivo: src/components/Dashboard.tsx
-import { useEffect, useState, useMemo, type FormEvent } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import {
   Button, Table, Modal, Spinner, Alert, Card, Form, Badge, InputGroup, Dropdown, ButtonGroup, Accordion, OverlayTrigger, Tooltip
 } from 'react-bootstrap';
@@ -9,7 +9,7 @@ interface History {
   id: number;
   evento: string;
   data_evento: string;
-  realizado_por: string; // <-- NOVO CAMPO
+  realizado_por: string;
 }
 
 interface Installation {
@@ -25,15 +25,14 @@ interface Installation {
   data_instalacao?: string;
   horario?: string;
   historico: History[];
-  tipo_servico: string;  // <-- NOVO CAMPO
-  observacao?: string;    // <-- NOVO CAMPO
+  tipo_servico: string;
+  observacao?: string;
   usuario: string;
   senha?: string;
   ano?: string;
   cor?: string;
 }
 
-// ... (Componentes ScheduleModal não mudam) ...
 interface ScheduleModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -44,7 +43,7 @@ interface ScheduleModalProps {
 
 function ScheduleModal({ isOpen, onClose, installation, onSchedule, scheduleType }: ScheduleModalProps) {
   const [dateTime, setDateTime] = useState('');
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!dateTime) return;
     const [date, time] = dateTime.split('T');
@@ -82,8 +81,6 @@ function ScheduleModal({ isOpen, onClose, installation, onSchedule, scheduleType
   );
 }
 
-
-// --- MODAL DE HISTÓRICO ATUALIZADO ---
 function HistoryModal({ isOpen, onClose, installation }: { isOpen: boolean, onClose: () => void, installation: Installation }) {
     const sortedHistory = installation.historico ? [...installation.historico].sort((a, b) => new Date(b.data_evento).getTime() - new Date(a.data_evento).getTime()) : [];
 
@@ -119,8 +116,6 @@ function HistoryModal({ isOpen, onClose, installation }: { isOpen: boolean, onCl
         </Modal>
     );
 }
-
-const getScheduledTaskInfo = (inst: Installation) => { /* ... (sem alterações) ... */ return { text: 'N/A', variant: 'secondary' }; };
 
 export function Dashboard() {
   const [installations, setInstallations] = useState<Installation[]>([]);
@@ -192,10 +187,6 @@ export function Dashboard() {
   const scheduled = filteredInstallations.filter(inst => inst.status === 'Agendado');
   const completed = filteredInstallations.filter(inst => inst.status === 'Concluído');
 
-  const getCompletionType = (inst: Installation) => { /* ... (sem alterações) ... */ return 'installation' };
-  const handleCopy = (inst: Installation) => { /* ... (sem alterações) ... */ };
-
-  // --- FUNÇÃO DE RENDERIZAÇÃO DA TABELA ATUALIZADA ---
   const renderInstallationsTable = (installationsList: Installation[]) => {
     if (installationsList.length === 0) {
         return <p className="text-muted p-3 mb-0 fst-italic">Nenhum registro encontrado.</p>;
@@ -216,7 +207,6 @@ export function Dashboard() {
                     <tr key={inst.id}>
                         <td>
                           {inst.nome_completo}
-                          {/* --- ÍCONE DE OBSERVAÇÃO --- */}
                           {inst.observacao && (
                             <OverlayTrigger
                               placement="top"
@@ -237,7 +227,6 @@ export function Dashboard() {
                         </td>
                         <td className="text-center">
                             <ButtonGroup>
-                                {/* --- LÓGICA DE BOTÕES ATUALIZADA --- */}
                                 {inst.status === 'A agendar' && inst.tipo_servico === 'Instalação' &&
                                     <Button size="sm" variant="primary" onClick={() => setSelected({ installation: inst, type: 'installation' })}>Agendar Instalação</Button>
                                 }
@@ -248,7 +237,7 @@ export function Dashboard() {
                                     <Button size="sm" variant="danger" onClick={() => setSelected({ installation: inst, type: 'removal' })}>Agendar Remoção</Button>
                                 }
 
-                                {inst.status === 'Agendado' && <Button size="sm" variant="success" onClick={() => handleUpdate(inst.id, 'Concluído', { completionType: getCompletionType(inst) })}>Concluir</Button>}
+                                {inst.status === 'Agendado' && <Button size="sm" variant="success" onClick={() => handleUpdate(inst.id, 'Concluído', { completionType: 'installation' })}>Concluir</Button>}
                                 
                                 {inst.status === 'Concluído' &&
                                     <>
@@ -260,7 +249,7 @@ export function Dashboard() {
                                     <Dropdown.Toggle split variant="secondary" size="sm" id={`dropdown-${inst.id}`} />
                                     <Dropdown.Menu>
                                         <Dropdown.Item onClick={() => setHistoryTarget(inst)}>Histórico</Dropdown.Item>
-                                        <Dropdown.Item onClick={() => handleCopy(inst)}>Copiar Dados</Dropdown.Item>
+                                        {/* Removido handleCopy que não estava implementado */}
                                         {inst.status === 'Agendado' && <Dropdown.Divider />}
                                         {inst.status === 'Agendado' && <Dropdown.Item onClick={() => setSelected({ installation: inst, type: 'installation' })}>Reagendar</Dropdown.Item>}
                                     </Dropdown.Menu>
@@ -321,7 +310,7 @@ export function Dashboard() {
             isOpen={!!selected} 
             onClose={() => setSelected(null)} 
             installation={selected.installation}
-            onSchedule={(id, date, time) => handleUpdate(id, 'Agendado', { date, time, type: selected.type !== 'installation' ? selected.type : undefined })}
+            onSchedule={(id, date, time) => handleUpdate(id, 'Agendado', { date, time, type: selected.type !== 'installation' ? (selected.type as 'maintenance' | 'removal') : undefined })}
             scheduleType={selected.type}
         />
       )}
