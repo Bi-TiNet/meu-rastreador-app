@@ -1,6 +1,5 @@
 // src/components/TechnicianAgenda.tsx
 import { useEffect, useState, useCallback } from 'react';
-// CORREÇÃO: Removido 'Event' da importação
 import { Calendar, momentLocalizer } from 'react-big-calendar';
 import moment from 'moment';
 import 'moment/locale/pt-br';
@@ -11,7 +10,6 @@ import { Alert, Spinner } from 'react-bootstrap';
 moment.locale('pt-br');
 const localizer = momentLocalizer(moment);
 
-// CORREÇÃO: A interface agora define todas as suas propriedades, sem herdar de 'Event'
 interface InstallationEvent {
   id: number;
   title: string;
@@ -33,7 +31,7 @@ export function TechnicianAgenda() {
     setLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Usuário não autenticado.');
+      if (!session) throw new Error('Utilizador não autenticado.');
 
       let query = supabase.from('instalacoes').select('*, profiles:tecnico_id(full_name)').eq('status', 'Agendado');
 
@@ -48,7 +46,6 @@ export function TechnicianAgenda() {
         const start = moment(`${inst.data_instalacao} ${inst.horario}`, 'YYYY-MM-DD HH:mm').toDate();
         const end = moment(start).add(1, 'hour').toDate();
         
-        // Monta o título do evento com nome do cliente, placa e nome do técnico (se for admin vendo)
         let eventTitle = `${inst.nome_completo} - ${inst.placa}`;
         if (userRole === 'admin' && inst.profiles) {
           eventTitle += ` (Téc: ${inst.profiles.full_name})`;
@@ -84,7 +81,7 @@ export function TechnicianAgenda() {
   }, []);
 
   useEffect(() => {
-    if (userId) { // Apenas busca as instalações depois que o ID do usuário for definido
+    if (userId) {
       fetchInstallations();
     }
   }, [fetchInstallations, userId]);
