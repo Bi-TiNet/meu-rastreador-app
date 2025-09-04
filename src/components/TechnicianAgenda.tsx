@@ -2,12 +2,12 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
 import moment from 'moment';
-import 'moment/locale/pt-br';
+import 'moment/dist/locale/pt-br'; // Caminho corrigido para a localidade
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { supabase } from '../supabaseClient';
 import { Alert, Spinner } from 'react-bootstrap';
 
-moment.locale('pt-br');
+moment.locale('pt-br'); // Define o local para pt-br
 const localizer = momentLocalizer(moment);
 
 interface InstallationEvent {
