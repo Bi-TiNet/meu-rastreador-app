@@ -1,5 +1,5 @@
 // src/components/TaskList.tsx
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react'; // <-- CORREÇÃO AQUI
 import { supabase } from '../supabaseClient';
 import { Card, ListGroup, Form, Button, InputGroup, Spinner, Alert } from 'react-bootstrap';
 import type { User } from '@supabase/supabase-js';
