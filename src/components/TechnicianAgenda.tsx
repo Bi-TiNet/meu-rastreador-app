@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback, useMemo, type FormEvent } from 'react';
 import moment from 'moment';
 // A importação correta para o locale do moment.
-import 'moment/locale/pt-br';
+import 'moment/min/locales';
 import { supabase } from '../supabaseClient';
 import { Alert, Spinner, Card, Badge, Button, Modal, Form, FloatingLabel, ListGroup } from 'react-bootstrap';
 import type { User } from '@supabase/supabase-js';
