@@ -2,7 +2,7 @@
 import { useState, useRef, type FormEvent } from 'react';
 import { Form, Button, Card, Row, Col, FloatingLabel, Spinner, Alert } from 'react-bootstrap';
 import { supabase } from '../supabaseClient';
-import './InstallationForm.css'; // Importando o novo CSS
+import './InstallationForm.css';
 
 interface InstallationFormProps {
   onSuccess?: () => void;
@@ -41,29 +41,38 @@ export function InstallationForm({ onSuccess }: InstallationFormProps) {
   };
   
   const handleBack = () => {
-    setValidated(false); // Reseta a validação ao voltar
+    setValidated(false);
     setCurrentStep(prev => prev - 1);
   };
 
-  const handleNext = () => {
-    // Valida apenas os campos da etapa atual usando a API nativa do formulário
-    if (formRef.current && !formRef.current.checkValidity()) {
-      // Se for inválido, ativa a exibição dos erros do Bootstrap e interrompe
-      setValidated(true);
-      return;
-    }
+  const validateCurrentStep = () => {
+    const form = formRef.current;
+    if (!form) return false;
     
-    // Se for válido, limpa os erros e avança para a próxima etapa
-    setValidated(false);
-    setCurrentStep(prev => prev + 1);
+    const activeStepFields = form.querySelectorAll('.form-step.active .form-control, .form-step.active .form-select');
+    let isStepValid = true;
+    
+    for (const field of Array.from(activeStepFields)) {
+        if (!(field as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement).checkValidity()) {
+            isStepValid = false;
+        }
+    }
+
+    return isStepValid;
   };
 
-  const handleSubmit = async (e: FormEvent) => {
-    // Impede o comportamento padrão de recarregar a página
-    e.preventDefault();
+  const handleNext = () => {
+    if (validateCurrentStep()) {
+      setValidated(false);
+      setCurrentStep(prev => prev + 1);
+    } else {
+      setValidated(true);
+    }
+  };
 
-    // Validação final antes de enviar
-    if (formRef.current && !formRef.current.checkValidity()) {
+  // Esta função agora não precisa mais do parâmetro 'e: FormEvent'
+  const handleSubmit = async () => {
+    if (!formRef.current?.checkValidity()) {
       setValidated(true);
       return;
     }
@@ -77,10 +86,7 @@ export function InstallationForm({ onSuccess }: InstallationFormProps) {
 
       const response = await fetch('/.netlify/functions/create-installation', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
-        },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
         body: JSON.stringify(formData),
       });
 
@@ -91,19 +97,8 @@ export function InstallationForm({ onSuccess }: InstallationFormProps) {
 
       setMessage({ type: 'success', text: 'Solicitação cadastrada com sucesso!' });
       setFormData({
-        nome_completo: '',
-        contato: '',
-        placa: '',
-        modelo: '',
-        ano: '',
-        cor: '',
-        endereco: '',
-        usuario: '',
-        senha: '',
-        base: 'Atena',
-        bloqueio: 'Sim',
-        tipo_servico: 'Instalação',
-        observacao: '',
+        nome_completo: '', contato: '', placa: '', modelo: '', ano: '', cor: '', endereco: '',
+        usuario: '', senha: '', base: 'Atena', bloqueio: 'Sim', tipo_servico: 'Instalação', observacao: '',
       });
       setCurrentStep(1);
       setValidated(false);
@@ -146,8 +141,11 @@ export function InstallationForm({ onSuccess }: InstallationFormProps) {
             {message.text}
           </Alert>
         )}
-
-        <Form ref={formRef} onSubmit={handleSubmit} noValidate validated={validated}>
+        
+        {/* ================================================================== */}
+        {/* MUDANÇA IMPORTANTE: A propriedade onSubmit FOI REMOVIDA DAQUI     */}
+        {/* ================================================================== */}
+        <Form ref={formRef} noValidate validated={validated}>
           <div className={`form-step ${currentStep === 1 ? 'active' : ''}`}>
             <h4 className="text-primary mb-4">Dados do Cliente</h4>
             <Row className="g-3">
@@ -234,18 +232,21 @@ export function InstallationForm({ onSuccess }: InstallationFormProps) {
           </div>
           
           <div className="form-navigation-buttons">
-            {currentStep > 1 ? (
+            {currentStep > 1 && (
                 <Button variant="secondary" type="button" onClick={handleBack} className="px-4">
                     <i className="bi bi-arrow-left me-2"></i> Voltar
                 </Button>
-            ) : <div/> }
+            )}
             
             {currentStep < steps.length ? (
-                <Button variant="primary" type="button" onClick={handleNext} className="px-4">
+                <Button variant="primary" type="button" onClick={handleNext} className="ms-auto px-4">
                     Avançar <i className="bi bi-arrow-right ms-2"></i>
                 </Button>
             ) : (
-                <Button variant="success" type="submit" disabled={loading} className="px-5">
+                // ==================================================================
+                // MUDANÇA IMPORTANTE: type="button" e onClick={handleSubmit}
+                // ==================================================================
+                <Button variant="success" type="button" onClick={handleSubmit} disabled={loading} className="ms-auto px-5">
                     {loading ? <Spinner as="span" size="sm" /> : <span><i className="bi bi-check-lg me-2"></i>Finalizar</span>}
                 </Button>
             )}
