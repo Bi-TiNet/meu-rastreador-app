@@ -29,10 +29,8 @@ export function InstallationForm({ onSuccess }: InstallationFormProps) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'danger'; text: string } | null>(null);
   
-  // Usamos um ref para o formulário para acionar a validação visual do Bootstrap
   const formRef = useRef<HTMLFormElement>(null);
   const [validated, setValidated] = useState(false);
-
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { id, value } = e.target;
@@ -42,50 +40,32 @@ export function InstallationForm({ onSuccess }: InstallationFormProps) {
     }));
   };
   
-  // Função para validar apenas os campos da etapa atual
-  const validateStep = () => {
-    const inputs = formRef.current?.querySelectorAll(`.form-step.active .form-control, .form-step.active .form-select`);
-    if (!inputs) return false;
-
-    for (const input of Array.from(inputs)) {
-        if (!(input as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement).checkValidity()) {
-            // Aciona a validação visual do Bootstrap
-            setValidated(true); 
-            return false;
-        }
-    }
-    return true;
-  };
-
-  const handleNext = () => {
-    // A função validateStep() já chama setValidated(true) se encontrar um erro.
-    // Não precisamos de mais nada para exibir a validação.
-    if (validateStep()) {
-      setValidated(false); // Limpa a validação antes de ir para o próximo passo.
-      setCurrentStep(prev => prev + 1);
-    }
-    // A linha "formRef.current?.reportValidity()" foi removida daqui.
-  };
-  
   const handleBack = () => {
     setValidated(false); // Reseta a validação ao voltar
     setCurrentStep(prev => prev - 1);
   };
 
-  // Arquivo: src/components/InstallationForm.tsx
-
-// ... (todo o código anterior, incluindo imports, a definição do componente e os estados)
+  const handleNext = () => {
+    // Valida apenas os campos da etapa atual usando a API nativa do formulário
+    if (formRef.current && !formRef.current.checkValidity()) {
+      // Se for inválido, ativa a exibição dos erros do Bootstrap e interrompe
+      setValidated(true);
+      return;
+    }
+    
+    // Se for válido, limpa os erros e avança para a próxima etapa
+    setValidated(false);
+    setCurrentStep(prev => prev + 1);
+  };
 
   const handleSubmit = async (e: FormEvent) => {
+    // Impede o comportamento padrão de recarregar a página
     e.preventDefault();
 
-    if (currentStep !== steps.length) {
-      return; 
-    }
-
-    if (!validateStep()) {
-        formRef.current?.reportValidity();
-        return;
+    // Validação final antes de enviar
+    if (formRef.current && !formRef.current.checkValidity()) {
+      setValidated(true);
+      return;
     }
 
     setLoading(true);
@@ -125,7 +105,7 @@ export function InstallationForm({ onSuccess }: InstallationFormProps) {
         tipo_servico: 'Instalação',
         observacao: '',
       });
-      setCurrentStep(1); // Resetar para o primeiro passo
+      setCurrentStep(1);
       setValidated(false);
       if (onSuccess) onSuccess();
 
@@ -150,7 +130,6 @@ export function InstallationForm({ onSuccess }: InstallationFormProps) {
           <p className="text-muted">Preencha os dados em 3 passos para concluir o cadastro.</p>
         </div>
 
-        {/* Barra de Progresso */}
         <div className="progress-bar-container">
             <div className="progress-bar-line"></div>
             <div className="progress-bar-line-active" style={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }}></div>
@@ -169,7 +148,6 @@ export function InstallationForm({ onSuccess }: InstallationFormProps) {
         )}
 
         <Form ref={formRef} onSubmit={handleSubmit} noValidate validated={validated}>
-          {/* Passo 1: Dados do Cliente */}
           <div className={`form-step ${currentStep === 1 ? 'active' : ''}`}>
             <h4 className="text-primary mb-4">Dados do Cliente</h4>
             <Row className="g-3">
@@ -191,7 +169,6 @@ export function InstallationForm({ onSuccess }: InstallationFormProps) {
             </Row>
           </div>
 
-          {/* Passo 2: Dados do Veículo */}
           <div className={`form-step ${currentStep === 2 ? 'active' : ''}`}>
             <h4 className="text-primary mb-4">Dados do Veículo</h4>
             <Row className="g-3">
@@ -218,7 +195,6 @@ export function InstallationForm({ onSuccess }: InstallationFormProps) {
             </Row>
           </div>
 
-          {/* Passo 3: Detalhes do Serviço */}
           <div className={`form-step ${currentStep === 3 ? 'active' : ''}`}>
             <h4 className="text-primary mb-4">Detalhes do Serviço e Acesso</h4>
             <Row className="g-3">
@@ -257,26 +233,21 @@ export function InstallationForm({ onSuccess }: InstallationFormProps) {
             </Row>
           </div>
           
-          {/* Botões de Navegação - CÓDIGO CORRIGIDO */}
           <div className="form-navigation-buttons">
-            {/* Lógica para o botão Voltar */}
             {currentStep > 1 ? (
-              <Button variant="secondary" type="button" onClick={handleBack} className="px-4">
-                <i className="bi bi-arrow-left me-2"></i> Voltar
-              </Button>
-            ) : <div /> /* Placeholder para manter o alinhamento */}
-
-            {/* Lógica para o botão Avançar ou Finalizar */}
+                <Button variant="secondary" type="button" onClick={handleBack} className="px-4">
+                    <i className="bi bi-arrow-left me-2"></i> Voltar
+                </Button>
+            ) : <div/> }
+            
             {currentStep < steps.length ? (
-              // Botão para AVANÇAR (não envia o formulário)
-              <Button variant="primary" type="button" onClick={handleNext} className="px-4">
-                Avançar <i className="bi bi-arrow-right ms-2"></i>
-              </Button>
+                <Button variant="primary" type="button" onClick={handleNext} className="px-4">
+                    Avançar <i className="bi bi-arrow-right ms-2"></i>
+                </Button>
             ) : (
-              // Botão para FINALIZAR (envia o formulário)
-              <Button variant="success" type="submit" disabled={loading} className="px-5">
-                {loading ? <Spinner as="span" size="sm" /> : <span><i className="bi bi-check-lg me-2"></i>Finalizar</span>}
-              </Button>
+                <Button variant="success" type="submit" disabled={loading} className="px-5">
+                    {loading ? <Spinner as="span" size="sm" /> : <span><i className="bi bi-check-lg me-2"></i>Finalizar</span>}
+                </Button>
             )}
           </div>
         </Form>
