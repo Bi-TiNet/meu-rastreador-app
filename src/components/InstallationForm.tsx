@@ -251,13 +251,13 @@ export function InstallationForm({ onSuccess }: InstallationFormProps) {
           {/* Botões de Navegação */}
           <div className="form-navigation-buttons">
             {currentStep > 1 ? (
-                <Button variant="secondary" onClick={handleBack} className="px-4">
+                <Button variant="secondary" type="button" onClick={handleBack} className="px-4">
                     <i className="bi bi-arrow-left me-2"></i> Voltar
                 </Button>
             ) : <div/> /* Placeholder para manter o alinhamento */}
             
             {currentStep < steps.length ? (
-                <Button variant="primary" onClick={handleNext} className="px-4">
+                <Button variant="primary" type="button" onClick={handleNext} className="px-4">
                     Avançar <i className="bi bi-arrow-right ms-2"></i>
                 </Button>
             ) : (
