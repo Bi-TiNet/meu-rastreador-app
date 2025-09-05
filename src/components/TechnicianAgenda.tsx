@@ -5,6 +5,7 @@ import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { supabase } from '../supabaseClient';
 import { Alert, Spinner, Card, ListGroup, Badge } from 'react-bootstrap';
+import type { User } from '@supabase/supabase-js';
 
 moment.locale('pt-br');
 const localizer = momentLocalizer(moment);
@@ -31,12 +32,9 @@ function MobileAgendaView({ events }: { events: InstallationEvent[] }) {
   const groupedEvents = useMemo(() => {
     const groups: { [key: string]: InstallationEvent[] } = {};
     const sortedEvents = [...events].sort((a, b) => a.start.getTime() - b.start.getTime());
-
     sortedEvents.forEach(event => {
       const dateKey = moment(event.start).format('DD/MM/YYYY');
-      if (!groups[dateKey]) {
-        groups[dateKey] = [];
-      }
+      if (!groups[dateKey]) groups[dateKey] = [];
       groups[dateKey].push(event);
     });
     return groups;
@@ -53,7 +51,7 @@ function MobileAgendaView({ events }: { events: InstallationEvent[] }) {
                 <p className="text-muted">Você não tem tarefas na sua agenda.</p>
             </Card.Body>
         </Card>
-    )
+    );
   }
 
   return (
@@ -92,7 +90,7 @@ export function TechnicianAgenda() {
   const [events, setEvents] = useState<InstallationEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   
   const [width] = useWindowSize();
   const isMobile = width < 768; 
@@ -103,35 +101,50 @@ export function TechnicianAgenda() {
   }), [isMobile]);
 
   const fetchInstallations = useCallback(async (userId: string, userRole: string) => {
-    setLoading(true);
-    let query = supabase.from('instalacoes').select('*, profiles:tecnico_id(full_name)').eq('status', 'Agendado');
-    if (userRole !== 'admin') {
-      query = query.eq('tecnico_id', userId);
+    try {
+      setLoading(true);
+      setError(null);
+      let query = supabase.from('instalacoes').select('*, profiles:tecnico_id(full_name)').eq('status', 'Agendado');
+      if (userRole !== 'admin') {
+        query = query.eq('tecnico_id', userId);
+      }
+      const { data, error: queryError } = await query;
+      if (queryError) throw queryError;
+      
+      const formattedEvents = data.map((inst: any) => ({
+        id: inst.id,
+        title: `${inst.nome_completo} - ${inst.placa}`,
+        start: moment(`${inst.data_instalacao} ${inst.horario}`, 'YYYY-MM-DD HH:mm').toDate(),
+        end: moment(`${inst.data_instalacao} ${inst.horario}`, 'YYYY-MM-DD HH:mm').add(1, 'hour').toDate(),
+        resource: inst,
+      }));
+      setEvents(formattedEvents);
+    } catch (err: any) {
+      setError(err.message || 'Não foi possível carregar a agenda.');
+    } finally {
+      setLoading(false);
     }
-    const { data, error: queryError } = await query;
-    if (queryError) throw queryError;
-    const formattedEvents = data.map((inst: any) => ({
-      id: inst.id,
-      title: `${inst.nome_completo} - ${inst.placa}`,
-      start: moment(`${inst.data_instalacao} ${inst.horario}`, 'YYYY-MM-DD HH:mm').toDate(),
-      end: moment(`${inst.data_instalacao} ${inst.horario}`, 'YYYY-MM-DD HH:mm').add(1, 'hour').toDate(),
-      resource: inst,
-    }));
-    setEvents(formattedEvents);
-    setLoading(false);
   }, []);
 
   useEffect(() => {
-    const getUser = async () => {
-        const { data: { user } } = await supabase.auth.getSession();
-        if (user) {
-            setUser(user);
-            fetchInstallations(user.id, user.app_metadata.role);
-        } else {
-            setLoading(false);
-        }
+    const getUserAndData = async () => {
+      // CORREÇÃO 2: Acessando 'session' e depois 'session.user'
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+      if (sessionError) {
+        setError(sessionError.message);
+        setLoading(false);
+        return;
+      }
+
+      if (session?.user) {
+        setUser(session.user);
+        fetchInstallations(session.user.id, session.user.app_metadata.role);
+      } else {
+        setLoading(false);
+      }
     };
-    getUser();
+    getUserAndData();
   }, [fetchInstallations]);
 
   if (loading) return <div className="text-center p-5"><Spinner animation="border" /></div>;
