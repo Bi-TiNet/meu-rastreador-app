@@ -1,0 +1,104 @@
+/* src/components/InstallationForm.css */
+
+.progress-bar-container {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+  position: relative;
+}
+
+.progress-step {
+  text-align: center;
+  position: relative;
+  z-index: 1;
+  width: 90px;
+}
+
+.progress-step .step-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #e0e0e0;
+  color: #757575;
+  border: 3px solid #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 10px;
+  transition: all 0.4s ease;
+  font-weight: bold;
+}
+
+.progress-step .step-name {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #757575;
+  transition: all 0.4s ease;
+}
+
+.progress-step.active .step-circle {
+  background-color: #fff;
+  border-color: var(--bs-primary);
+  color: var(--bs-primary);
+}
+
+.progress-step.active .step-name {
+  color: var(--bs-primary);
+  font-weight: 600;
+}
+
+.progress-step.completed .step-circle {
+  background-color: var(--bs-primary);
+  border-color: var(--bs-primary);
+  color: #fff;
+}
+
+.progress-step.completed .step-name {
+  color: var(--bs-body-color);
+}
+
+.progress-bar-line {
+  position: absolute;
+  top: 20px;
+  left: 0;
+  height: 3px;
+  width: 100%;
+  background-color: #e0e0e0;
+  z-index: 0;
+}
+
+.progress-bar-line-active {
+  position: absolute;
+  top: 20px;
+  left: 0;
+  height: 3px;
+  background-color: var(--bs-primary);
+  z-index: 0;
+  transition: width 0.4s ease;
+}
+
+.form-step {
+  display: none;
+  animation: fadeIn 0.5s;
+}
+
+.form-step.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.form-navigation-buttons {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2rem;
+}

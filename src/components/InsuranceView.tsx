@@ -109,16 +109,16 @@ function EditModal({ installation, onClose, onSave, }: { installation: Installat
   );
 }
 
-function DetailsModal({ 
-  installation, 
-  onClose, 
-  onViewHistory, 
-  onEdit, 
-  setMessage 
-}: { 
-  installation: Installation; 
-  onClose: () => void; 
-  onViewHistory: (installation: Installation) => void; 
+function DetailsModal({
+  installation,
+  onClose,
+  onViewHistory,
+  onEdit,
+  setMessage
+}: {
+  installation: Installation;
+  onClose: () => void;
+  onViewHistory: (installation: Installation) => void;
   onEdit: (installation: Installation) => void;
   setMessage: (message: { type: 'success' | 'danger'; text: string } | null) => void;
 }) {
@@ -127,7 +127,7 @@ function DetailsModal({
     try {
       await navigator.clipboard.writeText(text);
       setMessage({ type: 'success', text: 'Dados copiados para a área de transferência!' });
-    } catch { 
+    } catch {
       setMessage({ type: 'danger', text: 'Falha ao copiar os dados.' });
     }
     setTimeout(() => setMessage(null), 3000); // Limpa a mensagem após 3 segundos
@@ -267,36 +267,60 @@ export function InsuranceView() {
   if (loading) return <div className="text-center p-5"><Spinner animation="border" variant="primary" /></div>;
   if (error) return <Alert variant="danger">{error}</Alert>;
 
-  const renderInstallationsTable = (installations: Installation[]) => {
+  const renderInstallationsList = (installations: Installation[]) => {
     if (installations.length === 0) {
-      return <p className="text-muted p-3 text-center fst-italic">Nenhum registo encontrado.</p>;
+      return <p className="text-muted p-3 text-center fst-italic">Nenhum registro encontrado.</p>;
     }
     return (
-      <Table responsive striped hover className="align-middle">
-        <thead><tr><th>Cliente</th><th>Veículo</th><th>Serviço</th><th className="text-center">Status</th><th className="text-center">Ações</th></tr></thead>
-        <tbody>
-          {installations.map(inst => (
-            <tr key={inst.id}>
-              <td><div className="fw-bold">{inst.nome_completo}</div><div className="small text-muted">{inst.contato}</div></td>
-              <td><div>{inst.modelo}</div><div className="small text-muted">{inst.placa}</div></td>
-              <td><Badge bg={inst.tipo_servico === 'Instalação' ? 'primary' : inst.tipo_servico === 'Manutenção' ? 'warning' : 'danger'} className="me-1">{inst.tipo_servico}</Badge><Badge bg={inst.base === 'Atena' ? 'secondary' : 'primary'}>{inst.base}</Badge></td>
-              <td className="text-center"><Badge bg={inst.status === 'Agendado' ? 'info' : inst.status === 'Concluído' ? 'success' : 'warning'} text={inst.status === 'A agendar' ? 'dark' : 'white'}>{inst.status === 'Agendado' && inst.data_instalacao ? new Date(inst.data_instalacao + 'T00:00:00').toLocaleDateString('pt-BR') : inst.status}</Badge></td>
-              <td className="text-center"><Button variant="outline-primary" size="sm" onClick={() => setSelected(inst)}><i className="bi bi-eye-fill"></i> Detalhes</Button></td>
-            </tr>
-          ))}
-        </tbody>
-      </Table>
+      <ListGroup variant="flush">
+        {installations.map(inst => (
+          <ListGroup.Item key={inst.id} className="d-flex justify-content-between align-items-center flex-wrap">
+            {/* Seção de Informações Principais */}
+            <div className="me-auto pe-3">
+              <div className="fw-bold">{inst.nome_completo}</div>
+              <div className="small text-muted">{inst.modelo} ({inst.placa})</div>
+              <div>
+                <Badge bg={inst.tipo_servico === 'Instalação' ? 'primary' : inst.tipo_servico === 'Manutenção' ? 'warning' : 'danger'} className="me-1">
+                  {inst.tipo_servico}
+                </Badge>
+                <Badge bg={inst.base === 'Atena' ? 'secondary' : 'info'} className="me-1">{inst.base}</Badge>
+                <Badge bg={inst.status === 'Agendado' ? 'info' : inst.status === 'Concluído' ? 'success' : 'warning'} text={inst.status === 'A agendar' ? 'dark' : 'white'}>
+                  {inst.status === 'Agendado' && inst.data_instalacao ? new Date(inst.data_instalacao + 'T00:00:00').toLocaleDateString('pt-BR') : inst.status}
+                </Badge>
+              </div>
+            </div>
+            {/* Botão de Ação */}
+            <div className="mt-2 mt-md-0">
+              <Button variant="outline-primary" size="sm" onClick={() => setSelected(inst)}>
+                <i className="bi bi-eye-fill me-1"></i> Detalhes
+              </Button>
+            </div>
+          </ListGroup.Item>
+        ))}
+      </ListGroup>
     );
   };
 
   return (
     <div>
       <Card className="mb-4"><Card.Header as="h5"><i className="bi bi-search me-2"></i>Consulta de Solicitações</Card.Header><Card.Body>{message && <Alert variant={message.type} onClose={() => setMessage(null)} dismissible>{message.text}</Alert>}<InputGroup><InputGroup.Text><i className="bi bi-search"></i></InputGroup.Text><Form.Control type="text" placeholder="Buscar por nome ou placa..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></InputGroup></Card.Body></Card>
-      <Accordion defaultActiveKey={['0', '1']} alwaysOpen><Accordion.Item eventKey="0" className="mb-3"><Accordion.Header><i className="bi bi-clock-history me-2"></i>Pendentes ({pending.length})</Accordion.Header><Accordion.Body className="p-0">{renderInstallationsTable(pending)}</Accordion.Body></Accordion.Item><Accordion.Item eventKey="1" className="mb-3"><Accordion.Header><i className="bi bi-calendar-check me-2"></i>Agendadas ({scheduled.length})</Accordion.Header><Accordion.Body className="p-0">{renderInstallationsTable(scheduled)}</Accordion.Body></Accordion.Item><Accordion.Item eventKey="2"><Accordion.Header><i className="bi bi-check-circle-fill me-2"></i>Concluídas ({completed.length})</Accordion.Header><Accordion.Body className="p-0">{renderInstallationsTable(completed)}</Accordion.Body></Accordion.Item></Accordion>
+      <Accordion defaultActiveKey={['0', '1']} alwaysOpen>
+          <Accordion.Item eventKey="0" className="mb-3">
+              <Accordion.Header><i className="bi bi-clock-history me-2"></i>Pendentes ({pending.length})</Accordion.Header>
+              <Accordion.Body className="p-0">{renderInstallationsList(pending)}</Accordion.Body>
+          </Accordion.Item>
+          <Accordion.Item eventKey="1" className="mb-3">
+              <Accordion.Header><i className="bi bi-calendar-check me-2"></i>Agendadas ({scheduled.length})</Accordion.Header>
+              <Accordion.Body className="p-0">{renderInstallationsList(scheduled)}</Accordion.Body>
+          </Accordion.Item>
+          <Accordion.Item eventKey="2">
+              <Accordion.Header><i className="bi bi-check-circle-fill me-2"></i>Concluídas ({completed.length})</Accordion.Header>
+              <Accordion.Body className="p-0">{renderInstallationsList(completed)}</Accordion.Body>
+          </Accordion.Item>
+      </Accordion>
       {selected && <DetailsModal installation={selected} onClose={() => setSelected(null)} onViewHistory={(inst) => setHistoryTarget(inst)} onEdit={handleEditClick} setMessage={setMessage} />}
       {editingTarget && <EditModal installation={editingTarget} onClose={() => setEditingTarget(null)} onSave={handleSaveEdit} />}
       {historyTarget && <HistoryModal isOpen={!!historyTarget} onClose={() => setHistoryTarget(null)} installation={historyTarget} />}
     </div>
   );
 }
-
