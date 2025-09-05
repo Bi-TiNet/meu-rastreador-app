@@ -44,7 +44,6 @@ exports.handler = async function(event, context) {
     
     // 4. Insere os dados do novo usuário na tabela 'profiles'
     if (newUser && newUser.user) {
-        // *** CORREÇÃO APLICADA AQUI ***
         // Verificamos explicitamente se houve erro ao inserir o perfil
         const { error: profileError } = await supabase.from('profiles').insert({
             id: newUser.user.id,
