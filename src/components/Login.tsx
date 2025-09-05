@@ -25,9 +25,7 @@ export function Login() {
       setError(error.message);
       setLoading(false);
     } else {
-      // *** LÓGICA DE REDIRECIONAMENTO ATUALIZADA ***
       const userRole = user?.app_metadata?.role;
-      // Se for admin OU tecnico, redireciona para o painel. Senão, para a página inicial.
       if (userRole === 'admin' || userRole === 'tecnico') {
         navigate('/painel');
       } else {
@@ -44,6 +42,10 @@ export function Login() {
           Login
         </Card.Header>
         <Card.Body className="p-4">
+          {/* --- BANNER DE TESTE ADICIONADO AQUI --- */}
+          <Alert variant="info">
+            Versão de Teste 1.2 - Se você vê esta mensagem, o deploy funcionou!
+          </Alert>
           <Form onSubmit={handleLogin}>
             {error && <Alert variant="danger">{error}</Alert>}
             <FloatingLabel controlId="floatingEmail" label="Email" className="mb-3">
