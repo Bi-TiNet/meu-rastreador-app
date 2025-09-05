@@ -26,10 +26,10 @@ exports.handler = async function(event) {
       return { statusCode: 401, body: JSON.stringify({ message: "Token inválido." }) };
     }
 
-    // Pega a role do usuário a partir dos metadados
     const userRole = user.app_metadata?.role;
+    const userEmail = user.email;
 
-    // Inicia a query base
+    // Inicia a query base para buscar as instalações
     let query = supabase
       .from('instalacoes')
       .select(`
@@ -38,19 +38,29 @@ exports.handler = async function(event) {
         profiles:tecnico_id (full_name)
       `);
 
-    // *** LÓGICA DE FILTRO ADICIONADA ***
-    // Se o usuário for um técnico, filtra as instalações pelo seu ID
+    // *** LÓGICA DE FILTRO ATUALIZADA ***
+
+    // 1. Se o usuário for um TÉCNICO, ele vê apenas os serviços dele.
     if (userRole === 'tecnico') {
       query = query.eq('tecnico_id', user.id);
+    } 
+    // 2. Se o usuário for uma SEGURADORA, aplicamos a nova lógica.
+    else if (userRole === 'seguradora') {
+      // Verifica se é o usuário especial "Atena" (pelo e-mail)
+      if (userEmail && userEmail.toLowerCase().includes('atena')) {
+        // Se for Atena, vê todos os cadastros da base "Atena"
+        query = query.eq('base', 'Atena');
+      } else {
+        // Outras seguradoras veem apenas o que eles mesmos criaram
+        query = query.eq('created_by', user.id);
+      }
     }
-    
-    // Para administradores ou outros (se houver), a query continua sem o filtro extra,
-    // trazendo todos os resultados (respeitando as RLS, se houver).
+    // 3. Se for ADMIN, nenhum filtro é aplicado, e ele vê tudo.
 
-    // Adiciona a ordenação no final
+    // Adiciona a ordenação no final da query
     query = query.order('created_at', { ascending: false });
     
-    // Executa a query construída
+    // Executa a query
     let { data, error } = await query;
 
     if (error) throw error;
