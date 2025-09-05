@@ -27,7 +27,6 @@ interface InstallationEvent {
   resource: any; 
 }
 
-// --- NOVO COMPONENTE PARA A VISUALIZAÇÃO MOBILE ---
 function MobileAgendaView({ events }: { events: InstallationEvent[] }) {
   const groupedEvents = useMemo(() => {
     const groups: { [key: string]: InstallationEvent[] } = {};
@@ -89,7 +88,6 @@ function MobileAgendaView({ events }: { events: InstallationEvent[] }) {
   );
 }
 
-
 export function TechnicianAgenda() {
   const [events, setEvents] = useState<InstallationEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -140,13 +138,12 @@ export function TechnicianAgenda() {
   if (error) return <Alert variant="danger">{error}</Alert>;
 
   return (
-    // Se for mobile, renderiza a nova lista de cards. Senão, o calendário padrão.
     isMobile ? <MobileAgendaView events={events} /> : (
       <Card>
         <Card.Header as="h5">
           <i className="bi bi-calendar-week me-2"></i>
           {user?.app_metadata.role === 'tecnico' ? 'Minha Agenda' : 'Agenda de Técnicos'}
-        </-Card.Header>
+        </Card.Header>
         <Card.Body>
           <div style={{ height: '75vh' }}>
             <Calendar
