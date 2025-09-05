@@ -180,3 +180,12 @@ body {
   background-color: var(--card-bg) !important;
   border-top: 1px solid var(--card-border-color) !important;
 }
+/* Adicione no final de src/App.css */
+
+/* Em telas de celular (menores que 768px), move o botão de tema para cima
+   para não sobrepor a nova barra de navegação inferior. */
+@media (max-width: 768px) {
+  .theme-toggle {
+    bottom: 85px; /* Ajuste a altura conforme necessário */
+  }
+}

@@ -47,7 +47,6 @@ exports.handler = async function(event, context) {
 
         if (profileError) {
             await supabase.auth.admin.deleteUser(newUser.user.id);
-            // ESTA É A MENSAGEM DE ERRO DETALHADA QUE QUEREMOS VER SE O PROBLEMA CONTINUAR
             throw new Error(`Falha ao criar perfil no banco de dados: ${profileError.message}`);
         }
     }
