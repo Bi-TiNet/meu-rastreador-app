@@ -14,6 +14,7 @@ import { BottomNavBar } from './components/BottomNavBar';
 import { supabase } from './supabaseClient';
 import type { Session, User } from '@supabase/supabase-js';
 
+// --- HOOKS E COMPONENTES DE PROTEÇÃO DE ROTA (SEM ALTERAÇÕES) ---
 function useAuth() {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
@@ -39,24 +40,22 @@ function useAuth() {
   }, []);
   return { session, user, userRole, loading };
 }
-
 function ProtectedRoute({ session, loading, children }: { session: Session | null, loading: boolean, children: ReactNode }) {
   if (loading) return <div className="text-center p-5"><Spinner animation="border" /></div>;
   return session ? children : <Navigate to="/login" />;
 }
-
 function AdminProtectedRoute({ session, userRole, loading, children }: { session: Session | null, userRole: string | null, loading: boolean, children: ReactNode }) {
   if (loading) return <div className="text-center p-5"><Spinner animation="border" /></div>;
   if (!session) return <Navigate to="/login" />;
   return userRole === 'admin' ? children : <Navigate to="/" />;
 }
-
 function AdminOrTechnicianRoute({ session, userRole, loading, children }: { session: Session | null, userRole: string | null, loading: boolean, children: ReactNode }) {
   if (loading) return <div className="text-center p-5"><Spinner animation="border" /></div>;
   if (!session) return <Navigate to="/login" />;
   return (userRole === 'admin' || userRole === 'tecnico') ? children : <Navigate to="/" />;
 }
 
+// --- NAVBAR SUPERIOR (PARA ADMIN E SEGURADORA) ---
 function AppNavbar({ session, userRole }: { session: Session | null, userRole: string | null }) {
     const handleLogout = async () => {
         await supabase.auth.signOut();
@@ -78,11 +77,10 @@ function AppNavbar({ session, userRole }: { session: Session | null, userRole: s
                         <Nav className="me-auto">
                             <Nav.Link as={NavLink} to="/"><i className="bi bi-plus-circle me-1"></i> Cadastrar</Nav.Link>
                             <Nav.Link as={NavLink} to="/consulta"><i className="bi bi-search me-1"></i> Consulta</Nav.Link>
-                            {(userRole === 'admin' || userRole === 'tecnico') && (<Nav.Link as={NavLink} to="/painel"><i className="bi bi-clipboard-data me-1"></i> Painel</Nav.Link>)}
                             {userRole === 'admin' && (<>
+                                <Nav.Link as={NavLink} to="/painel"><i className="bi bi-clipboard-data me-1"></i> Painel</Nav.Link>
                                 <Nav.Link as={NavLink} to="/agenda"><i className="bi bi-calendar-week me-1"></i> Agenda</Nav.Link>
                                 <Nav.Link as={NavLink} to="/usuarios"><i className="bi bi-people-fill me-1"></i> Usuários</Nav.Link></>)}
-                            {userRole === 'tecnico' && (<Nav.Link as={NavLink} to="/agenda"><i className="bi bi-calendar-week me-1"></i> Minha Agenda</Nav.Link>)}
                         </Nav>
                     )}
                     <Nav className="ms-auto">
@@ -94,10 +92,12 @@ function AppNavbar({ session, userRole }: { session: Session | null, userRole: s
     );
 }
 
+// --- BOTÃO DE TEMA ---
 function ThemeToggleButton({ theme, toggleTheme }: { theme: string, toggleTheme: () => void }) {
   return (<Button variant="primary" onClick={toggleTheme} className="theme-toggle"><i className={`bi bi-${theme === 'light' ? 'moon-stars-fill' : 'sun-fill'}`}></i></Button>);
 }
 
+// --- COMPONENTE PRINCIPAL APP ---
 function App() {
   const { session, userRole, loading } = useAuth();
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
@@ -110,6 +110,8 @@ function App() {
   const renderLayout = () => {
     if (loading) return <div className="text-center p-5"><Spinner animation="border" /></div>;
     if (!session) return (<Routes><Route path="*" element={<Login />} /><Route path="/update-password" element={<ResetPassword />} /></Routes>);
+    
+    // LAYOUT DO TÉCNICO
     if (userRole === 'tecnico') {
       return (
         <>
@@ -118,8 +120,8 @@ function App() {
               <Routes>
                 <Route path="/agenda" element={<TechnicianAgenda />} />
                 <Route path="/consulta" element={<InsuranceView />} />
-                <Route path="/painel" element={<Dashboard />} />
                 <Route path="/tarefas" element={<TaskList />} />
+                {/* A rota /painel foi removida para os técnicos */}
                 <Route path="*" element={<Navigate to="/agenda" />} />
               </Routes>
             </Container>
@@ -128,6 +130,7 @@ function App() {
         </>
       );
     }
+    // LAYOUT PADRÃO (ADMIN E SEGURADORA)
     return (
       <>
         <AppNavbar session={session} userRole={userRole} />
@@ -136,9 +139,9 @@ function App() {
              <Routes>
               <Route path="/" element={<ProtectedRoute session={session} loading={loading}><InstallationForm /></ProtectedRoute>} />
               <Route path="/consulta" element={<ProtectedRoute session={session} loading={loading}><InsuranceView /></ProtectedRoute>} />
-              <Route path="/painel" element={<AdminOrTechnicianRoute session={session} userRole={userRole} loading={loading}><Dashboard /></AdminOrTechnicianRoute>} />
+              <Route path="/painel" element={<AdminProtectedRoute session={session} userRole={userRole} loading={loading}><Dashboard /></AdminProtectedRoute>} />
               <Route path="/usuarios" element={<AdminProtectedRoute session={session} userRole={userRole} loading={loading}><UserManagement /></AdminProtectedRoute>} />
-              <Route path="/agenda" element={<AdminOrTechnicianRoute session={session} userRole={userRole} loading={loading}><TechnicianAgenda /></AdminOrTechnicianRoute>} />
+              <Route path="/agenda" element={<AdminProtectedRoute session={session} userRole={userRole} loading={loading}><TechnicianAgenda /></AdminProtectedRoute>} />
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
           </Container>

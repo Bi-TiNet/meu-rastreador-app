@@ -1,11 +1,11 @@
 // src/components/InsuranceView.tsx
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback, FormEvent } from 'react';
 import {
   Form, Card, Badge, Modal, Button, Alert, Spinner, InputGroup, Table, Accordion, Row, Col, FloatingLabel, ListGroup,
 } from 'react-bootstrap';
 import { supabase } from '../supabaseClient';
 
-// Interfaces (não precisam de alterações)
+// --- INTERFACES ---
 interface History {
   id: number;
   evento: string;
@@ -34,7 +34,7 @@ interface Installation {
   observacao?: string;
 }
 
-// HistoryModal (não precisa de alterações)
+// --- MODAIS (SEM ALTERAÇÕES) ---
 function HistoryModal({ isOpen, installation, onClose }: { isOpen: boolean; installation: Installation; onClose: () => void; }) {
   const sortedHistory = useMemo(() => installation.historico ? [...installation.historico].sort((a, b) => new Date(b.data_evento).getTime() - new Date(a.data_evento).getTime()) : [], [installation.historico]);
   return (
@@ -58,9 +58,8 @@ function HistoryModal({ isOpen, installation, onClose }: { isOpen: boolean; inst
   );
 }
 
-// EditModal (não precisa de alterações)
-function EditModal({ installation, onClose, onSave, }: { installation: Installation; onClose: () => void; onSave: (updatedData: Installation) => void; }) {
-  const [formData, setFormData] = useState<Installation>(installation);
+function EditModal({ installation, onClose, onSave, }: { installation: Installation; onClose: () => void; onSave: (updatedData: Partial<Installation>) => void; }) {
+  const [formData, setFormData] = useState<Partial<Installation>>(installation);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => { setFormData(installation); }, [installation]);
@@ -110,7 +109,6 @@ function EditModal({ installation, onClose, onSave, }: { installation: Installat
   );
 }
 
-// VERSÃO CORRIGIDA E MELHORADA DO MODAL DE DETALHES
 function DetailsModal({ installation, onClose, onViewHistory, onEdit }: { installation: Installation; onClose: () => void; onViewHistory: (installation: Installation) => void; onEdit: (installation: Installation) => void; }) {
   const handleCopy = async () => {
     const text = `Veículo ${installation.modelo}\nModelo: ${installation.modelo}\nAno Fabricação: ${installation.ano || 'N/A'}\nPlaca: ${installation.placa}\nCor: ${installation.cor || 'N/A'}\nNome: ${installation.nome_completo}\nTelefone: ${installation.contato}\nusuario: ${installation.usuario || 'N/A'}\nsenha: ${installation.senha || 'N/A'}\nBASE Atena (${installation.base === 'Atena' ? 'X' : ' '})   Base Autocontrol (${installation.base === 'Autocontrol' ? 'X' : ' '})\nBloqueio sim (${installation.bloqueio === 'Sim' ? 'X' : ' '})   nao (${installation.bloqueio === 'Nao' ? 'X' : ' '})`.trim();
@@ -180,7 +178,7 @@ function DetailsModal({ installation, onClose, onViewHistory, onEdit }: { instal
   );
 }
 
-// Componente Principal
+// --- COMPONENTE PRINCIPAL ---
 export function InsuranceView() {
   const [allInstallations, setAllInstallations] = useState<Installation[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -191,38 +189,52 @@ export function InsuranceView() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'danger'; text: string } | null>(null);
 
-  const fetchInstallations = async () => {
+  // *** AQUI ESTÁ A CORREÇÃO ***
+  // A função agora busca os dados diretamente do Supabase, aplicando as regras de permissão corretas
+  // para cada perfil de usuário, resolvendo o erro para os técnicos.
+  const fetchInstallations = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Usuário não autenticado.');
-      const response = await fetch('/.netlify/functions/get-installations', { headers: { Authorization: `Bearer ${session.access_token}` } });
-      if (!response.ok) throw new Error('Falha ao buscar dados.');
-      const data: Installation[] = await response.json();
-      setAllInstallations(data);
-    } catch { setError('Não foi possível carregar os dados.'); } finally { setLoading(false); }
-  };
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Usuário não autenticado.');
 
-  useEffect(() => { fetchInstallations(); }, []);
+      const userRole = user.app_metadata?.role;
+      let query = supabase.from('instalacoes').select('*, historico(*)');
+
+      if (userRole === 'tecnico') {
+        query = query.eq('tecnico_id', user.id);
+      } else if (userRole === 'seguradora') {
+        if (user.email && user.email.toLowerCase().includes('atena')) {
+          query = query.eq('base', 'Atena');
+        } else {
+          query = query.eq('created_by', user.id);
+        }
+      }
+      
+      const { data, error: queryError } = await query.order('created_at', { ascending: false });
+
+      if (queryError) throw queryError;
+      setAllInstallations(data || []);
+    } catch (err: any) {
+      setError(err.message || 'Não foi possível carregar os dados.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchInstallations(); }, [fetchInstallations]);
 
   const handleEditClick = (installation: Installation) => {
     setSelected(null);
     setEditingTarget(installation);
   };
 
-  const handleSaveEdit = async (updatedData: Installation) => {
+  const handleSaveEdit = async (updatedData: Partial<Installation>) => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Usuário não autenticado.');
-      const response = await fetch('/.netlify/functions/update-installation', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify(updatedData),
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Falha ao salvar as alterações.');
-      }
+      const { historico, ...dataToUpdate } = updatedData;
+      const { error } = await supabase.from('instalacoes').update(dataToUpdate).eq('id', updatedData.id);
+      if (error) throw error;
       setMessage({ type: 'success', text: 'Dados atualizados com sucesso!' });
       setEditingTarget(null);
       await fetchInstallations();
@@ -249,47 +261,15 @@ export function InsuranceView() {
     }
     return (
       <Table responsive striped hover className="align-middle">
-        <thead>
-          <tr>
-            <th>Cliente</th>
-            <th>Veículo</th>
-            <th>Serviço</th>
-            <th className="text-center">Status</th>
-            <th className="text-center">Ações</th>
-          </tr>
-        </thead>
+        <thead><tr><th>Cliente</th><th>Veículo</th><th>Serviço</th><th className="text-center">Status</th><th className="text-center">Ações</th></tr></thead>
         <tbody>
           {installations.map(inst => (
             <tr key={inst.id}>
-              <td>
-                <div className="fw-bold">{inst.nome_completo}</div>
-                <div className="small text-muted">{inst.contato}</div>
-              </td>
-              <td>
-                <div>{inst.modelo}</div>
-                <div className="small text-muted">{inst.placa}</div>
-              </td>
-              <td>
-                <Badge bg={inst.tipo_servico === 'Instalação' ? 'primary' : inst.tipo_servico === 'Manutenção' ? 'warning' : 'danger'} className="me-1">
-                  {inst.tipo_servico}
-                </Badge>
-                <Badge bg={inst.base === 'Atena' ? 'secondary' : 'primary'}>{inst.base}</Badge>
-              </td>
-              <td className="text-center">
-                <Badge 
-                  bg={inst.status === 'Agendado' ? 'info' : inst.status === 'Concluído' ? 'success' : 'warning'}
-                  text={inst.status === 'A agendar' ? 'dark' : 'white'}
-                >
-                  {inst.status === 'Agendado' && inst.data_instalacao 
-                    ? new Date(inst.data_instalacao + 'T00:00:00').toLocaleDateString('pt-BR') 
-                    : inst.status}
-                </Badge>
-              </td>
-              <td className="text-center">
-                <Button variant="outline-primary" size="sm" onClick={() => setSelected(inst)}>
-                  <i className="bi bi-eye-fill"></i> Detalhes
-                </Button>
-              </td>
+              <td><div className="fw-bold">{inst.nome_completo}</div><div className="small text-muted">{inst.contato}</div></td>
+              <td><div>{inst.modelo}</div><div className="small text-muted">{inst.placa}</div></td>
+              <td><Badge bg={inst.tipo_servico === 'Instalação' ? 'primary' : inst.tipo_servico === 'Manutenção' ? 'warning' : 'danger'} className="me-1">{inst.tipo_servico}</Badge><Badge bg={inst.base === 'Atena' ? 'secondary' : 'primary'}>{inst.base}</Badge></td>
+              <td className="text-center"><Badge bg={inst.status === 'Agendado' ? 'info' : inst.status === 'Concluído' ? 'success' : 'warning'} text={inst.status === 'A agendar' ? 'dark' : 'white'}>{inst.status === 'Agendado' && inst.data_instalacao ? new Date(inst.data_instalacao + 'T00:00:00').toLocaleDateString('pt-BR') : inst.status}</Badge></td>
+              <td className="text-center"><Button variant="outline-primary" size="sm" onClick={() => setSelected(inst)}><i className="bi bi-eye-fill"></i> Detalhes</Button></td>
             </tr>
           ))}
         </tbody>
@@ -299,38 +279,8 @@ export function InsuranceView() {
 
   return (
     <div>
-      <Card className="mb-4">
-        <Card.Header as="h5"><i className="bi bi-search me-2"></i>Consulta de Solicitações</Card.Header>
-        <Card.Body>
-          {message && <Alert variant={message.type} onClose={() => setMessage(null)} dismissible>{message.text}</Alert>}
-          <InputGroup>
-            <InputGroup.Text><i className="bi bi-search"></i></InputGroup.Text>
-            <Form.Control type="text" placeholder="Buscar por nome ou placa..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-          </InputGroup>
-        </Card.Body>
-      </Card>
-
-      <Accordion defaultActiveKey={['0', '1']} alwaysOpen>
-        <Accordion.Item eventKey="0" className="mb-3">
-          <Accordion.Header><i className="bi bi-clock-history me-2"></i>Pendentes ({pending.length})</Accordion.Header>
-          <Accordion.Body className="p-0">
-            {renderInstallationsTable(pending)}
-          </Accordion.Body>
-        </Accordion.Item>
-        <Accordion.Item eventKey="1" className="mb-3">
-          <Accordion.Header><i className="bi bi-calendar-check me-2"></i>Agendadas ({scheduled.length})</Accordion.Header>
-          <Accordion.Body className="p-0">
-            {renderInstallationsTable(scheduled)}
-          </Accordion.Body>
-        </Accordion.Item>
-        <Accordion.Item eventKey="2">
-          <Accordion.Header><i className="bi bi-check-circle-fill me-2"></i>Concluídas ({completed.length})</Accordion.Header>
-          <Accordion.Body className="p-0">
-            {renderInstallationsTable(completed)}
-          </Accordion.Body>
-        </Accordion.Item>
-      </Accordion>
-
+      <Card className="mb-4"><Card.Header as="h5"><i className="bi bi-search me-2"></i>Consulta de Solicitações</Card.Header><Card.Body>{message && <Alert variant={message.type} onClose={() => setMessage(null)} dismissible>{message.text}</Alert>}<InputGroup><InputGroup.Text><i className="bi bi-search"></i></InputGroup.Text><Form.Control type="text" placeholder="Buscar por nome ou placa..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></InputGroup></Card.Body></Card>
+      <Accordion defaultActiveKey={['0', '1']} alwaysOpen><Accordion.Item eventKey="0" className="mb-3"><Accordion.Header><i className="bi bi-clock-history me-2"></i>Pendentes ({pending.length})</Accordion.Header><Accordion.Body className="p-0">{renderInstallationsTable(pending)}</Accordion.Body></Accordion.Item><Accordion.Item eventKey="1" className="mb-3"><Accordion.Header><i className="bi bi-calendar-check me-2"></i>Agendadas ({scheduled.length})</Accordion.Header><Accordion.Body className="p-0">{renderInstallationsTable(scheduled)}</Accordion.Body></Accordion.Item><Accordion.Item eventKey="2"><Accordion.Header><i className="bi bi-check-circle-fill me-2"></i>Concluídas ({completed.length})</Accordion.Header><Accordion.Body className="p-0">{renderInstallationsTable(completed)}</Accordion.Body></Accordion.Item></Accordion>
       {selected && <DetailsModal installation={selected} onClose={() => setSelected(null)} onViewHistory={(inst) => setHistoryTarget(inst)} onEdit={handleEditClick} />}
       {editingTarget && <EditModal installation={editingTarget} onClose={() => setEditingTarget(null)} onSave={handleSaveEdit} />}
       {historyTarget && <HistoryModal isOpen={!!historyTarget} onClose={() => setHistoryTarget(null)} installation={historyTarget} />}
