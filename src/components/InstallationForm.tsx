@@ -58,13 +58,13 @@ export function InstallationForm({ onSuccess }: InstallationFormProps) {
   };
 
   const handleNext = () => {
+    // A função validateStep() já chama setValidated(true) se encontrar um erro.
+    // Não precisamos de mais nada para exibir a validação.
     if (validateStep()) {
-      setValidated(false); // Reseta a validação para a próxima etapa
+      setValidated(false); // Limpa a validação antes de ir para o próximo passo.
       setCurrentStep(prev => prev + 1);
-    } else {
-        // Força a exibição das mensagens de erro do navegador se o formulário for inválido
-        formRef.current?.reportValidity();
     }
+    // A linha "formRef.current?.reportValidity()" foi removida daqui.
   };
   
   const handleBack = () => {
