@@ -1,7 +1,7 @@
 // src/components/TechnicianAgenda.tsx
-import { useEffect, useState, useCallback, useMemo, FormEvent } from 'react';
+import { useEffect, useState, useCallback, useMemo, type FormEvent } from 'react';
 import moment from 'moment';
-import 'moment/dist/locale/pt-br';
+import 'moment/locale/pt-br';
 import { supabase } from '../supabaseClient';
 import { Alert, Spinner, Card, Badge, Button, Modal, Form, FloatingLabel, ListGroup } from 'react-bootstrap';
 import type { User } from '@supabase/supabase-js';

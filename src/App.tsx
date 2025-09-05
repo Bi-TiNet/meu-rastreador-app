@@ -14,7 +14,7 @@ import { BottomNavBar } from './components/BottomNavBar';
 import { supabase } from './supabaseClient';
 import type { Session, User } from '@supabase/supabase-js';
 
-// --- HOOKS E COMPONENTES DE PROTEÇÃO DE ROTA (SEM ALTERAÇÕES) ---
+// --- HOOKS E COMPONENTES DE PROTEÇÃO DE ROTA ---
 function useAuth() {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
@@ -48,11 +48,6 @@ function AdminProtectedRoute({ session, userRole, loading, children }: { session
   if (loading) return <div className="text-center p-5"><Spinner animation="border" /></div>;
   if (!session) return <Navigate to="/login" />;
   return userRole === 'admin' ? children : <Navigate to="/" />;
-}
-function AdminOrTechnicianRoute({ session, userRole, loading, children }: { session: Session | null, userRole: string | null, loading: boolean, children: ReactNode }) {
-  if (loading) return <div className="text-center p-5"><Spinner animation="border" /></div>;
-  if (!session) return <Navigate to="/login" />;
-  return (userRole === 'admin' || userRole === 'tecnico') ? children : <Navigate to="/" />;
 }
 
 // --- NAVBAR SUPERIOR (PARA ADMIN E SEGURADORA) ---
@@ -121,7 +116,6 @@ function App() {
                 <Route path="/agenda" element={<TechnicianAgenda />} />
                 <Route path="/consulta" element={<InsuranceView />} />
                 <Route path="/tarefas" element={<TaskList />} />
-                {/* A rota /painel foi removida para os técnicos */}
                 <Route path="*" element={<Navigate to="/agenda" />} />
               </Routes>
             </Container>

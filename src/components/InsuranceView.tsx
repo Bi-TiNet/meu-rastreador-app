@@ -1,5 +1,5 @@
 // src/components/InsuranceView.tsx
-import { useEffect, useState, useMemo, useCallback, FormEvent } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   Form, Card, Badge, Modal, Button, Alert, Spinner, InputGroup, Table, Accordion, Row, Col, FloatingLabel, ListGroup,
 } from 'react-bootstrap';
@@ -34,7 +34,7 @@ interface Installation {
   observacao?: string;
 }
 
-// --- MODAIS (SEM ALTERAÇÕES) ---
+// --- MODAIS ---
 function HistoryModal({ isOpen, installation, onClose }: { isOpen: boolean; installation: Installation; onClose: () => void; }) {
   const sortedHistory = useMemo(() => installation.historico ? [...installation.historico].sort((a, b) => new Date(b.data_evento).getTime() - new Date(a.data_evento).getTime()) : [], [installation.historico]);
   return (
@@ -189,9 +189,6 @@ export function InsuranceView() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'danger'; text: string } | null>(null);
 
-  // *** AQUI ESTÁ A CORREÇÃO ***
-  // A função agora busca os dados diretamente do Supabase, aplicando as regras de permissão corretas
-  // para cada perfil de usuário, resolvendo o erro para os técnicos.
   const fetchInstallations = useCallback(async () => {
     setLoading(true);
     setError(null);
