@@ -72,8 +72,17 @@ export function InstallationForm({ onSuccess }: InstallationFormProps) {
     setCurrentStep(prev => prev - 1);
   };
 
+  // Arquivo: src/components/InstallationForm.tsx
+
+// ... (todo o código anterior, incluindo imports, a definição do componente e os estados)
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+
+    if (currentStep !== steps.length) {
+      return; 
+    }
+
     if (!validateStep()) {
         formRef.current?.reportValidity();
         return;
