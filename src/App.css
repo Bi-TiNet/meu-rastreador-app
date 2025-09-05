@@ -157,3 +157,9 @@ body {
   border-radius: 50%;
   font-size: 1.25rem;
 }
+
+/* Estilo para a barra de navegação inferior no tema escuro */
+[data-bs-theme="dark"] .fixed-bottom {
+  background-color: var(--card-bg) !important;
+  border-top: 1px solid var(--card-border-color) !important;
+}

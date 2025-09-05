@@ -9,6 +9,8 @@ import { InsuranceView } from './components/InsuranceView';
 import { Login } from './components/Login';
 import { ResetPassword } from './components/ResetPassword';
 import { UserManagement } from './components/UserManagement';
+import { TaskList } from './components/TaskList'; // <-- IMPORTAR NOVO COMPONENTE
+import { BottomNavBar } from './components/BottomNavBar'; // <-- IMPORTAR NOVO COMPONENTE
 import { supabase } from './supabaseClient';
 import type { Session, User } from '@supabase/supabase-js';
 
@@ -64,7 +66,6 @@ function AdminProtectedRoute({ session, userRole, loading, children }: { session
   return userRole === 'admin' ? children : <Navigate to="/" />;
 }
 
-// *** NOVO COMPONENTE DE ROTA ***
 // Protege rotas para administradores e técnicos
 function AdminOrTechnicianRoute({ session, userRole, loading, children }: { session: Session | null, userRole: string | null, loading: boolean, children: ReactNode }) {
   if (loading) {
@@ -78,7 +79,7 @@ function AdminOrTechnicianRoute({ session, userRole, loading, children }: { sess
 }
 
 
-// Componente do Navbar
+// Componente do Navbar superior
 function AppNavbar({ session, userRole }: { session: Session | null, userRole: string | null }) {
     const navigate = useNavigate();
 
@@ -106,16 +107,13 @@ function AppNavbar({ session, userRole }: { session: Session | null, userRole: s
                 <Navbar.Collapse id="basic-navbar-nav">
                     {session && (
                         <Nav className="me-auto">
-                            {/* Links visíveis para todos os perfis logados */}
                             <Nav.Link as={NavLink} to="/"><i className="bi bi-plus-circle me-1"></i> Cadastrar</Nav.Link>
                             <Nav.Link as={NavLink} to="/consulta"><i className="bi bi-search me-1"></i> Consulta</Nav.Link>
                             
-                            {/* Links para Admin e Técnico */}
                             {(userRole === 'admin' || userRole === 'tecnico') && (
                                 <Nav.Link as={NavLink} to="/painel"><i className="bi bi-clipboard-data me-1"></i> Painel</Nav.Link>
                             )}
                             
-                            {/* Links apenas para Admin */}
                             {userRole === 'admin' && (
                                 <>
                                     <Nav.Link as={NavLink} to="/agenda"><i className="bi bi-calendar-week me-1"></i> Agenda</Nav.Link>
@@ -123,7 +121,6 @@ function AppNavbar({ session, userRole }: { session: Session | null, userRole: s
                                 </>
                             )}
                             
-                            {/* Link da Agenda para Técnicos */}
                              {userRole === 'tecnico' && (
                                 <Nav.Link as={NavLink} to="/agenda"><i className="bi bi-calendar-week me-1"></i> Minha Agenda</Nav.Link>
                              )}
@@ -151,11 +148,10 @@ function ThemeToggleButton({ theme, toggleTheme }: { theme: string, toggleTheme:
   );
 }
 
+
 function App() {
   const { session, userRole, loading } = useAuth();
-  const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('theme') || 'light';
-  });
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
 
   useEffect(() => {
     document.documentElement.setAttribute('data-bs-theme', theme);
@@ -166,36 +162,67 @@ function App() {
     setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
   };
 
-  return (
-    <BrowserRouter>
-      <div className={`app-container theme-${theme}`}>
-        {session && <AppNavbar session={session} userRole={userRole} />}
+  // Renderiza o layout correto baseado no perfil do usuário
+  const renderLayout = () => {
+    if (loading) {
+      return <div className="text-center p-5"><Spinner animation="border" /></div>;
+    }
+
+    if (!session) {
+      return (
+        <Routes>
+          <Route path="*" element={<Login />} />
+          <Route path="/update-password" element={<ResetPassword />} />
+        </Routes>
+      );
+    }
+    
+    // LAYOUT DO TÉCNICO COM NAVEGAÇÃO INFERIOR
+    if (userRole === 'tecnico') {
+      return (
+        <>
+          <main className="py-4 pb-5 mb-5"> {/* Padding no final para não cobrir o conteúdo */}
+            <Container>
+              <Routes>
+                <Route path="/agenda" element={<TechnicianAgenda />} />
+                <Route path="/consulta" element={<InsuranceView />} />
+                <Route path="/painel" element={<Dashboard />} />
+                <Route path="/tarefas" element={<TaskList />} />
+                {/* Redireciona qualquer outra rota para a agenda */}
+                <Route path="*" element={<Navigate to="/agenda" />} />
+              </Routes>
+            </Container>
+          </main>
+          <BottomNavBar />
+        </>
+      );
+    }
+
+    // LAYOUT PADRÃO (ADMIN / SEGURADORA) COM NAVEGAÇÃO SUPERIOR
+    return (
+      <>
+        <AppNavbar session={session} userRole={userRole} />
         <main className="py-4">
           <Container>
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/update-password" element={<ResetPassword />} />
-              
-              {/* Rotas Protegidas para todos os usuários logados */}
+             <Routes>
               <Route path="/" element={<ProtectedRoute session={session} loading={loading}><InstallationForm /></ProtectedRoute>} />
               <Route path="/consulta" element={<ProtectedRoute session={session} loading={loading}><InsuranceView /></ProtectedRoute>} />
-              
-              {/* Rota do Painel para ADMIN e TÉCNICO */}
               <Route path="/painel" element={<AdminOrTechnicianRoute session={session} userRole={userRole} loading={loading}><Dashboard /></AdminOrTechnicianRoute>} />
-              
-              {/* Rota de Usuários apenas para ADMIN */}
               <Route path="/usuarios" element={<AdminProtectedRoute session={session} userRole={userRole} loading={loading}><UserManagement /></AdminProtectedRoute>} />
-              
-              {/* Rota da Agenda para ADMIN e TÉCNICO */}
-              <Route path="/agenda" element={
-                <ProtectedRoute session={session} loading={loading}>
-                  {(userRole === 'admin' || userRole === 'tecnico') ? <TechnicianAgenda /> : <Navigate to="/" />}
-                </ProtectedRoute>
-              } />
-            
+              <Route path="/agenda" element={<AdminOrTechnicianRoute session={session} userRole={userRole} loading={loading}><TechnicianAgenda /></AdminOrTechnicianRoute>} />
+              <Route path="*" element={<Navigate to="/" />} />
             </Routes>
           </Container>
         </main>
+      </>
+    );
+  };
+
+
+  return (
+    <BrowserRouter>
+      <div className={`app-container theme-${theme}`}>
+        {renderLayout()}
         {session && <ThemeToggleButton theme={theme} toggleTheme={toggleTheme} />}
       </div>
     </BrowserRouter>
