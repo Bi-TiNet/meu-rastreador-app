@@ -19,7 +19,6 @@ function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     const getSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -63,7 +62,6 @@ function AppNavbar({ session, userRole }: { session: Session | null, userRole: s
         await supabase.auth.signOut();
         window.location.href = '/login';
     };
-
     return (
         <Navbar expand="lg" className="mb-4 shadow-sm">
             <Container>
@@ -97,32 +95,21 @@ function AppNavbar({ session, userRole }: { session: Session | null, userRole: s
 }
 
 function ThemeToggleButton({ theme, toggleTheme }: { theme: string, toggleTheme: () => void }) {
-  return (
-    <Button variant="primary" onClick={toggleTheme} className="theme-toggle">
-      <i className={`bi bi-${theme === 'light' ? 'moon-stars-fill' : 'sun-fill'}`}></i>
-    </Button>
-  );
+  return (<Button variant="primary" onClick={toggleTheme} className="theme-toggle"><i className={`bi bi-${theme === 'light' ? 'moon-stars-fill' : 'sun-fill'}`}></i></Button>);
 }
 
 function App() {
   const { session, userRole, loading } = useAuth();
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
-
   useEffect(() => {
     document.documentElement.setAttribute('data-bs-theme', theme);
     localStorage.setItem('theme', theme);
   }, [theme]);
-
   const toggleTheme = () => setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
 
   const renderLayout = () => {
     if (loading) return <div className="text-center p-5"><Spinner animation="border" /></div>;
-    if (!session) return (
-      <Routes>
-        <Route path="*" element={<Login />} />
-        <Route path="/update-password" element={<ResetPassword />} />
-      </Routes>
-    );
+    if (!session) return (<Routes><Route path="*" element={<Login />} /><Route path="/update-password" element={<ResetPassword />} /></Routes>);
     if (userRole === 'tecnico') {
       return (
         <>
@@ -169,5 +156,4 @@ function App() {
     </BrowserRouter>
   );
 }
-
 export default App;
