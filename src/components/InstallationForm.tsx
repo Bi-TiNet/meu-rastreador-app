@@ -1,5 +1,5 @@
 // Arquivo: src/components/InstallationForm.tsx
-import { useState, useRef, FormEvent } from 'react';
+import { useState, useRef, type FormEvent } from 'react';
 import { Form, Button, Card, Row, Col, FloatingLabel, Spinner, Alert } from 'react-bootstrap';
 import { supabase } from '../supabaseClient';
 import './InstallationForm.css'; // Importando o novo CSS
