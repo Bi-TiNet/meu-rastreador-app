@@ -163,3 +163,20 @@ body {
   background-color: var(--card-bg) !important;
   border-top: 1px solid var(--card-border-color) !important;
 }
+/* Adicione no final de src/App.css */
+
+/* --- Estilos para a Barra de Navegação Inferior --- */
+.nav-link-custom {
+  color: var(--bs-secondary-color); /* Cor do ícone e texto inativo */
+  transition: color 0.2s ease-in-out;
+}
+
+.nav-link-custom.active {
+  color: var(--bs-primary); /* Cor do ícone e texto ativo */
+}
+
+/* Tema escuro para a barra inferior */
+[data-bs-theme="dark"] .fixed-bottom {
+  background-color: var(--card-bg) !important;
+  border-top: 1px solid var(--card-border-color) !important;
+}
