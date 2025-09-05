@@ -109,13 +109,28 @@ function EditModal({ installation, onClose, onSave, }: { installation: Installat
   );
 }
 
-function DetailsModal({ installation, onClose, onViewHistory, onEdit }: { installation: Installation; onClose: () => void; onViewHistory: (installation: Installation) => void; onEdit: (installation: Installation) => void; }) {
+function DetailsModal({ 
+  installation, 
+  onClose, 
+  onViewHistory, 
+  onEdit, 
+  setMessage 
+}: { 
+  installation: Installation; 
+  onClose: () => void; 
+  onViewHistory: (installation: Installation) => void; 
+  onEdit: (installation: Installation) => void;
+  setMessage: (message: { type: 'success' | 'danger'; text: string } | null) => void;
+}) {
   const handleCopy = async () => {
     const text = `Veículo ${installation.modelo}\nModelo: ${installation.modelo}\nAno Fabricação: ${installation.ano || 'N/A'}\nPlaca: ${installation.placa}\nCor: ${installation.cor || 'N/A'}\nNome: ${installation.nome_completo}\nTelefone: ${installation.contato}\nusuario: ${installation.usuario || 'N/A'}\nsenha: ${installation.senha || 'N/A'}\nBASE Atena (${installation.base === 'Atena' ? 'X' : ' '})   Base Autocontrol (${installation.base === 'Autocontrol' ? 'X' : ' '})\nBloqueio sim (${installation.bloqueio === 'Sim' ? 'X' : ' '})   nao (${installation.bloqueio === 'Nao' ? 'X' : ' '})`.trim();
     try {
       await navigator.clipboard.writeText(text);
-      alert('Dados copiados no formato para WhatsApp!');
-    } catch { alert('Falha ao copiar os dados.'); }
+      setMessage({ type: 'success', text: 'Dados copiados para a área de transferência!' });
+    } catch { 
+      setMessage({ type: 'danger', text: 'Falha ao copiar os dados.' });
+    }
+    setTimeout(() => setMessage(null), 3000); // Limpa a mensagem após 3 segundos
   };
 
   return (
@@ -278,9 +293,10 @@ export function InsuranceView() {
     <div>
       <Card className="mb-4"><Card.Header as="h5"><i className="bi bi-search me-2"></i>Consulta de Solicitações</Card.Header><Card.Body>{message && <Alert variant={message.type} onClose={() => setMessage(null)} dismissible>{message.text}</Alert>}<InputGroup><InputGroup.Text><i className="bi bi-search"></i></InputGroup.Text><Form.Control type="text" placeholder="Buscar por nome ou placa..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></InputGroup></Card.Body></Card>
       <Accordion defaultActiveKey={['0', '1']} alwaysOpen><Accordion.Item eventKey="0" className="mb-3"><Accordion.Header><i className="bi bi-clock-history me-2"></i>Pendentes ({pending.length})</Accordion.Header><Accordion.Body className="p-0">{renderInstallationsTable(pending)}</Accordion.Body></Accordion.Item><Accordion.Item eventKey="1" className="mb-3"><Accordion.Header><i className="bi bi-calendar-check me-2"></i>Agendadas ({scheduled.length})</Accordion.Header><Accordion.Body className="p-0">{renderInstallationsTable(scheduled)}</Accordion.Body></Accordion.Item><Accordion.Item eventKey="2"><Accordion.Header><i className="bi bi-check-circle-fill me-2"></i>Concluídas ({completed.length})</Accordion.Header><Accordion.Body className="p-0">{renderInstallationsTable(completed)}</Accordion.Body></Accordion.Item></Accordion>
-      {selected && <DetailsModal installation={selected} onClose={() => setSelected(null)} onViewHistory={(inst) => setHistoryTarget(inst)} onEdit={handleEditClick} />}
+      {selected && <DetailsModal installation={selected} onClose={() => setSelected(null)} onViewHistory={(inst) => setHistoryTarget(inst)} onEdit={handleEditClick} setMessage={setMessage} />}
       {editingTarget && <EditModal installation={editingTarget} onClose={() => setEditingTarget(null)} onSave={handleSaveEdit} />}
       {historyTarget && <HistoryModal isOpen={!!historyTarget} onClose={() => setHistoryTarget(null)} installation={historyTarget} />}
     </div>
   );
 }
+
