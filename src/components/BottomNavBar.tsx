@@ -3,32 +3,37 @@ import { Nav } from 'react-bootstrap';
 import { NavLink } from 'react-router-dom';
 
 export function BottomNavBar() {
-  // Função para gerar as classes dinamicamente
+  // Esta função agora retorna todas as classes necessárias, incluindo 'nav-link' do Bootstrap.
   const getNavLinkClass = ({ isActive }: { isActive: boolean }) => {
-    return `text-center d-flex flex-column nav-link-custom ${isActive ? 'active' : ''}`;
+    return `nav-link text-center d-flex flex-column nav-link-custom ${isActive ? 'active' : ''}`;
   };
 
   return (
+    // O componente <Nav> do React Bootstrap continua sendo usado como um container.
     <Nav className="justify-content-around fixed-bottom bg-light border-top py-1">
-      <Nav.Link as={NavLink} to="/agenda" className={getNavLinkClass}>
+      
+      {/* CORREÇÃO: Trocamos <Nav.Link as={NavLink}> por apenas <NavLink>.
+        Isso resolve o conflito de tipos da propriedade 'className'.
+      */}
+      <NavLink to="/agenda" className={getNavLinkClass}>
         <i className="bi bi-calendar-week d-block fs-4"></i>
         <span style={{ fontSize: '0.7rem' }}>Agenda</span>
-      </Nav.Link>
+      </NavLink>
 
-      <Nav.Link as={NavLink} to="/consulta" className={getNavLinkClass}>
+      <NavLink to="/consulta" className={getNavLinkClass}>
         <i className="bi bi-search d-block fs-4"></i>
         <span style={{ fontSize: '0.7rem' }}>Consulta</span>
-      </Nav.Link>
+      </NavLink>
 
-      <Nav.Link as={NavLink} to="/painel" className={getNavLinkClass}>
+      <NavLink to="/painel" className={getNavLinkClass}>
         <i className="bi bi-clipboard-data d-block fs-4"></i>
         <span style={{ fontSize: '0.7rem' }}>Painel</span>
-      </Nav.Link>
+      </NavLink>
 
-      <Nav.Link as={NavLink} to="/tarefas" className={getNavLinkClass}>
+      <NavLink to="/tarefas" className={getNavLinkClass}>
         <i className="bi bi-check2-square d-block fs-4"></i>
         <span style={{ fontSize: '0.7rem' }}>Tarefas</span>
-      </Nav.Link>
+      </NavLink>
     </Nav>
   );
 }
