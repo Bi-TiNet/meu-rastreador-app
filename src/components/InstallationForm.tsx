@@ -1,5 +1,5 @@
 // Arquivo: src/components/InstallationForm.tsx
-import { useState, useRef, type FormEvent } from 'react';
+import { useState, useRef } from 'react'; // <-- 'FormEvent' foi removido desta linha
 import { Form, Button, Card, Row, Col, FloatingLabel, Spinner, Alert } from 'react-bootstrap';
 import { supabase } from '../supabaseClient';
 import './InstallationForm.css';
@@ -70,7 +70,6 @@ export function InstallationForm({ onSuccess }: InstallationFormProps) {
     }
   };
 
-  // Esta função agora não precisa mais do parâmetro 'e: FormEvent'
   const handleSubmit = async () => {
     if (!formRef.current?.checkValidity()) {
       setValidated(true);
@@ -142,9 +141,6 @@ export function InstallationForm({ onSuccess }: InstallationFormProps) {
           </Alert>
         )}
         
-        {/* ================================================================== */}
-        {/* MUDANÇA IMPORTANTE: A propriedade onSubmit FOI REMOVIDA DAQUI     */}
-        {/* ================================================================== */}
         <Form ref={formRef} noValidate validated={validated}>
           <div className={`form-step ${currentStep === 1 ? 'active' : ''}`}>
             <h4 className="text-primary mb-4">Dados do Cliente</h4>
@@ -243,9 +239,6 @@ export function InstallationForm({ onSuccess }: InstallationFormProps) {
                     Avançar <i className="bi bi-arrow-right ms-2"></i>
                 </Button>
             ) : (
-                // ==================================================================
-                // MUDANÇA IMPORTANTE: type="button" e onClick={handleSubmit}
-                // ==================================================================
                 <Button variant="success" type="button" onClick={handleSubmit} disabled={loading} className="ms-auto px-5">
                     {loading ? <Spinner as="span" size="sm" /> : <span><i className="bi bi-check-lg me-2"></i>Finalizar</span>}
                 </Button>
