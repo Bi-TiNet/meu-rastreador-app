@@ -248,25 +248,26 @@ export function InstallationForm({ onSuccess }: InstallationFormProps) {
             </Row>
           </div>
           
-          {/* Botões de Navegação - VERIFIQUE AQUI */}
+          {/* Botões de Navegação - CÓDIGO CORRIGIDO */}
           <div className="form-navigation-buttons">
+            {/* Lógica para o botão Voltar */}
             {currentStep > 1 ? (
-                // Este botão NÃO envia o formulário
-                <Button variant="secondary" type="button" onClick={handleBack} className="px-4">
-                    <i className="bi bi-arrow-left me-2"></i> Voltar
-                </Button>
-            ) : <div/> /* Placeholder para manter o alinhamento */}
-            
+              <Button variant="secondary" type="button" onClick={handleBack} className="px-4">
+                <i className="bi bi-arrow-left me-2"></i> Voltar
+              </Button>
+            ) : <div /> /* Placeholder para manter o alinhamento */}
+
+            {/* Lógica para o botão Avançar ou Finalizar */}
             {currentStep < steps.length ? (
-                // Este botão NÃO envia o formulário
-                <Button variant="primary" type="button" onClick={handleNext} className="px-4">
-                    Avançar <i className="bi bi-arrow-right ms-2"></i>
-                </Button>
+              // Botão para AVANÇAR (não envia o formulário)
+              <Button variant="primary" type="button" onClick={handleNext} className="px-4">
+                Avançar <i className="bi bi-arrow-right ms-2"></i>
+              </Button>
             ) : (
-                // Este é o ÚNICO botão que envia o formulário
-                <Button variant="success" type="submit" disabled={loading} className="px-5">
-                    {loading ? <Spinner as="span" size="sm" /> : <span><i className="bi bi-check-lg me-2"></i>Finalizar</span>}
-                </Button>
+              // Botão para FINALIZAR (envia o formulário)
+              <Button variant="success" type="submit" disabled={loading} className="px-5">
+                {loading ? <Spinner as="span" size="sm" /> : <span><i className="bi bi-check-lg me-2"></i>Finalizar</span>}
+              </Button>
             )}
           </div>
         </Form>
