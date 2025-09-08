@@ -27,6 +27,10 @@ interface Installation {
   horario?: string;
   tipo_servico: string;
   observacao?: string;
+  // ADICIONADO PARA EXIBIR NOME DO TÉCNICO
+  profiles?: {
+    full_name: string;
+  };
 }
 
 // --- COMPONENTES AUXILIARES ---
@@ -145,7 +149,7 @@ function MonthView({ navDate, selectedDate, onDateSelect, daysWithEvents }: { na
 }
 
 
-function EventList({ events, onEventClick }: { events: Installation[], onEventClick: (event: Installation) => void }) {
+function EventList({ events, onEventClick, userRole }: { events: Installation[], onEventClick: (event: Installation) => void, userRole: string | null }) {
   const scheduled = useMemo(() => events.filter(e => e.status === 'Agendado').sort((a,b) => (a.horario || '').localeCompare(b.horario || '')), [events]);
   const completed = useMemo(() => events.filter(e => e.status === 'Concluído').sort((a,b) => (a.horario || '').localeCompare(b.horario || '')), [events]);
 
@@ -165,6 +169,9 @@ function EventList({ events, onEventClick }: { events: Installation[], onEventCl
                   <div>
                     <Card.Title className="h6 mb-1">{event.nome_completo}</Card.Title>
                     <Card.Text className="text-muted small mb-1">{event.tipo_servico}</Card.Text>
+                    {userRole === 'admin' && event.profiles && (
+                        <Card.Text className="text-muted small mb-1"><i className="bi bi-person-fill me-2"></i>{event.profiles.full_name}</Card.Text>
+                    )}
                     <Card.Text className="text-muted small mb-1"><i className="bi bi-telephone me-2"></i>{event.contato}</Card.Text>
                     <Card.Text className="text-muted small"><i className="bi bi-geo-alt me-2"></i>{event.endereco}</Card.Text>
                   </div>
@@ -185,6 +192,9 @@ function EventList({ events, onEventClick }: { events: Installation[], onEventCl
                   <div>
                     <Card.Title className="h6 mb-1 text-muted">{event.nome_completo}</Card.Title>
                      <Card.Text className="text-muted small mb-1 text-decoration-line-through">{event.tipo_servico}</Card.Text>
+                    {userRole === 'admin' && event.profiles && (
+                        <Card.Text className="text-muted small mb-1 text-decoration-line-through"><i className="bi bi-person-fill me-2"></i>{event.profiles.full_name}</Card.Text>
+                    )}
                     <Card.Text className="text-muted small mb-1 text-decoration-line-through"><i className="bi bi-telephone me-2"></i>{event.contato}</Card.Text>
                     <Card.Text className="text-muted small text-decoration-line-through"><i className="bi bi-geo-alt me-2"></i>{event.endereco}</Card.Text>
                   </div>
@@ -339,18 +349,31 @@ export function TechnicianAgenda() {
   const [view, setView] = useState<'day' | 'week' | 'month'>('day');
   const [selectedEvent, setSelectedEvent] = useState<Installation | null>(null);
 
-  const fetchInstallations = useCallback(async (userId: string) => {
+  const fetchInstallations = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const { data, error: queryError } = await supabase
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) {
+        throw new Error("Usuário não autenticado.");
+      }
+      setUser(currentUser);
+      const userRole = currentUser.app_metadata?.role;
+
+      let query = supabase
         .from('instalacoes')
-        .select('*')
-        .eq('tecnico_id', userId)
+        .select('*, profiles:tecnico_id (full_name)')
         .in('status', ['Agendado', 'Concluído']);
 
+      if (userRole === 'tecnico') {
+        query = query.eq('tecnico_id', currentUser.id);
+      }
+      // Se for admin, não adiciona filtro de técnico, buscando todas as OS.
+      
+      const { data, error: queryError } = await query;
+
       if (queryError) throw queryError;
-      setAllEvents(data || []);
+      setAllEvents(data as Installation[] || []);
     } catch (err: any) {
       setError(err.message || 'Falha ao carregar agenda.');
     } finally {
@@ -379,17 +402,7 @@ export function TechnicianAgenda() {
   }
 
   useEffect(() => {
-    const getUserAndInstallations = async () => {
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      if (currentUser) {
-        setUser(currentUser);
-        fetchInstallations(currentUser.id);
-      } else {
-        setLoading(false);
-        setError("Usuário não autenticado.");
-      }
-    };
-    getUserAndInstallations();
+    fetchInstallations();
   }, [fetchInstallations]);
 
   const daysWithEvents = useMemo(() => {
@@ -403,7 +416,7 @@ export function TechnicianAgenda() {
   const handleUpdate = async () => {
     if(user) {
         setSelectedEvent(null);
-        await fetchInstallations(user.id);
+        await fetchInstallations();
     }
   }
 
@@ -418,7 +431,7 @@ export function TechnicianAgenda() {
       {view === 'week' && <WeekView navDate={navDate} selectedDate={selectedDate} onDateSelect={handleDateSelect} daysWithEvents={daysWithEvents} />}
       {view === 'month' && <MonthView navDate={navDate} selectedDate={selectedDate} onDateSelect={handleDateSelect} daysWithEvents={daysWithEvents} />}
       
-      <EventList events={filteredEvents} onEventClick={setSelectedEvent} />
+      <EventList events={filteredEvents} onEventClick={setSelectedEvent} userRole={user?.app_metadata?.role} />
       
       <EventDetailsModal event={selectedEvent} show={!!selectedEvent} onClose={() => setSelectedEvent(null)} onUpdate={handleUpdate} />
     </div>
