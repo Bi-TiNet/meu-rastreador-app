@@ -11,6 +11,7 @@
     "tw:init": "node ./node_modules/tailwindcss/cli.js init -p"
   },
   "dependencies": {
+    "@heroicons/react": "^2.2.0",
     "@supabase/supabase-js": "^2.45.0",
     "@types/react": "^19.1.8",
     "@types/react-big-calendar": "^1.8.9",
