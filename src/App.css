@@ -15,3 +15,41 @@ body {
     bottom: 85px;
   }
 }
+
+/* Adicionando o tema claro */
+body.light {
+  background-color: #f1f5f9;
+  color: #334155;
+}
+
+body.light .bg-slate-900 {
+  background-color: #ffffff;
+}
+
+body.light .text-slate-300 {
+  color: #334155;
+}
+
+body.light .bg-slate-800\/50 {
+  background-color: rgba(241, 245, 249, 0.5);
+}
+
+body.light .border-slate-700 {
+  border-color: #e2e8f0;
+}
+
+body.light .text-white {
+  color: #0f172a;
+}
+
+body.light .text-slate-400 {
+  color: #64748b;
+}
+
+body.light .bg-slate-700\/50 {
+  background-color: rgba(226, 232, 240, 0.5);
+}
+
+body.light .bg-slate-800 {
+  background-color: #ffffff;
+}

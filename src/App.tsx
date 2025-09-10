@@ -59,7 +59,7 @@ function AdminProtectedRoute({ session, userRole, loading, children }: { session
 }
 
 // --- NAVBAR SUPERIOR (PARA ADMIN E SEGURADORA) ---
-function AppHeader({ userRole }: { userRole: string | null }) {
+function AppHeader({ userRole, theme, toggleTheme }: { userRole: string | null, theme: string, toggleTheme: () => void }) {
     const handleLogout = async () => {
         await supabase.auth.signOut();
         window.location.href = '/login';
@@ -96,6 +96,9 @@ function AppHeader({ userRole }: { userRole: string | null }) {
                         </div>
                     </div>
                     <div className="hidden md:block">
+                        <button onClick={toggleTheme} className="ml-4 px-3 py-2 rounded-md text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-colors duration-300">
+                            <i className={`bi bi-${theme === 'light' ? 'moon-stars-fill' : 'sun-fill'} text-xl`}></i>
+                        </button>
                         <button onClick={handleLogout} className="ml-4 px-3 py-2 rounded-md text-sm font-medium text-slate-300 hover:bg-red-500/20 hover:text-red-400 transition-colors duration-300">
                             <i className="bi bi-box-arrow-right mr-2"></i>Sair
                         </button>
@@ -104,15 +107,6 @@ function AppHeader({ userRole }: { userRole: string | null }) {
             </nav>
         </header>
     );
-}
-
-// --- BOTÃO DE TEMA ---
-function ThemeToggleButton({ theme, toggleTheme }: { theme: string, toggleTheme: () => void }) {
-  return (
-    <button onClick={toggleTheme} className="theme-toggle h-12 w-12 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg hover:bg-blue-500 transition-colors duration-300">
-        <i className={`bi bi-${theme === 'light' ? 'moon-stars-fill' : 'sun-fill'} text-xl`}></i>
-    </button>
-  );
 }
 
 // --- COMPONENTE PRINCIPAL APP ---
@@ -124,11 +118,17 @@ function App() {
     const root = window.document.documentElement;
     const isDark = theme === 'dark';
     root.classList.toggle('dark', isDark);
+    root.classList.toggle('light', !isDark);
     localStorage.setItem('theme', theme);
   }, [theme]);
   
   const toggleTheme = () => setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    window.location.href = '/login';
+  };
+  
   const renderLayout = () => {
     if (loading) return <LoadingSpinner />;
     if (!session) return (<Routes><Route path="*" element={<Login />} /><Route path="/update-password" element={<ResetPassword />} /></Routes>);
@@ -145,14 +145,14 @@ function App() {
               <Route path="*" element={<Navigate to="/agenda" />} />
             </Routes>
           </main>
-          <BottomNavBar />
+          <BottomNavBar theme={theme} toggleTheme={toggleTheme} handleLogout={handleLogout} />
         </>
       );
     }
     // LAYOUT PADRÃO (ADMIN E SEGURADORA)
     return (
       <>
-        <AppHeader userRole={userRole} />
+        <AppHeader userRole={userRole} theme={theme} toggleTheme={toggleTheme} />
         <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
            <Routes>
             <Route path="/" element={<ProtectedRoute session={session} loading={loading}><InstallationForm /></ProtectedRoute>} />
@@ -171,7 +171,6 @@ function App() {
     <BrowserRouter>
       <div className="app-container min-h-screen">
         {renderLayout()}
-        {session && <ThemeToggleButton theme={theme} toggleTheme={toggleTheme} />}
       </div>
     </BrowserRouter>
   );
