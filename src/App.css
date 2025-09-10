@@ -10,22 +10,25 @@ html.dark body {
   color: #cbd5e1; /* text-slate-300 */
 }
 
-/* TEMA CLARO (LIGHT) */
+/* TEMA CLARO (LIGHT) - CORES APRIMORADAS */
 html.light body {
-  background-color: #f1f5f9; /* bg-slate-100 */
-  color: #0f172a; /* text-slate-900 */
+  background-color: #f8fafc; /* bg-slate-50 - Um branco um pouco mais suave */
+  color: #1e293b; /* text-slate-800 - Um preto mais suave */
 }
 
 /* Sobrescrevendo classes do Tailwind para o tema claro */
-html.light .bg-slate-900 { background-color: #ffffff !important; }
-html.light .bg-slate-800\/50 { background-color: rgba(248, 250, 252, 0.7) !important; } /* bg-slate-50/70 */
+html.light .bg-slate-900 { background-color: #ffffff !important; } /* Fundo principal branco puro */
+html.light .bg-slate-800\/50 { background-color: rgba(241, 245, 249, 0.7) !important; } /* bg-slate-100/70 */
 html.light .backdrop-blur-sm { --tw-backdrop-blur: blur(4px); backdrop-filter: var(--tw-backdrop-filter,); }
 html.light .border-slate-700 { border-color: #e2e8f0 !important; } /* border-slate-200 */
-html.light .text-white { color: #0f172a !important; } /* text-slate-900 */
+html.light .text-white { color: #1e293b !important; } /* text-slate-800 */
 html.light .text-slate-300 { color: #475569 !important; } /* text-slate-600 */
 html.light .text-slate-400 { color: #64748b !important; } /* text-slate-500 */
 html.light .bg-slate-700\/50 { background-color: rgba(226, 232, 240, 0.5) !important; } /* bg-slate-200/50 */
-html.light .bg-slate-800 { background-color: #f8fafc !important; } /* bg-slate-50 */
+html.light .bg-slate-800 { background-color: #f1f5f9 !important; } /* bg-slate-100 */
 html.light .bg-slate-900\/70 { background-color: rgba(255, 255, 255, 0.7) !important; }
 html.light .hover\:bg-slate-800:hover { background-color: #f1f5f9 !important; } /* hover:bg-slate-100 */
 html.light .hover\:text-white:hover { color: #0f172a !important; } /* hover:text-slate-900 */
+
+/* Ajuste de cor para o link ativo na navegação do tema claro */
+html.light .bg-slate-700 { background-color: #3b82f6 !important; } /* bg-blue-500 */
