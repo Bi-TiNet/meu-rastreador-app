@@ -116,9 +116,13 @@ function App() {
 
   useEffect(() => {
     const root = window.document.documentElement;
-    const isDark = theme === 'dark';
-    root.classList.toggle('dark', isDark);
-    root.classList.toggle('light', !isDark);
+    if (theme === 'dark') {
+      root.classList.add('dark');
+      root.classList.remove('light');
+    } else {
+      root.classList.add('light');
+      root.classList.remove('dark');
+    }
     localStorage.setItem('theme', theme);
   }, [theme]);
   
