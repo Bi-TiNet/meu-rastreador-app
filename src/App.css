@@ -1,6 +1,17 @@
-/* Adicione no final de src/App.css */
+/* src/App.css */
+body {
+  font-family: 'Poppins', sans-serif;
+}
+
+.theme-toggle {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+  }
+
 @media (max-width: 768px) {
   .theme-toggle {
-    bottom: 85px; /* Move o botão para cima da barra de navegação */
+    bottom: 85px;
   }
 }

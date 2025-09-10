@@ -29,35 +29,35 @@ exports.handler = async function(event) {
     const userRole = user.app_metadata?.role;
     const userEmail = user.email;
 
-    // Inicia a query base para buscar as instalações
+    // Inicia a query base para buscar as instalações e suas relações
     let query = supabase
       .from('instalacoes')
       .select(`
         *,
         historico (id, evento, data_evento, realizado_por),
+        observacoes (*),
         profiles:tecnico_id (full_name)
       `);
 
-    // *** LÓGICA DE FILTRO ATUALIZADA ***
+    // --- LÓGICA DE FILTRO DE ACORDO COM O PERFIL DO USUÁRIO ---
 
-    // 1. Se o usuário for um TÉCNICO, ele vê apenas os serviços dele.
+    // 1. Se for TÉCNICO, vê apenas os serviços atribuídos a ele.
     if (userRole === 'tecnico') {
       query = query.eq('tecnico_id', user.id);
     } 
-    // 2. Se o usuário for uma SEGURADORA, aplicamos a nova lógica.
+    // 2. Se for SEGURADORA, aplica a lógica específica.
     else if (userRole === 'seguradora') {
-      // Verifica se é o usuário especial "Atena" (pelo e-mail)
+      // O usuário especial "Atena" vê todos os cadastros da base "Atena"
       if (userEmail && userEmail.toLowerCase().includes('atena')) {
-        // Se for Atena, vê todos os cadastros da base "Atena"
         query = query.eq('base', 'Atena');
       } else {
-        // Outras seguradoras veem apenas o que eles mesmos criaram
+        // Outras seguradoras veem apenas o que elas mesmas criaram
         query = query.eq('created_by', user.id);
       }
     }
     // 3. Se for ADMIN, nenhum filtro é aplicado, e ele vê tudo.
 
-    // Adiciona a ordenação no final da query
+    // Ordena os resultados pela data de criação
     query = query.order('created_at', { ascending: false });
     
     // Executa a query
@@ -78,3 +78,4 @@ exports.handler = async function(event) {
     };
   }
 };
+

@@ -1,11 +1,17 @@
 // Arquivo: src/components/InstallationForm.tsx
-import { useState, useRef } from 'react'; // <-- 'FormEvent' foi removido desta linha
+import { useState, useRef } from 'react';
 import { Form, Button, Card, Row, Col, FloatingLabel, Spinner, Alert } from 'react-bootstrap';
 import { supabase } from '../supabaseClient';
 import './InstallationForm.css';
 
 interface InstallationFormProps {
   onSuccess?: () => void;
+}
+
+// Interface para definir a estrutura de uma observação
+interface Observacao {
+  texto: string;
+  destaque: boolean;
 }
 
 export function InstallationForm({ onSuccess }: InstallationFormProps) {
@@ -22,7 +28,8 @@ export function InstallationForm({ onSuccess }: InstallationFormProps) {
     base: 'Atena',
     bloqueio: 'Sim',
     tipo_servico: 'Instalação',
-    observacao: '',
+    // --- LÓGICA DE OBSERVAÇÃO ATUALIZADA PARA UM ARRAY ---
+    observacoes: [{ texto: '', destaque: false }] as Observacao[],
   });
 
   const [currentStep, setCurrentStep] = useState(1);
@@ -32,6 +39,33 @@ export function InstallationForm({ onSuccess }: InstallationFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const [validated, setValidated] = useState(false);
 
+  // --- FUNÇÕES PARA MANIPULAR O ARRAY DE OBSERVAÇÕES ---
+
+  // Adiciona um novo campo de observação em branco
+  const adicionarObservacao = () => {
+    setFormData(prev => ({
+      ...prev,
+      observacoes: [...prev.observacoes, { texto: '', destaque: false }]
+    }));
+  };
+
+  // Remove um campo de observação pelo seu índice
+  const removerObservacao = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      observacoes: prev.observacoes.filter((_, i) => i !== index)
+    }));
+  };
+
+  // Atualiza uma observação específica no array
+  const handleObservacaoChange = (index: number, field: keyof Observacao, value: string | boolean) => {
+    const novasObservacoes = [...formData.observacoes];
+    novasObservacoes[index] = { ...novasObservacoes[index], [field]: value };
+    setFormData(prev => ({ ...prev, observacoes: novasObservacoes }));
+  };
+
+
+  // --- MANIPULADOR DE MUDANÇAS GERAL ---
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { id, value } = e.target;
     setFormData((prev) => ({
@@ -83,10 +117,16 @@ export function InstallationForm({ onSuccess }: InstallationFormProps) {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Usuário não autenticado.');
 
+      // Filtra observações com texto vazio antes de enviar
+      const dadosParaEnviar = {
+        ...formData,
+        observacoes: formData.observacoes.filter(obs => obs.texto.trim() !== '')
+      };
+
       const response = await fetch('/.netlify/functions/create-installation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(dadosParaEnviar),
       });
 
       if (!response.ok) {
@@ -97,7 +137,8 @@ export function InstallationForm({ onSuccess }: InstallationFormProps) {
       setMessage({ type: 'success', text: 'Solicitação cadastrada com sucesso!' });
       setFormData({
         nome_completo: '', contato: '', placa: '', modelo: '', ano: '', cor: '', endereco: '',
-        usuario: '', senha: '', base: 'Atena', bloqueio: 'Sim', tipo_servico: 'Instalação', observacao: '',
+        usuario: '', senha: '', base: 'Atena', bloqueio: 'Sim', tipo_servico: 'Instalação', 
+        observacoes: [{ texto: '', destaque: false }],
       });
       setCurrentStep(1);
       setValidated(false);
@@ -219,12 +260,48 @@ export function InstallationForm({ onSuccess }: InstallationFormProps) {
                         <Form.Control type="text" id="senha" value={formData.senha} onChange={handleChange} />
                     </FloatingLabel>
                 </Col>
-                <Col md={12}>
-                    <FloatingLabel label="Observações (opcional)">
-                        <Form.Control as="textarea" style={{ height: '100px' }} id="observacao" value={formData.observacao} onChange={handleChange} />
-                    </FloatingLabel>
-                </Col>
             </Row>
+
+            <hr className="my-4" />
+
+            <h5 className="text-primary mb-3">Observações</h5>
+            {formData.observacoes.map((obs, index) => (
+              <Card key={index} className="mb-3 bg-light border">
+                <Card.Body>
+                  <Row className="g-2">
+                    <Col xs={12}>
+                       <FloatingLabel label={`Observação ${index + 1}`}>
+                          <Form.Control 
+                              as="textarea" 
+                              style={{ height: '100px' }} 
+                              value={obs.texto}
+                              onChange={(e) => handleObservacaoChange(index, 'texto', e.target.value)}
+                          />
+                       </FloatingLabel>
+                    </Col>
+                    <Col xs={12} sm={8}>
+                      <Form.Check 
+                          type="checkbox"
+                          label="Destacar para o técnico"
+                          checked={obs.destaque}
+                          onChange={(e) => handleObservacaoChange(index, 'destaque', e.target.checked)}
+                          className="pt-2"
+                      />
+                    </Col>
+                    {formData.observacoes.length > 1 && (
+                      <Col xs={12} sm={4} className="d-flex align-items-end justify-content-end">
+                          <Button variant="outline-danger" size="sm" onClick={() => removerObservacao(index)}>
+                              <i className="bi bi-trash-fill me-1"></i> Remover
+                          </Button>
+                      </Col>
+                    )}
+                  </Row>
+                </Card.Body>
+              </Card>
+            ))}
+            <Button variant="outline-primary" onClick={adicionarObservacao}>
+                <i className="bi bi-plus-circle-fill me-2"></i> Adicionar outra observação
+            </Button>
           </div>
           
           <div className="form-navigation-buttons">

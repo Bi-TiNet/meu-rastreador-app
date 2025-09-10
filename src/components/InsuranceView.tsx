@@ -1,16 +1,21 @@
 // src/components/InsuranceView.tsx
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import {
-  Form, Card, Badge, Modal, Button, Alert, Spinner, InputGroup, Table, Accordion, Row, Col, FloatingLabel, ListGroup,
-} from 'react-bootstrap';
 import { supabase } from '../supabaseClient';
 
-// --- INTERFACES ---
+// --- Interfaces ---
 interface History {
   id: number;
   evento: string;
   data_evento: string;
   realizado_por: string;
+}
+
+interface Observacao {
+    id: number;
+    texto: string;
+    destaque: boolean;
+    created_at: string;
+    criado_por: string;
 }
 
 interface Installation {
@@ -30,37 +35,52 @@ interface Installation {
   horario?: string;
   status: string;
   historico: History[];
+  observacoes: Observacao[]; // Alterado
   tipo_servico: string;
-  observacao?: string;
 }
 
 // --- MODAIS ---
+
 function HistoryModal({ isOpen, installation, onClose }: { isOpen: boolean; installation: Installation; onClose: () => void; }) {
   const sortedHistory = useMemo(() => installation.historico ? [...installation.historico].sort((a, b) => new Date(b.data_evento).getTime() - new Date(a.data_evento).getTime()) : [], [installation.historico]);
+  if (!isOpen) return null;
   return (
-    <Modal show={isOpen} onHide={onClose} centered size="lg">
-      <Modal.Header closeButton><Modal.Title>Histórico de {installation.nome_completo}</Modal.Title></Modal.Header>
-      <Modal.Body>
-        <Table striped bordered hover size="sm">
-          <thead><tr><th>Data</th><th>Evento</th><th>Realizado por</th></tr></thead>
-          <tbody>
-            {sortedHistory.length > 0 ? sortedHistory.map((h) => (
-              <tr key={h.id}>
-                <td>{new Date(h.data_evento).toLocaleString('pt-BR')}</td>
-                <td>{h.evento}</td>
-                <td>{h.realizado_por || 'N/A'}</td>
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 p-4">
+      <div className="bg-slate-800 rounded-lg shadow-xl w-full max-w-2xl border border-slate-700">
+        <div className="p-4 border-b border-slate-700 flex justify-between items-center">
+          <h3 className="text-lg font-medium text-white">Histórico de {installation.nome_completo}</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-white text-2xl">&times;</button>
+        </div>
+        <div className="p-6 max-h-[70vh] overflow-y-auto">
+          <table className="w-full text-sm text-left text-slate-400">
+            <thead className="text-xs text-slate-300 uppercase bg-slate-700">
+              <tr>
+                <th scope="col" className="px-6 py-3">Data</th>
+                <th scope="col" className="px-6 py-3">Evento</th>
+                <th scope="col" className="px-6 py-3">Realizado por</th>
               </tr>
-            )) : <tr><td colSpan={3} className="text-center">Nenhum histórico encontrado.</td></tr>}
-          </tbody>
-        </Table>
-      </Modal.Body>
-    </Modal>
+            </thead>
+            <tbody>
+              {sortedHistory.length > 0 ? sortedHistory.map((h) => (
+                <tr key={h.id} className="bg-slate-800 border-b border-slate-700 hover:bg-slate-700/50">
+                  <td className="px-6 py-4">{new Date(h.data_evento).toLocaleString('pt-BR')}</td>
+                  <td className="px-6 py-4">{h.evento}</td>
+                  <td className="px-6 py-4">{h.realizado_por || 'N/A'}</td>
+                </tr>
+              )) : <tr><td colSpan={3} className="text-center py-8 text-slate-500">Nenhum histórico encontrado.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   );
 }
 
-function EditModal({ installation, onClose, onSave, }: { installation: Installation; onClose: () => void; onSave: (updatedData: Partial<Installation>) => void; }) {
+function EditModal({ installation, onClose, onSave }: { installation: Installation; onClose: () => void; onSave: (updatedData: Partial<Installation> & { nova_observacao_texto?: string, nova_observacao_destaque?: boolean }) => void; }) {
   const [formData, setFormData] = useState<Partial<Installation>>(installation);
   const [isLoading, setIsLoading] = useState(false);
+  const [novaObservacao, setNovaObservacao] = useState('');
+  const [destacarObservacao, setDestacarObservacao] = useState(false);
 
   useEffect(() => { setFormData(installation); }, [installation]);
 
@@ -72,162 +92,208 @@ function EditModal({ installation, onClose, onSave, }: { installation: Installat
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    try { await onSave(formData); } finally { setIsLoading(false); }
+    try {
+      const dataToSend = { ...formData, nova_observacao_texto: novaObservacao, nova_observacao_destaque: destacarObservacao };
+      await onSave(dataToSend);
+      setNovaObservacao('');
+      setDestacarObservacao(false);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
+  if (!installation) return null;
+  const sortedObservacoes = [...(installation.observacoes || [])].sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
   return (
-    <Modal show onHide={onClose} centered size="lg">
-      <Form onSubmit={handleSubmit}>
-        <Modal.Header closeButton><Modal.Title>Editar Solicitação</Modal.Title></Modal.Header>
-        <Modal.Body>
-           <h6 className="text-primary">DADOS DO CLIENTE E VEÍCULO</h6><hr className="mt-2" />
-          <Row className="g-3 mb-4">
-            <Col md={6}><FloatingLabel label="Nome Completo"><Form.Control id="nome_completo" value={formData.nome_completo} onChange={handleChange} required /></FloatingLabel></Col>
-            <Col md={6}><FloatingLabel label="Contato"><Form.Control id="contato" value={formData.contato} onChange={handleChange} required /></FloatingLabel></Col>
-            <Col md={4}><FloatingLabel label="Placa"><Form.Control id="placa" value={formData.placa} onChange={handleChange} required /></FloatingLabel></Col>
-            <Col md={4}><FloatingLabel label="Modelo"><Form.Control id="modelo" value={formData.modelo} onChange={handleChange} /></FloatingLabel></Col>
-            <Col md={2}><FloatingLabel label="Ano"><Form.Control id="ano" value={formData.ano || ''} onChange={handleChange} /></FloatingLabel></Col>
-            <Col md={2}><FloatingLabel label="Cor"><Form.Control id="cor" value={formData.cor || ''} onChange={handleChange} /></FloatingLabel></Col>
-            <Col md={12}><FloatingLabel label="Endereço"><Form.Control as="textarea" style={{ height: '80px' }} id="endereco" value={formData.endereco} onChange={handleChange} /></FloatingLabel></Col>
-          </Row>
-          <h6 className="text-primary">DETALHES DO SERVIÇO E ACESSO</h6><hr className="mt-2" />
-          <Row className="g-3">
-            <Col md={6}><FloatingLabel label="Tipo de Serviço"><Form.Select id="tipo_servico" value={formData.tipo_servico} onChange={handleChange}><option>Instalação</option><option>Manutenção</option><option>Remoção</option></Form.Select></FloatingLabel></Col>
-            <Col md={6}><FloatingLabel label="Base"><Form.Select id="base" value={formData.base} onChange={handleChange}><option>Atena</option><option>Autocontrol</option></Form.Select></FloatingLabel></Col>
-            <Col md={6}><FloatingLabel label="Usuário"><Form.Control id="usuario" value={formData.usuario} onChange={handleChange} /></FloatingLabel></Col>
-            <Col md={6}><FloatingLabel label="Senha"><Form.Control type="text" id="senha" value={formData.senha || ''} onChange={handleChange} /></FloatingLabel></Col>
-            <Col md={6}><FloatingLabel label="Bloqueio"><Form.Select id="bloqueio" value={formData.bloqueio} onChange={handleChange}><option>Sim</option><option>Nao</option></Form.Select></FloatingLabel></Col>
-            <Col md={12}><FloatingLabel label="Observação"><Form.Control as="textarea" style={{ height: '100px' }} id="observacao" value={formData.observacao || ''} onChange={handleChange} /></FloatingLabel></Col>
-          </Row>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={onClose} disabled={isLoading}>Cancelar</Button>
-          <Button variant="primary" type="submit" disabled={isLoading}>{isLoading ? <Spinner as="span" size="sm" /> : 'Salvar Alterações'}</Button>
-        </Modal.Footer>
-      </Form>
-    </Modal>
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 p-4">
+      <form onSubmit={handleSubmit} className="bg-slate-800 rounded-lg shadow-xl w-full max-w-2xl border border-slate-700">
+        <div className="p-4 border-b border-slate-700 flex justify-between items-center">
+          <h3 className="text-lg font-medium text-white">Editar Solicitação</h3>
+          <button type="button" onClick={onClose} className="text-slate-400 hover:text-white text-2xl">&times;</button>
+        </div>
+        <div className="p-6 max-h-[70vh] overflow-y-auto space-y-6">
+          <div>
+            <h4 className="text-blue-400 font-semibold mb-3">Dados do Cliente e Veículo</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div><label htmlFor="nome_completo" className="block mb-1 text-sm text-slate-400">Nome</label><input id="nome_completo" className="w-full p-2.5 bg-slate-700 border border-slate-600 rounded-lg text-white" value={formData.nome_completo || ''} onChange={handleChange} required /></div>
+              <div><label htmlFor="contato" className="block mb-1 text-sm text-slate-400">Contato</label><input id="contato" className="w-full p-2.5 bg-slate-700 border border-slate-600 rounded-lg text-white" value={formData.contato || ''} onChange={handleChange} required /></div>
+              <div><label htmlFor="placa" className="block mb-1 text-sm text-slate-400">Placa</label><input id="placa" className="w-full p-2.5 bg-slate-700 border border-slate-600 rounded-lg text-white" value={formData.placa || ''} onChange={handleChange} required /></div>
+              <div><label htmlFor="modelo" className="block mb-1 text-sm text-slate-400">Modelo</label><input id="modelo" className="w-full p-2.5 bg-slate-700 border border-slate-600 rounded-lg text-white" value={formData.modelo || ''} onChange={handleChange} /></div>
+              <div><label htmlFor="ano" className="block mb-1 text-sm text-slate-400">Ano</label><input id="ano" type="number" className="w-full p-2.5 bg-slate-700 border border-slate-600 rounded-lg text-white" value={formData.ano || ''} onChange={handleChange} /></div>
+              <div><label htmlFor="cor" className="block mb-1 text-sm text-slate-400">Cor</label><input id="cor" className="w-full p-2.5 bg-slate-700 border border-slate-600 rounded-lg text-white" value={formData.cor || ''} onChange={handleChange} /></div>
+              <div className="md:col-span-2"><label htmlFor="endereco" className="block mb-1 text-sm text-slate-400">Endereço</label><textarea id="endereco" className="w-full p-2.5 bg-slate-700 border border-slate-600 rounded-lg text-white h-24" value={formData.endereco || ''} onChange={handleChange} /></div>
+            </div>
+          </div>
+          <div>
+            <h4 className="text-blue-400 font-semibold mb-3">Detalhes do Serviço e Acesso</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div><label htmlFor="tipo_servico" className="block mb-1 text-sm text-slate-400">Tipo de Serviço</label><select id="tipo_servico" className="w-full p-2.5 bg-slate-700 border border-slate-600 rounded-lg text-white" value={formData.tipo_servico} onChange={handleChange}><option>Instalação</option><option>Manutenção</option><option>Remoção</option></select></div>
+              <div><label htmlFor="base" className="block mb-1 text-sm text-slate-400">Base</label><select id="base" className="w-full p-2.5 bg-slate-700 border border-slate-600 rounded-lg text-white" value={formData.base} onChange={handleChange}><option>Atena</option><option>Autocontrol</option></select></div>
+              <div><label htmlFor="usuario" className="block mb-1 text-sm text-slate-400">Usuário</label><input id="usuario" className="w-full p-2.5 bg-slate-700 border border-slate-600 rounded-lg text-white" value={formData.usuario || ''} onChange={handleChange} /></div>
+              <div><label htmlFor="senha" className="block mb-1 text-sm text-slate-400">Senha</label><input type="text" id="senha" className="w-full p-2.5 bg-slate-700 border border-slate-600 rounded-lg text-white" value={formData.senha || ''} onChange={handleChange} /></div>
+              <div className="md:col-span-2"><label htmlFor="bloqueio" className="block mb-1 text-sm text-slate-400">Bloqueio</label><select id="bloqueio" className="w-full p-2.5 bg-slate-700 border border-slate-600 rounded-lg text-white" value={formData.bloqueio} onChange={handleChange}><option>Sim</option><option>Nao</option></select></div>
+            </div>
+          </div>
+          <div>
+            <h4 className="text-blue-400 font-semibold mb-3">Observações</h4>
+            <div className="space-y-3 mb-4 max-h-48 overflow-y-auto bg-slate-900/50 p-3 rounded-lg">
+                {sortedObservacoes.length > 0 ? (
+                    sortedObservacoes.map(obs => (
+                        <div key={obs.id} className={`p-2 rounded ${obs.destaque ? 'bg-yellow-900/50 border border-yellow-700' : 'bg-slate-700/50'}`}>
+                            <p className="text-sm text-slate-300">{obs.texto}</p>
+                            <p className="text-xs text-slate-500 text-right mt-1">{obs.criado_por} em {new Date(obs.created_at).toLocaleDateString('pt-BR')}</p>
+                        </div>
+                    ))
+                ) : (<p className="text-sm text-slate-500 italic">Nenhuma observação registrada.</p>)}
+            </div>
+            <div className="space-y-2">
+                <label htmlFor="nova_observacao" className="block mb-1 text-sm text-slate-400">Adicionar Nova Observação</label>
+                <textarea id="nova_observacao" className="w-full p-2.5 bg-slate-700 border border-slate-600 rounded-lg text-white h-24" value={novaObservacao} onChange={(e) => setNovaObservacao(e.target.value)} />
+                <div className="flex items-center"><input id="destacar_observacao" type="checkbox" checked={destacarObservacao} onChange={(e) => setDestacarObservacao(e.target.checked)} className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-600" /><label htmlFor="destacar_observacao" className="ml-2 text-sm font-medium text-slate-400">Destacar para o técnico</label></div>
+            </div>
+          </div>
+        </div>
+        <div className="p-4 bg-slate-800/50 border-t border-slate-700 flex justify-end space-x-2">
+            <button type="button" onClick={onClose} disabled={isLoading} className="px-4 py-2 rounded-lg bg-slate-600 hover:bg-slate-500 text-white font-medium transition-colors">Cancelar</button>
+            <button type="submit" disabled={isLoading} className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors">{isLoading ? 'Salvando...' : 'Salvar Alterações'}</button>
+        </div>
+      </form>
+    </div>
   );
 }
 
-function DetailsModal({
-  installation,
-  onClose,
-  onViewHistory,
-  onEdit,
-  setMessage
-}: {
-  installation: Installation;
-  onClose: () => void;
-  onViewHistory: (installation: Installation) => void;
-  onEdit: (installation: Installation) => void;
-  setMessage: (message: { type: 'success' | 'danger'; text: string } | null) => void;
-}) {
+function DetailsModal({ installation, onClose, onViewHistory, onEdit, setMessage }: { installation: Installation; onClose: () => void; onViewHistory: (installation: Installation) => void; onEdit: (installation: Installation) => void; setMessage: (message: { type: 'success' | 'danger'; text: string } | null) => void; }) {
   const handleCopy = async () => {
-    const text = `Veículo ${installation.modelo}\nModelo: ${installation.modelo}\nAno Fabricação: ${installation.ano || 'N/A'}\nPlaca: ${installation.placa}\nCor: ${installation.cor || 'N/A'}\nNome: ${installation.nome_completo}\nTelefone: ${installation.contato}\nusuario: ${installation.usuario || 'N/A'}\nsenha: ${installation.senha || 'N/A'}\nBASE Atena (${installation.base === 'Atena' ? 'X' : ' '})   Base Autocontrol (${installation.base === 'Autocontrol' ? 'X' : ' '})\nBloqueio sim (${installation.bloqueio === 'Sim' ? 'X' : ' '})   nao (${installation.bloqueio === 'Nao' ? 'X' : ' '})`.trim();
+    const baseString = installation.base === 'Atena' 
+        ? '*BASE* Atena (X)   Base Autocontrol ( )' 
+        : '*BASE* Atena ( )   Base Autocontrol (X)';
+    const bloqueioString = installation.bloqueio === 'Sim' 
+        ? '*Bloqueio* sim (X)   nao ( )' 
+        : '*Bloqueio* sim ( )   nao (X)';
+
+    const textToCopy = [
+      `*Veículo:* ${installation.modelo}`,
+      `*Ano Fabricação:* ${installation.ano || 'N/A'}`,
+      `*Placa:* ${installation.placa}`,
+      `*Cor:* ${installation.cor || 'N/A'}`,
+      `*Nome:* ${installation.nome_completo}`,
+      `*Telefone:* ${installation.contato}`,
+      `*Endereço:* ${installation.endereco}`,
+      `*Usuário:* ${installation.usuario || 'N/A'}`,
+      `*Senha:* ${installation.senha || 'N/A'}`,
+      baseString,
+      bloqueioString
+    ].join('\n');
+
     try {
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(textToCopy);
       setMessage({ type: 'success', text: 'Dados copiados para a área de transferência!' });
     } catch {
       setMessage({ type: 'danger', text: 'Falha ao copiar os dados.' });
     }
-    setTimeout(() => setMessage(null), 3000); // Limpa a mensagem após 3 segundos
+    setTimeout(() => setMessage(null), 3000);
+  };
+  
+  const getServiceBadgeColor = (serviceType: string) => {
+    switch (serviceType) {
+        case 'Instalação': return 'bg-green-900/50 text-green-300';
+        case 'Manutenção': return 'bg-yellow-900/50 text-yellow-300';
+        case 'Remoção': return 'bg-red-900/50 text-red-300';
+        default: return 'bg-slate-700 text-slate-300';
+    }
   };
 
+  if (!installation) return null;
+  const sortedObservacoes = [...(installation.observacoes || [])].sort((a,b) => (b.destaque ? 1 : -1) - (a.destaque ? 1 : -1) || new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
   return (
-    <Modal show onHide={onClose} centered size="lg">
-      <Modal.Header closeButton>
-        <Modal.Title>
-            <i className="bi bi-file-text-fill me-2"></i>Detalhes da Solicitação
-        </Modal.Title>
-      </Modal.Header>
-      <Modal.Body>
-        <Row>
-          <Col md={6} className="mb-3 mb-md-0">
-            <h5 className="text-primary">Cliente e Veículo</h5>
-            <ListGroup variant="flush">
-              <ListGroup.Item><strong>Cliente:</strong> {installation.nome_completo}</ListGroup.Item>
-              <ListGroup.Item><strong>Contato:</strong> {installation.contato}</ListGroup.Item>
-              <ListGroup.Item><strong>Veículo:</strong> {installation.modelo} ({installation.placa})</ListGroup.Item>
-              <ListGroup.Item><strong>Ano/Cor:</strong> {installation.ano || 'N/A'} / {installation.cor || 'N/A'}</ListGroup.Item>
-              <ListGroup.Item><strong>Endereço:</strong> {installation.endereco}</ListGroup.Item>
-            </ListGroup>
-          </Col>
-
-          <Col md={6}>
-            <h5 className="text-primary">Serviço e Acesso</h5>
-            <ListGroup variant="flush">
-                <ListGroup.Item>
-                    <strong>Status:</strong>{' '}
-                    <Badge bg={installation.status === 'Agendado' ? 'info' : installation.status === 'Concluído' ? 'success' : 'warning'} text={installation.status === 'A agendar' ? 'dark' : 'white'}>
-                        {installation.status}
-                    </Badge>
-                </ListGroup.Item>
-                {installation.status === 'Agendado' && installation.data_instalacao && (
-                    <ListGroup.Item><strong>Agendado para:</strong> {new Date(installation.data_instalacao + 'T00:00:00').toLocaleDateString('pt-BR')} às {installation.horario}</ListGroup.Item>
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 p-4">
+        <div className="bg-slate-800 rounded-lg shadow-xl w-full max-w-3xl border border-slate-700">
+            <div className="p-4 border-b border-slate-700 flex justify-between items-center"><h3 className="text-lg font-medium text-white"><i className="bi bi-file-text-fill mr-2"></i>Detalhes da Solicitação</h3><button onClick={onClose} className="text-slate-400 hover:text-white text-2xl">&times;</button></div>
+            <div className="p-6 max-h-[70vh] overflow-y-auto">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                        <h4 className="text-blue-400 font-semibold border-b border-slate-700 pb-2">Cliente e Veículo</h4>
+                        <p><strong>Cliente:</strong> {installation.nome_completo}</p>
+                        <p><strong>Contato:</strong> {installation.contato}</p>
+                        <p><strong>Veículo:</strong> {installation.modelo} ({installation.placa})</p>
+                        <p><strong>Ano/Cor:</strong> {installation.ano || 'N/A'} / {installation.cor || 'N/A'}</p>
+                        <p><strong>Endereço:</strong> {installation.endereco}</p>
+                    </div>
+                     <div className="space-y-4">
+                        <h4 className="text-blue-400 font-semibold border-b border-slate-700 pb-2">Serviço e Acesso</h4>
+                        <p><strong>Status:</strong> <span className={`px-2 py-1 text-xs font-medium rounded-full ${installation.status === 'Agendado' ? 'bg-blue-900/50 text-blue-300' : installation.status === 'Concluído' ? 'bg-green-900/50 text-green-300' : 'bg-yellow-900/50 text-yellow-300'}`}>{installation.status}</span></p>
+                        {installation.status === 'Agendado' && installation.data_instalacao && (
+                            <p><strong>Agendado para:</strong> {new Date(installation.data_instalacao + 'T00:00:00').toLocaleDateString('pt-BR')} às {installation.horario}</p>
+                        )}
+                        <p><strong>Serviço:</strong> <span className={`px-2 py-1 text-xs font-medium rounded-full ${getServiceBadgeColor(installation.tipo_servico)}`}>{installation.tipo_servico}</span></p>
+                        <p><strong>Base:</strong> {installation.base}</p>
+                        <p><strong>Usuário/Senha:</strong> {installation.usuario || 'N/A'} / {installation.senha || 'N/A'}</p>
+                        <p><strong>Bloqueio:</strong> {installation.bloqueio}</p>
+                    </div>
+                </div>
+                {sortedObservacoes.length > 0 && (
+                    <div className="mt-6">
+                        <h4 className="text-blue-400 font-semibold border-b border-slate-700 pb-2 flex items-center"><i className="bi bi-chat-left-text-fill mr-2"></i> Observações</h4>
+                        <div className="mt-2 space-y-3">
+                            {sortedObservacoes.map(obs => (
+                                <div key={obs.id} className={`p-3 rounded-lg ${obs.destaque ? 'bg-yellow-900/50 border-l-4 border-yellow-400' : 'bg-slate-700/50'}`}>
+                                    {obs.destaque && <p className="text-sm font-bold text-yellow-300 mb-1"><i className="bi bi-star-fill mr-2"></i>Destaque para o Técnico</p>}
+                                    <p className="text-slate-300">{obs.texto}</p>
+                                    <p className="text-xs text-slate-500 text-right mt-2">Adicionado por {obs.criado_por || 'N/A'} em {new Date(obs.created_at).toLocaleDateString('pt-BR')}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 )}
-              <ListGroup.Item><strong>Serviço:</strong> <Badge bg={installation.tipo_servico === 'Instalação' ? 'primary' : installation.tipo_servico === 'Manutenção' ? 'warning' : 'danger'}>{installation.tipo_servico}</Badge></ListGroup.Item>
-              <ListGroup.Item><strong>Base:</strong> <Badge bg={installation.base === 'Atena' ? 'secondary' : 'primary'}>{installation.base}</Badge></ListGroup.Item>
-              <ListGroup.Item><strong>Usuário/Senha:</strong> {installation.usuario || 'N/A'} / {installation.senha || 'N/A'}</ListGroup.Item>
-              <ListGroup.Item><strong>Bloqueio:</strong> {installation.bloqueio}</ListGroup.Item>
-            </ListGroup>
-          </Col>
-        </Row>
-
-        {installation.observacao && (
-            <>
-                <hr />
-                <h5 className="text-primary mt-3">Observação</h5>
-                <p className="text-muted fst-italic bg-light p-2 rounded" style={{ whiteSpace: 'pre-wrap' }}>{installation.observacao}</p>
-            </>
-        )}
-      </Modal.Body>
-      <Modal.Footer className="d-flex justify-content-between flex-wrap">
-        <div className="mb-2 mb-md-0">
-          <Button variant="info" onClick={() => onEdit(installation)} className="me-2"><i className="bi bi-pencil-square me-1"></i> Editar</Button>
-          <Button variant="secondary" onClick={() => onViewHistory(installation)} className="me-2"><i className="bi bi-clock-history me-1"></i> Histórico</Button>
-          <Button variant="outline-primary" onClick={handleCopy}><i className="bi bi-clipboard me-1"></i> Copiar</Button>
+            </div>
+            <div className="p-4 bg-slate-800/50 border-t border-slate-700 flex flex-wrap justify-between items-center gap-2">
+                <div className="flex items-center space-x-2">
+                    <button onClick={() => onEdit(installation)} className="px-4 py-2 rounded-lg bg-yellow-600 hover:bg-yellow-700 text-white font-medium transition-colors text-sm">Editar</button>
+                    <button onClick={() => onViewHistory(installation)} className="px-4 py-2 rounded-lg bg-slate-600 hover:bg-slate-500 text-white font-medium transition-colors text-sm">Histórico</button>
+                </div>
+                <div className="flex items-center space-x-2">
+                    <button onClick={handleCopy} className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium transition-colors text-sm"><i className="bi bi-whatsapp mr-2"></i>Copiar p/ WhatsApp</button>
+                    <button onClick={onClose} className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors text-sm">Fechar</button>
+                </div>
+            </div>
         </div>
-        <Button variant="primary" onClick={onClose}>Fechar</Button>
-      </Modal.Footer>
-    </Modal>
+    </div>
   );
+}
+
+function AccordionItem({ title, children, isOpen, onToggle }: { title: React.ReactNode, children: React.ReactNode, isOpen: boolean, onToggle: () => void }) {
+    return ( <div className="border border-slate-700 rounded-lg overflow-hidden mb-3"><button onClick={onToggle} className="w-full flex justify-between items-center p-4 bg-slate-800 hover:bg-slate-700/50 transition-colors duration-300"><span className="font-medium text-white">{title}</span><i className={`bi bi-chevron-down transition-transform duration-300 ${isOpen ? 'transform rotate-180' : ''}`}></i></button><div className={`transition-all duration-500 ease-in-out ${isOpen ? 'max-h-[10000px]' : 'max-h-0'} overflow-hidden`}><div className="bg-slate-900">{children}</div></div></div>);
 }
 
 // --- COMPONENTE PRINCIPAL ---
 export function InsuranceView() {
   const [allInstallations, setAllInstallations] = useState<Installation[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selected, setSelected] = useState<Installation | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
   const [editingTarget, setEditingTarget] = useState<Installation | null>(null);
   const [historyTarget, setHistoryTarget] = useState<Installation | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'danger'; text: string } | null>(null);
+  const [openAccordions, setOpenAccordions] = useState<string[]>(['pending', 'scheduled', 'completed']);
+
+  const selectedInstallation = useMemo(() => allInstallations.find(inst => inst.id === selectedId), [allInstallations, selectedId]);
 
   const fetchInstallations = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Usuário não autenticado.');
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Usuário não autenticado.');
 
-      const userRole = user.app_metadata?.role;
-      let query = supabase.from('instalacoes').select('*, historico(*)');
-
-      if (userRole === 'tecnico') {
-        query = query.eq('tecnico_id', user.id);
-      } else if (userRole === 'seguradora') {
-        if (user.email && user.email.toLowerCase().includes('atena')) {
-          query = query.eq('base', 'Atena');
-        } else {
-          query = query.eq('created_by', user.id);
-        }
-      }
-      
-      const { data, error: queryError } = await query.order('created_at', { ascending: false });
-
-      if (queryError) throw queryError;
-      setAllInstallations(data || []);
+      const response = await fetch('/.netlify/functions/get-installations', {
+        headers: { 'Authorization': `Bearer ${session.access_token}` },
+      });
+      if (!response.ok) throw new Error('Falha ao buscar dados.');
+      const data: Installation[] = await response.json();
+      setAllInstallations(data);
     } catch (err: any) {
       setError(err.message || 'Não foi possível carregar os dados.');
     } finally {
@@ -237,90 +303,91 @@ export function InsuranceView() {
 
   useEffect(() => { fetchInstallations(); }, [fetchInstallations]);
 
-  const handleEditClick = (installation: Installation) => {
-    setSelected(null);
-    setEditingTarget(installation);
-  };
+  const toggleAccordion = (id: string) => setOpenAccordions(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
+  const handleEditClick = (installation: Installation | undefined) => { if (!installation) return; setSelectedId(null); setEditingTarget(installation); };
 
-  const handleSaveEdit = async (updatedData: Partial<Installation>) => {
+  const handleSaveEdit = async (updatedData: Partial<Installation> & { nova_observacao_texto?: string, nova_observacao_destaque?: boolean }) => {
+    if (!updatedData.id) return;
     try {
-      const { historico, ...dataToUpdate } = updatedData;
-      const { error } = await supabase.from('instalacoes').update(dataToUpdate).eq('id', updatedData.id);
-      if (error) throw error;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Usuário não autenticado.');
+
+      const response = await fetch('/.netlify/functions/update-installation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify(updatedData),
+      });
+
+      if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Falha na operação.');
+      }
       setMessage({ type: 'success', text: 'Dados atualizados com sucesso!' });
       setEditingTarget(null);
       await fetchInstallations();
-    } catch (error: any) { setMessage({ type: 'danger', text: error.message }); }
+    } catch (error: any) { setMessage({ type: 'danger', text: error.message || "Falha ao atualizar." }); }
   };
 
-  const filteredInstallations = useMemo(() =>
-      allInstallations.filter((inst) =>
-          inst.nome_completo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          inst.placa.toLowerCase().includes(searchTerm.toLowerCase())
-      ), [allInstallations, searchTerm]
-  );
-
+  const filteredInstallations = useMemo(() => allInstallations.filter((inst) => inst.nome_completo.toLowerCase().includes(searchTerm.toLowerCase()) || inst.placa.toLowerCase().includes(searchTerm.toLowerCase())), [allInstallations, searchTerm]);
   const scheduled = filteredInstallations.filter((inst) => inst.status === 'Agendado');
   const completed = filteredInstallations.filter((inst) => inst.status === 'Concluído');
   const pending = filteredInstallations.filter((inst) => inst.status === 'A agendar');
 
-  if (loading) return <div className="text-center p-5"><Spinner animation="border" variant="primary" /></div>;
-  if (error) return <Alert variant="danger">{error}</Alert>;
+  if (loading) return <div className="text-center p-5"><div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mx-auto"></div></div>;
+  if (error) return <div className="p-4 text-sm text-red-400 bg-red-500/10 border border-red-500/30 rounded-lg">{error}</div>;
+
+  const getServiceBadgeColor = (serviceType: string) => {
+    switch (serviceType) {
+        case 'Instalação': return 'bg-green-900/50 text-green-300';
+        case 'Manutenção': return 'bg-yellow-900/50 text-yellow-300';
+        case 'Remoção': return 'bg-red-900/50 text-red-300';
+        default: return 'bg-slate-700 text-slate-300';
+    }
+  };
 
   const renderInstallationsList = (installations: Installation[]) => {
-    if (installations.length === 0) {
-      return <p className="text-muted p-3 text-center fst-italic">Nenhum registro encontrado.</p>;
-    }
+    if (installations.length === 0) return <p className="text-slate-500 p-4 text-center italic">Nenhum registro encontrado.</p>;
     return (
-      <ListGroup variant="flush">
-        {installations.map(inst => (
-          <ListGroup.Item key={inst.id} className="d-flex justify-content-between align-items-center flex-wrap">
-            {/* Seção de Informações Principais */}
-            <div className="me-auto pe-3">
-              <div className="fw-bold">{inst.nome_completo}</div>
-              <div className="small text-muted">{inst.modelo} ({inst.placa})</div>
-              <div>
-                <Badge bg={inst.tipo_servico === 'Instalação' ? 'primary' : inst.tipo_servico === 'Manutenção' ? 'warning' : 'danger'} className="me-1">
-                  {inst.tipo_servico}
-                </Badge>
-                <Badge bg={inst.base === 'Atena' ? 'secondary' : 'info'} className="me-1">{inst.base}</Badge>
-                <Badge bg={inst.status === 'Agendado' ? 'info' : inst.status === 'Concluído' ? 'success' : 'warning'} text={inst.status === 'A agendar' ? 'dark' : 'white'}>
-                  {inst.status === 'Agendado' && inst.data_instalacao ? new Date(inst.data_instalacao + 'T00:00:00').toLocaleDateString('pt-BR') : inst.status}
-                </Badge>
+      <div className="divide-y divide-slate-700">
+        {installations.map(inst => {
+            const hasHighlight = inst.observacoes?.some(o => o.destaque);
+            return (
+              <div key={inst.id} className="p-4 flex flex-wrap justify-between items-center gap-4 hover:bg-slate-800/50">
+                <div className="flex-grow">
+                  <p className="font-bold text-white flex items-center">{inst.nome_completo} {hasHighlight && <span className="ml-2 text-yellow-400" title="Possui observação em destaque">⚠️</span>}</p>
+                  <p className="text-sm text-slate-400">{inst.modelo} ({inst.placa})</p>
+                  <div className="flex items-center flex-wrap gap-2 mt-2">
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${ inst.status === 'Agendado' ? 'bg-blue-900/50 text-blue-300' : inst.status === 'Concluído' ? 'bg-green-900/50 text-green-300' : 'bg-yellow-900/50 text-yellow-300' }`}>
+                      {inst.status === 'Agendado' && inst.data_instalacao ? new Date(inst.data_instalacao + 'T00:00:00').toLocaleDateString('pt-BR') : inst.status}
+                    </span>
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${getServiceBadgeColor(inst.tipo_servico)}`}>{inst.tipo_servico}</span>
+                    <span className="px-2 py-1 text-xs font-medium rounded-full bg-purple-900/50 text-purple-300">{inst.base}</span>
+                  </div>
+                </div>
+                <button onClick={() => setSelectedId(inst.id)} className="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-medium transition-colors text-sm"><i className="bi bi-eye-fill mr-2"></i>Detalhes</button>
               </div>
-            </div>
-            {/* Botão de Ação */}
-            <div className="mt-2 mt-md-0">
-              <Button variant="outline-primary" size="sm" onClick={() => setSelected(inst)}>
-                <i className="bi bi-eye-fill me-1"></i> Detalhes
-              </Button>
-            </div>
-          </ListGroup.Item>
-        ))}
-      </ListGroup>
+            )
+        })}
+      </div>
     );
   };
 
   return (
-    <div>
-      <Card className="mb-4"><Card.Header as="h5"><i className="bi bi-search me-2"></i>Consulta de Solicitações</Card.Header><Card.Body>{message && <Alert variant={message.type} onClose={() => setMessage(null)} dismissible>{message.text}</Alert>}<InputGroup><InputGroup.Text><i className="bi bi-search"></i></InputGroup.Text><Form.Control type="text" placeholder="Buscar por nome ou placa..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></InputGroup></Card.Body></Card>
-      <Accordion defaultActiveKey={['0', '1']} alwaysOpen>
-          <Accordion.Item eventKey="0" className="mb-3">
-              <Accordion.Header><i className="bi bi-clock-history me-2"></i>Pendentes ({pending.length})</Accordion.Header>
-              <Accordion.Body className="p-0">{renderInstallationsList(pending)}</Accordion.Body>
-          </Accordion.Item>
-          <Accordion.Item eventKey="1" className="mb-3">
-              <Accordion.Header><i className="bi bi-calendar-check me-2"></i>Agendadas ({scheduled.length})</Accordion.Header>
-              <Accordion.Body className="p-0">{renderInstallationsList(scheduled)}</Accordion.Body>
-          </Accordion.Item>
-          <Accordion.Item eventKey="2">
-              <Accordion.Header><i className="bi bi-check-circle-fill me-2"></i>Concluídas ({completed.length})</Accordion.Header>
-              <Accordion.Body className="p-0">{renderInstallationsList(completed)}</Accordion.Body>
-          </Accordion.Item>
-      </Accordion>
-      {selected && <DetailsModal installation={selected} onClose={() => setSelected(null)} onViewHistory={(inst) => setHistoryTarget(inst)} onEdit={handleEditClick} setMessage={setMessage} />}
+    <div className="space-y-6">
+      <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-6 shadow-lg">
+        <h1 className="text-2xl font-bold text-white mb-4"><i className="bi bi-search mr-3"></i>Consulta de Solicitações</h1>
+        {message && <div className={`p-4 mb-4 text-sm rounded-lg ${message.type === 'success' ? 'bg-green-800/50 text-green-300 border border-green-700' : 'bg-red-800/50 text-red-300 border border-red-700'}`} role="alert">{message.text}</div>}
+        <div className="relative"><div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none"><i className="bi bi-search text-slate-400"></i></div><input type="text" className="w-full p-2 pl-10 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-blue-500 focus:border-blue-500" placeholder="Buscar por nome ou placa..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></div>
+      </div>
+      <div>
+          <AccordionItem isOpen={openAccordions.includes('pending')} onToggle={() => toggleAccordion('pending')} title={<><i className="bi bi-clock-history mr-2"></i>Pendentes ({pending.length})</>}>{renderInstallationsList(pending)}</AccordionItem>
+          <AccordionItem isOpen={openAccordions.includes('scheduled')} onToggle={() => toggleAccordion('scheduled')} title={<><i className="bi bi-calendar-check mr-2"></i>Agendadas ({scheduled.length})</>}>{renderInstallationsList(scheduled)}</AccordionItem>
+          <AccordionItem isOpen={openAccordions.includes('completed')} onToggle={() => toggleAccordion('completed')} title={<><i className="bi bi-check-circle-fill mr-2"></i>Concluídas ({completed.length})</>}>{renderInstallationsList(completed)}</AccordionItem>
+      </div>
+      {selectedInstallation && <DetailsModal installation={selectedInstallation} onClose={() => setSelectedId(null)} onViewHistory={(inst) => setHistoryTarget(inst)} onEdit={() => handleEditClick(selectedInstallation)} setMessage={setMessage} />}
       {editingTarget && <EditModal installation={editingTarget} onClose={() => setEditingTarget(null)} onSave={handleSaveEdit} />}
       {historyTarget && <HistoryModal isOpen={!!historyTarget} onClose={() => setHistoryTarget(null)} installation={historyTarget} />}
     </div>
   );
 }
+

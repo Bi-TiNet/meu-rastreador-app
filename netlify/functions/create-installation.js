@@ -2,65 +2,71 @@
 const { createClient } = require('@supabase/supabase-js');
 
 exports.handler = async function(event) {
-  // Define os headers que serão usados em todas as respostas
   const headers = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
     "Content-Type": "application/json"
   };
 
-  // Responde a requisições OPTIONS (necessário para o CORS)
   if (event.httpMethod === 'OPTIONS') {
-    return {
-      statusCode: 204,
-      headers,
-      body: ''
-    };
+    return { statusCode: 204, headers, body: '' };
   }
 
   const supabaseUrl = process.env.SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
-    console.error("Erro Crítico: Variáveis de ambiente do Supabase não configuradas.");
-    return {
-      statusCode: 500,
-      headers,
-      body: JSON.stringify({ message: "Configuração do servidor incompleta." })
-    };
+    return { statusCode: 500, headers, body: JSON.stringify({ message: "Configuração do servidor incompleta." }) };
   }
   
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
     const token = event.headers.authorization?.split('Bearer ')[1];
-    if (!token) {
-        return { statusCode: 401, headers, body: JSON.stringify({ message: "Acesso não autorizado." }) };
-    }
+    if (!token) return { statusCode: 401, headers, body: JSON.stringify({ message: "Acesso não autorizado." }) };
+    
     const { data: { user } } = await supabase.auth.getUser(token);
-    if (!user) {
-        return { statusCode: 401, headers, body: JSON.stringify({ message: "Token inválido." }) };
-    }
+    if (!user) return { statusCode: 401, headers, body: JSON.stringify({ message: "Token inválido." }) };
 
-    const data = JSON.parse(event.body);
-    data.status = 'A agendar'; // status inicial
-    data.created_by = user.id; // Adiciona o ID do criador
+    // Separa o array de 'observacoes' do resto dos dados da instalação
+    const { observacoes, ...installationData } = JSON.parse(event.body);
+    
+    installationData.status = 'A agendar';
+    installationData.created_by = user.id;
 
-    const { data: insertData, error } = await supabase
+    // 1. Insere a instalação principal e retorna o registro criado
+    const { data: newInstallation, error: installationError } = await supabase
       .from('instalacoes')
-      .insert(data)
-      .select();
+      .insert(installationData)
+      .select()
+      .single();
 
-    if (error) {
-      // Log detalhado do erro do Supabase
-      console.error("Erro do Supabase ao inserir:", error);
-      throw error;
+    if (installationError) throw installationError;
+
+    // 2. Se houver observações e a instalação foi criada com sucesso, formata e insere as observações
+    if (newInstallation && observacoes && observacoes.length > 0) {
+      const observacoesParaInserir = observacoes.map(obs => ({
+        instalacao_id: newInstallation.id,
+        texto: obs.texto,
+        destaque: obs.destaque,
+        criado_por: user.email
+      }));
+
+      const { error: observationError } = await supabase
+        .from('observacoes')
+        .insert(observacoesParaInserir);
+
+      if (observationError) {
+        // Log do erro para depuração, mas não impede a resposta de sucesso,
+        // pois a instalação principal já foi criada.
+        console.error("Erro ao inserir observações:", observationError);
+      }
     }
 
     return { 
       statusCode: 200,
       headers,
-      body: JSON.stringify({ message: 'Solicitação cadastrada com sucesso!', data: insertData }) 
+      body: JSON.stringify({ message: 'Solicitação cadastrada com sucesso!', data: newInstallation }) 
     };
 
   } catch (error) {
@@ -72,3 +78,4 @@ exports.handler = async function(event) {
     };
   }
 };
+

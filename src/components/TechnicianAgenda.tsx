@@ -1,14 +1,21 @@
 // src/components/TechnicianAgenda.tsx
 import { useEffect, useState, useCallback, useMemo, type FormEvent } from 'react';
 import moment from 'moment';
-import 'moment/locale/pt-br';
+import 'moment/locale/pt-br'; // Importa a localização para português do Brasil
 import { supabase } from '../supabaseClient';
-import { Alert, Spinner, Card, Badge, Button, Modal, Form, FloatingLabel, ListGroup } from 'react-bootstrap';
 import type { User } from '@supabase/supabase-js';
 
-moment.locale('pt-br');
+moment.locale('pt-br'); // Define o Moment.js para usar português do Brasil globalmente
 
 // --- INTERFACES ---
+interface Observacao {
+    id: number;
+    texto: string;
+    destaque: boolean;
+    created_at: string;
+    criado_por: string;
+}
+
 interface Installation {
   id: number;
   nome_completo: string;
@@ -26,209 +33,42 @@ interface Installation {
   data_instalacao?: string;
   horario?: string;
   tipo_servico: string;
-  observacao?: string;
-  // ADICIONADO PARA EXIBIR NOME DO TÉCNICO
+  observacoes: Observacao[]; // Alterado
   profiles?: {
     full_name: string;
   };
 }
 
-// --- COMPONENTES AUXILIARES ---
-
-function CalendarDay({ day, hasEvent, isSelected, isToday, isCurrentMonth, onClick }: { day: moment.Moment, hasEvent: boolean, isSelected: boolean, isToday: boolean, isCurrentMonth: boolean, onClick: (date: moment.Moment) => void }) {
-    const dayClass = isSelected ? 'bg-primary text-white' : isToday ? 'bg-light' : '';
-    const textClass = isCurrentMonth ? 'text-dark' : 'text-muted';
-
-    return (
-        <div 
-            onClick={() => onClick(day)} 
-            style={{ cursor: 'pointer', textAlign: 'center', position: 'relative' }} 
-            className={`p-2 rounded-circle ${dayClass}`}
-        >
-            <span className={textClass}>{day.format('D')}</span>
-            {hasEvent && <div style={{ position: 'absolute', bottom: '5px', left: '50%', transform: 'translateX(-50%)', width: '5px', height: '5px', backgroundColor: isSelected ? 'white' : 'blue', borderRadius: '50%' }}></div>}
-        </div>
-    );
-}
-
-
-function DateNavigator({ currentDate, setCurrentDate, view, setView }: { currentDate: moment.Moment, setCurrentDate: (date: moment.Moment) => void, view: 'day' | 'week' | 'month', setView: (view: 'day' | 'week' | 'month') => void }) {
-  const handlePrev = () => setCurrentDate(moment(currentDate).subtract(1, view));
-  const handleNext = () => setCurrentDate(moment(currentDate).add(1, view));
-  const handleToday = () => setCurrentDate(moment());
-
-  const formatDateTitle = () => {
-    if (view === 'day') return currentDate.format('DD [de] MMMM YYYY');
-    if (view === 'week') return `${currentDate.startOf('week').format('DD/MM')} a ${currentDate.endOf('week').format('DD/MM/YYYY')}`;
-    return currentDate.format('MMMM [de] YYYY');
-  };
-
-  return (
-    <Card className="mb-3 shadow-sm">
-      <Card.Body className="p-2">
-        <div className="d-flex justify-content-between align-items-center">
-          <Button variant="link" onClick={handlePrev} className="text-decoration-none text-secondary"><i className="bi bi-chevron-left h5"></i></Button>
-          <span className="fw-bold text-capitalize">{formatDateTitle()}</span>
-          <Button variant="link" onClick={handleNext} className="text-decoration-none text-secondary"><i className="bi bi-chevron-right h5"></i></Button>
-        </div>
-        <div className="d-grid gap-2 d-flex justify-content-center mt-2">
-          <Button variant="outline-secondary" size="sm" onClick={handleToday}>Hoje</Button>
-          <Button variant={view === 'day' ? 'primary' : 'outline-primary'} size="sm" onClick={() => setView('day')}>Dia</Button>
-          <Button variant={view === 'week' ? 'primary' : 'outline-primary'} size="sm" onClick={() => setView('week')}>Semana</Button>
-          <Button variant={view === 'month' ? 'primary' : 'outline-primary'} size="sm" onClick={() => setView('month')}>Mês</Button>
-        </div>
-      </Card.Body>
-    </Card>
-  );
-}
-
-function WeekView({ navDate, selectedDate, onDateSelect, daysWithEvents }: { navDate: moment.Moment, selectedDate: moment.Moment, onDateSelect: (date: moment.Moment) => void, daysWithEvents: Set<string> }) {
-    const weekDays = [];
-    const startOfWeek = moment(navDate).startOf('week');
-
-    for (let i = 0; i < 7; i++) {
-        weekDays.push(moment(startOfWeek).add(i, 'days'));
-    }
-
-    return (
-        <Card className="mb-3">
-            <Card.Body className="d-flex justify-content-around p-2">
-                {weekDays.map(day => (
-                    <div key={day.format('YYYY-MM-DD')} className="text-center">
-                        <small className="text-muted">{day.format('ddd')}</small>
-                        <CalendarDay 
-                            day={day} 
-                            hasEvent={daysWithEvents.has(day.format('YYYY-MM-DD'))}
-                            isSelected={day.isSame(selectedDate, 'day')}
-                            isToday={day.isSame(moment(), 'day')}
-                            isCurrentMonth={true}
-                            onClick={onDateSelect}
-                        />
-                    </div>
-                ))}
-            </Card.Body>
-        </Card>
-    );
-}
-
-function MonthView({ navDate, selectedDate, onDateSelect, daysWithEvents }: { navDate: moment.Moment, selectedDate: moment.Moment, onDateSelect: (date: moment.Moment) => void, daysWithEvents: Set<string> }) {
-    const monthDays = [];
-    const startOfMonth = moment(navDate).startOf('month').startOf('week');
-    const endOfMonth = moment(navDate).endOf('month').endOf('week');
-    
-    let day = startOfMonth;
-    while(day <= endOfMonth) {
-        monthDays.push(day);
-        day = day.clone().add(1, 'day');
-    }
-    
-    const weekDayLabels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-
-    return (
-        <Card className="mb-3">
-            <Card.Body className="p-2">
-                <div className="d-flex justify-content-around">
-                    {weekDayLabels.map(label => <div key={label} className="fw-bold text-muted" style={{width: '14.28%', textAlign: 'center'}}><small>{label}</small></div>)}
-                </div>
-                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' }}>
-                    {monthDays.map(d => (
-                         <CalendarDay 
-                            key={d.format('YYYY-MM-DD')}
-                            day={d} 
-                            hasEvent={daysWithEvents.has(d.format('YYYY-MM-DD'))}
-                            isSelected={d.isSame(selectedDate, 'day')}
-                            isToday={d.isSame(moment(), 'day')}
-                            isCurrentMonth={d.isSame(navDate, 'month')}
-                            onClick={onDateSelect}
-                        />
-                    ))}
-                </div>
-            </Card.Body>
-        </Card>
-    );
-}
-
-
-function EventList({ events, onEventClick, userRole }: { events: Installation[], onEventClick: (event: Installation) => void, userRole: string | null }) {
-  const scheduled = useMemo(() => events.filter(e => e.status === 'Agendado').sort((a,b) => (a.horario || '').localeCompare(b.horario || '')), [events]);
-  const completed = useMemo(() => events.filter(e => e.status === 'Concluído').sort((a,b) => (a.horario || '').localeCompare(b.horario || '')), [events]);
-
-  if (events.length === 0) {
-    return <Card body className="text-center text-muted mt-4 border-0 bg-transparent">Nenhuma ordem de serviço para este dia.</Card>;
-  }
-
-  return (
-    <>
-      {scheduled.length > 0 && (
-        <div className="mb-4">
-          <h6 className="text-uppercase small text-muted fw-bold ps-1">AGENDADAS</h6>
-          {scheduled.map(event => (
-            <Card key={event.id} className="mb-2 shadow-sm" onClick={() => onEventClick(event)} style={{ cursor: 'pointer' }}>
-              <Card.Body className="p-3">
-                <div className="d-flex justify-content-between">
-                  <div>
-                    <Card.Title className="h6 mb-1">{event.nome_completo}</Card.Title>
-                    <Card.Text className="text-muted small mb-1">{event.tipo_servico}</Card.Text>
-                    {userRole === 'admin' && event.profiles && (
-                        <Card.Text className="text-muted small mb-1"><i className="bi bi-person-fill me-2"></i>{event.profiles.full_name}</Card.Text>
-                    )}
-                    <Card.Text className="text-muted small mb-1"><i className="bi bi-telephone me-2"></i>{event.contato}</Card.Text>
-                    <Card.Text className="text-muted small"><i className="bi bi-geo-alt me-2"></i>{event.endereco}</Card.Text>
-                  </div>
-                  <Badge bg="primary" pill className="align-self-start fs-6">{event.horario}</Badge>
-                </div>
-              </Card.Body>
-            </Card>
-          ))}
-        </div>
-      )}
-      {completed.length > 0 && (
-        <div>
-          <h6 className="text-uppercase small text-muted fw-bold ps-1">FINALIZADAS</h6>
-           {completed.map(event => (
-            <Card key={event.id} className="mb-2 shadow-sm bg-light" onClick={() => onEventClick(event)} style={{ cursor: 'pointer' }}>
-              <Card.Body className="p-3">
-                <div className="d-flex justify-content-between">
-                  <div>
-                    <Card.Title className="h6 mb-1 text-muted">{event.nome_completo}</Card.Title>
-                     <Card.Text className="text-muted small mb-1 text-decoration-line-through">{event.tipo_servico}</Card.Text>
-                    {userRole === 'admin' && event.profiles && (
-                        <Card.Text className="text-muted small mb-1 text-decoration-line-through"><i className="bi bi-person-fill me-2"></i>{event.profiles.full_name}</Card.Text>
-                    )}
-                    <Card.Text className="text-muted small mb-1 text-decoration-line-through"><i className="bi bi-telephone me-2"></i>{event.contato}</Card.Text>
-                    <Card.Text className="text-muted small text-decoration-line-through"><i className="bi bi-geo-alt me-2"></i>{event.endereco}</Card.Text>
-                  </div>
-                   <Badge bg="secondary" pill className="align-self-start fs-6">{event.horario}</Badge>
-                </div>
-              </Card.Body>
-            </Card>
-          ))}
-        </div>
-      )}
-    </>
-  );
-}
-
+// --- MODAL DE DETALHES ---
 function EventDetailsModal({ event, show, onClose, onUpdate }: { event: Installation | null, show: boolean, onClose: () => void, onUpdate: () => Promise<void> }) {
   const [isRescheduling, setIsRescheduling] = useState(false);
   const [dateTime, setDateTime] = useState('');
   const [loadingAction, setLoadingAction] = useState(false);
   const [error, setError] = useState('');
-  const [copySuccessMessage, setCopySuccessMessage] = useState('');
+  const [copySuccess, setCopySuccess] = useState('');
 
   useEffect(() => {
     if (event) {
-      const initialDateTime = event.data_instalacao && event.horario
-        ? moment(`${event.data_instalacao}T${event.horario}`).format('YYYY-MM-DDTHH:mm')
-        : '';
+      const initialDateTime = event.data_instalacao && event.horario ? moment(`${event.data_instalacao}T${event.horario}`).format('YYYY-MM-DDTHH:mm') : '';
       setDateTime(initialDateTime);
-      setIsRescheduling(false); 
+      setIsRescheduling(false);
       setError('');
-      setCopySuccessMessage('');
+      setCopySuccess('');
     }
   }, [event]);
 
-  if (!event) return null;
+  if (!show || !event) return null;
+
+  const sortedObservacoes = [...(event.observacoes || [])].sort((a,b) => (b.destaque ? 1 : -1) - (a.destaque ? 1 : -1) || new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+  const getServiceBadgeColor = (serviceType: string) => {
+    switch (serviceType) {
+        case 'Instalação': return 'bg-green-900/50 text-green-300';
+        case 'Manutenção': return 'bg-yellow-900/50 text-yellow-300';
+        case 'Remoção': return 'bg-red-900/50 text-red-300';
+        default: return 'bg-slate-700 text-slate-300';
+    }
+  };
   
   const handleAction = async (action: 'complete' | 'return_to_pending' | 'reschedule_self', payload?: any) => {
     setLoadingAction(true);
@@ -253,22 +93,36 @@ function EventDetailsModal({ event, show, onClose, onUpdate }: { event: Installa
         throw new Error(errData.message || 'Falha ao executar ação.');
       }
       await onUpdate();
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoadingAction(false);
-    }
+    } catch (err: any) { setError(err.message); } finally { setLoadingAction(false); }
   };
 
   const handleCopy = () => {
-    setCopySuccessMessage('');
-    const text = `Cliente: ${event.nome_completo}\nContato: ${event.contato}\nVeículo: ${event.modelo} ${event.cor} ${event.ano} (${event.placa})\nEndereço: ${event.endereco}\nTipo de Serviço: ${event.tipo_servico}\nBase: ${event.base}\nBloqueio: ${event.bloqueio}\nUsuário: ${event.usuario}\nSenha: ${event.senha || 'N/A'}\nObservação: ${event.observacao || 'Nenhuma'}`;
-    navigator.clipboard.writeText(text).then(() => {
-        setCopySuccessMessage('Dados copiados com sucesso!');
-        setTimeout(() => setCopySuccessMessage(''), 3000);
-    }, () => {
-        setError('Falha ao copiar dados.');
-        setTimeout(() => setError(''), 3000);
+    setCopySuccess('');
+    const baseString = event.base === 'Atena' 
+        ? '*BASE* Atena (X)   Base Autocontrol ( )' 
+        : '*BASE* Atena ( )   Base Autocontrol (X)';
+    const bloqueioString = event.bloqueio === 'Sim' 
+        ? '*Bloqueio* sim (X)   nao ( )' 
+        : '*Bloqueio* sim ( )   nao (X)';
+
+    const textToCopy = [
+        `*Veículo* ${event.modelo}`,
+        `*Modelo:* ${event.modelo}`,
+        `*Ano Fabricação:* ${event.ano || 'N/A'}`,
+        `*Placa:* ${event.placa}`,
+        `*Cor:* ${event.cor || 'N/A'}`,
+        `*Nome:* ${event.nome_completo}`,
+        `*Telefone:* ${event.contato}`,
+        `*Endereço:* ${event.endereco}`,
+        `*Usuário:* ${event.usuario || 'N/A'}`,
+        `*Senha:* ${event.senha || 'N/A'}`,
+        baseString,
+        bloqueioString
+    ].join('\n');
+
+    navigator.clipboard.writeText(textToCopy).then(() => {
+        setCopySuccess('Dados copiados!');
+        setTimeout(() => setCopySuccess(''), 3000);
     });
   };
   
@@ -276,65 +130,218 @@ function EventDetailsModal({ event, show, onClose, onUpdate }: { event: Installa
     e.preventDefault();
     const [date, time] = dateTime.split('T');
     handleAction('reschedule_self', { date, time });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 p-4">
+        <div className="bg-slate-800 rounded-lg shadow-xl w-full max-w-2xl border border-slate-700">
+            <div className="p-4 border-b border-slate-700 flex justify-between items-center">
+                <h3 className="text-lg font-medium text-white">{event.nome_completo}</h3>
+                <button onClick={onClose} className="text-slate-400 hover:text-white text-2xl">&times;</button>
+            </div>
+            <div className="p-6 max-h-[70vh] overflow-y-auto">
+                {error && <div className="p-3 mb-4 text-sm rounded-lg bg-red-800/50 text-red-300 border border-red-700">{error}</div>}
+                {copySuccess && <div className="p-3 mb-4 text-sm rounded-lg bg-blue-800/50 text-blue-300 border border-blue-700">{copySuccess}</div>}
+                {isRescheduling ? (
+                    <form onSubmit={handleRescheduleSubmit}>
+                        <h4 className="text-white font-semibold mb-4">Reagendar Serviço</h4>
+                        <div>
+                            <label className="block mb-2 text-sm font-medium text-slate-300">Nova Data e Hora</label>
+                            <input type="datetime-local" className="w-full p-2.5 bg-slate-700 border border-slate-600 rounded-lg text-white" value={dateTime} onChange={e => setDateTime(e.target.value)} required/>
+                        </div>
+                        <div className="pt-4 flex justify-end space-x-2">
+                            <button type="button" onClick={() => setIsRescheduling(false)} className="px-4 py-2 rounded-lg bg-slate-600 hover:bg-slate-500 text-white font-medium transition-colors">Cancelar</button>
+                            <button type="submit" disabled={loadingAction} className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors">{loadingAction ? '...' : 'Salvar'}</button>
+                        </div>
+                    </form>
+                ) : (
+                    <div className="space-y-3 text-slate-300">
+                        <p><strong>Status:</strong> <span className={`px-2 py-1 text-xs font-medium rounded-full ${event.status === 'Agendado' ? 'bg-blue-900/50 text-blue-300' : 'bg-green-900/50 text-green-300'}`}>{event.status}</span></p>
+                        <p><strong>Data:</strong> {moment(event.data_instalacao).format('DD/MM/YYYY')} às {event.horario}</p>
+                        <p><strong>Serviço:</strong> <span className={`px-2 py-1 text-xs font-medium rounded-full ${getServiceBadgeColor(event.tipo_servico)}`}>{event.tipo_servico}</span></p>
+                        <p><strong>Contato:</strong> {event.contato}</p>
+                        <p><strong>Endereço:</strong> {event.endereco}</p>
+                        <p><strong>Veículo:</strong> {`${event.modelo} ${event.cor || ''} ${event.ano || ''}`}</p>
+                        <p><strong>Placa:</strong> {event.placa}</p>
+                        <p><strong>Base/Bloqueio:</strong> {event.base} / {event.bloqueio}</p>
+                        <p><strong>Usuário/Senha:</strong> {event.usuario} / {event.senha || 'N/A'}</p>
+                        
+                        {sortedObservacoes.length > 0 && (
+                            <div className="pt-2">
+                                <h4 className="text-blue-400 font-semibold border-t border-slate-700 pt-3 flex items-center"><i className="bi bi-chat-left-text-fill mr-2"></i> Observações</h4>
+                                <div className="mt-2 space-y-2">
+                                    {sortedObservacoes.map(obs => (
+                                        <div key={obs.id} className={`p-3 rounded-lg text-sm ${obs.destaque ? 'bg-yellow-900/50 border-l-4 border-yellow-400' : 'bg-slate-700/50'}`}>
+                                            {obs.destaque && <p className="font-bold text-yellow-300 mb-1"><i className="bi bi-star-fill mr-2"></i>Destaque</p>}
+                                            <p className="text-slate-300">{obs.texto}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+            {!isRescheduling && (
+                <div className="p-4 bg-slate-800/50 border-t border-slate-700 flex justify-between items-center">
+                    <button onClick={handleCopy} className="px-3 py-2 rounded-lg bg-slate-600 hover:bg-slate-500 text-white text-sm" title="Copiar Dados"><i className="bi bi-whatsapp"></i></button>
+                    {event.status === 'Agendado' && (
+                        <div className="space-x-2">
+                            <button onClick={() => handleAction('return_to_pending')} disabled={loadingAction} className="px-3 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm">Pendente</button>
+                            <button onClick={() => setIsRescheduling(true)} disabled={loadingAction} className="px-3 py-2 rounded-lg bg-yellow-600 hover:bg-yellow-700 text-white text-sm">Reagendar</button>
+                            <button onClick={() => handleAction('complete')} disabled={loadingAction} className="px-3 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm">{loadingAction ? '...' : 'Concluir'}</button>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    </div>
+  );
+}
+
+// --- COMPONENTES AUXILIARES ---
+
+function CalendarDay({ day, hasEvent, isSelected, isToday, isCurrentMonth, onClick }: { day: moment.Moment, hasEvent: boolean, isSelected: boolean, isToday: boolean, isCurrentMonth: boolean, onClick: (date: moment.Moment) => void }) {
+    const dayClass = isSelected ? 'bg-blue-600 text-white' : isToday ? 'bg-slate-700' : 'hover:bg-slate-700/50';
+    const textClass = isCurrentMonth ? 'text-slate-200' : 'text-slate-600';
+
+    return (
+        <div 
+            onClick={() => onClick(day)} 
+            className={`flex items-center justify-center w-10 h-10 rounded-full cursor-pointer transition-colors ${dayClass}`}
+        >
+            <div className="relative w-full h-full flex items-center justify-center">
+              <span className={textClass}>{day.format('D')}</span>
+              {hasEvent && <div className={`absolute bottom-1.5 w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-blue-500'}`}></div>}
+            </div>
+        </div>
+    );
+}
+
+function DateNavigator({ currentDate, onDateChange, view, setView }: { currentDate: moment.Moment, onDateChange: (date: moment.Moment) => void, view: 'day' | 'week' | 'month', setView: (view: 'day' | 'week' | 'month') => void }) {
+  const handlePrev = () => onDateChange(moment(currentDate).subtract(1, view));
+  const handleNext = () => onDateChange(moment(currentDate).add(1, view));
+  const handleToday = () => onDateChange(moment());
+
+  const formatDateTitle = () => {
+    if (view === 'day') return currentDate.format('DD [de] MMMM [de] YYYY');
+    if (view === 'week') return `Semana de ${currentDate.startOf('week').format('DD/MM')}`;
+    return currentDate.format('MMMM [de] YYYY');
+  };
+  
+  const viewButtonClass = (buttonView: string) => 
+    `px-3 py-1.5 text-sm rounded-md font-medium transition-colors ${view === buttonView ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`;
+
+  return (
+    <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 mb-4 space-y-3">
+      <div className="flex justify-between items-center">
+        <button onClick={handlePrev} className="p-2 rounded-full hover:bg-slate-700"><i className="bi bi-chevron-left text-xl text-slate-400"></i></button>
+        <h3 className="font-semibold text-white text-lg text-center capitalize">{formatDateTitle()}</h3>
+        <button onClick={handleNext} className="p-2 rounded-full hover:bg-slate-700"><i className="bi bi-chevron-right text-xl text-slate-400"></i></button>
+      </div>
+      <div className="flex justify-center items-center gap-2">
+        <button onClick={handleToday} className="px-3 py-1.5 text-sm rounded-md font-medium transition-colors border border-slate-600 text-slate-300 hover:bg-slate-700">Hoje</button>
+        <div className="flex items-center gap-1 p-1 bg-slate-900/50 rounded-lg">
+           <button onClick={() => setView('day')} className={viewButtonClass('day')}>Dia</button>
+           <button onClick={() => setView('week')} className={viewButtonClass('week')}>Semana</button>
+           <button onClick={() => setView('month')} className={viewButtonClass('month')}>Mês</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const WeekView = ({ navDate, selectedDate, onDateSelect, daysWithEvents }: { navDate: moment.Moment, selectedDate: moment.Moment, onDateSelect: (date: moment.Moment) => void, daysWithEvents: Set<string> }) => {
+    const weekDays = Array.from({ length: 7 }, (_, i) => moment(navDate).startOf('week').add(i, 'days'));
+    return (
+        <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 mb-4 flex justify-around">
+            {weekDays.map(day => (
+                <div key={day.format('YYYY-MM-DD')} className="text-center space-y-1">
+                    <small className="text-slate-400 font-bold uppercase text-xs">{day.format('ddd')}</small>
+                    <CalendarDay day={day} hasEvent={daysWithEvents.has(day.format('YYYY-MM-DD'))} isSelected={day.isSame(selectedDate, 'day')} isToday={day.isSame(moment(), 'day')} isCurrentMonth={true} onClick={onDateSelect} />
+                </div>
+            ))}
+        </div>
+    );
+};
+
+const MonthView = ({ navDate, selectedDate, onDateSelect, daysWithEvents }: { navDate: moment.Moment, selectedDate: moment.Moment, onDateSelect: (date: moment.Moment) => void, daysWithEvents: Set<string> }) => {
+    const monthDays = [];
+    const start = moment(navDate).startOf('month').startOf('week');
+    const end = moment(navDate).endOf('month').endOf('week');
+    let day = start.clone();
+    while (day.isSameOrBefore(end)) {
+        monthDays.push(day.clone());
+        day.add(1, 'day');
+    }
+    const weekDayLabels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+    return (
+        <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 mb-4">
+            <div className="grid grid-cols-7 gap-2 text-center mb-2">
+                {weekDayLabels.map(label => <div key={label} className="font-bold text-slate-500 text-xs">{label}</div>)}
+            </div>
+            <div className="grid grid-cols-7 gap-1">
+                {monthDays.map(d => <CalendarDay key={d.format('YYYY-MM-DD')} day={d} hasEvent={daysWithEvents.has(d.format('YYYY-MM-DD'))} isSelected={d.isSame(selectedDate, 'day')} isToday={d.isSame(moment(), 'day')} isCurrentMonth={d.isSame(navDate, 'month')} onClick={onDateSelect} />)}
+            </div>
+        </div>
+    );
+};
+
+const EventList = ({ events, onEventClick, userRole }: { events: Installation[], onEventClick: (event: Installation) => void, userRole: string | null }) => {
+  const scheduled = useMemo(() => events.filter(e => e.status === 'Agendado').sort((a,b) => (a.horario || '').localeCompare(b.horario || '')), [events]);
+  const completed = useMemo(() => events.filter(e => e.status === 'Concluído').sort((a,b) => (a.horario || '').localeCompare(b.horario || '')), [events]);
+
+  if (events.length === 0) {
+    return <div className="text-center text-slate-500 py-10">Nenhuma ordem de serviço para este dia.</div>;
+  }
+  
+  const getServiceBadgeColor = (serviceType: string) => {
+    switch (serviceType) {
+        case 'Instalação': return 'bg-green-900/50 text-green-300';
+        case 'Manutenção': return 'bg-yellow-900/50 text-yellow-300';
+        case 'Remoção': return 'bg-red-900/50 text-red-300';
+        default: return 'bg-slate-700 text-slate-300';
+    }
+  };
+
+  const renderEventCard = (event: Installation, isCompleted: boolean) => {
+    const hasHighlight = event.observacoes?.some(o => o.destaque);
+    return (
+        <div key={event.id} onClick={() => onEventClick(event)} className={`p-4 rounded-lg shadow-md cursor-pointer transition-colors ${isCompleted ? 'bg-slate-800/60' : 'bg-slate-800 hover:bg-slate-700/50'}`}>
+            <div className="flex justify-between items-start">
+                <div className="flex-grow space-y-2">
+                    <h4 className={`font-bold flex items-center ${isCompleted ? 'text-slate-500 line-through' : 'text-white'}`}>
+                        {event.nome_completo}
+                        {hasHighlight && <span className="ml-2 text-yellow-400" title="Possui observação em destaque">⚠️</span>}
+                    </h4>
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${getServiceBadgeColor(event.tipo_servico)}`}>{event.tipo_servico}</span>
+                    {userRole === 'admin' && event.profiles && (
+                        <p className={`text-sm ${isCompleted ? 'text-slate-600 line-through' : 'text-slate-400'}`}><i className="bi bi-person-fill mr-2"></i>{event.profiles.full_name}</p>
+                    )}
+                    <p className={`text-sm ${isCompleted ? 'text-slate-600 line-through' : 'text-slate-400'}`}><i className="bi bi-geo-alt mr-2"></i>{event.endereco}</p>
+                </div>
+                <span className={`px-2 py-1 text-sm font-semibold rounded-full ${isCompleted ? 'bg-slate-700 text-slate-400' : 'bg-blue-600 text-white'}`}>{event.horario}</span>
+            </div>
+        </div>
+    );
   }
 
   return (
-    <Modal show={show} onHide={onClose} centered size="lg">
-      <Modal.Header closeButton>
-        <Modal.Title>{event.nome_completo}</Modal.Title>
-      </Modal.Header>
-      <Modal.Body>
-        {error && <Alert variant="danger">{error}</Alert>}
-        {copySuccessMessage && <Alert variant="info">{copySuccessMessage}</Alert>}
-        {isRescheduling ? (
-          <Form onSubmit={handleRescheduleSubmit}>
-            <h5>Reagendar Serviço</h5>
-            <FloatingLabel label="Nova Data e Hora" className="mb-3">
-              <Form.Control type="datetime-local" value={dateTime} onChange={e => setDateTime(e.target.value)} required />
-            </FloatingLabel>
-            <div className="d-flex justify-content-end">
-                <Button variant="secondary" onClick={() => setIsRescheduling(false)} className="me-2">Cancelar</Button>
-                <Button variant="primary" type="submit" disabled={loadingAction}>
-                  {loadingAction ? <Spinner as="span" size="sm" /> : 'Salvar'}
-                </Button>
-            </div>
-          </Form>
-        ) : (
-          <ListGroup variant="flush">
-            <ListGroup.Item><strong>Status: </strong><Badge bg={event.status === 'Agendado' ? 'primary' : 'success'}>{event.status}</Badge></ListGroup.Item>
-            <ListGroup.Item><strong>Data: </strong>{moment(event.data_instalacao).format('DD/MM/YYYY')} às {event.horario}</ListGroup.Item>
-            <ListGroup.Item><strong>Contato: </strong>{event.contato}</ListGroup.Item>
-            <ListGroup.Item><strong>Endereço: </strong>{event.endereco}</ListGroup.Item>
-            <ListGroup.Item><strong>Veículo: </strong>{`${event.modelo} ${event.cor || ''} ${event.ano || ''}`}</ListGroup.Item>
-            <ListGroup.Item><strong>Placa: </strong>{event.placa}</ListGroup.Item>
-            <ListGroup.Item><strong>Tipo de Serviço: </strong>{event.tipo_servico}</ListGroup.Item>
-            <ListGroup.Item><strong>Base: </strong>{event.base}</ListGroup.Item>
-            <ListGroup.Item><strong>Bloqueio: </strong>{event.bloqueio}</ListGroup.Item>
-            <ListGroup.Item><strong>Usuário: </strong>{event.usuario}</ListGroup.Item>
-            <ListGroup.Item><strong>Senha: </strong>{event.senha || 'Não definida'}</ListGroup.Item>
-            {event.observacao && <ListGroup.Item><strong>Observação: </strong>{event.observacao}</ListGroup.Item>}
-          </ListGroup>
-        )}
-      </Modal.Body>
-      {!isRescheduling && (
-        <Modal.Footer className="justify-content-between">
-            <div>
-              <Button variant="outline-secondary" size="sm" onClick={handleCopy} disabled={loadingAction}><i className="bi bi-clipboard"></i> Copiar Tudo</Button>
-            </div>
-            <div>
-              {event.status === 'Agendado' && (
-                <>
-                  <Button variant="danger" size="sm" className="me-2" onClick={() => handleAction('return_to_pending')} disabled={loadingAction}>Pendente</Button>
-                  <Button variant="warning" size="sm" className="me-2" onClick={() => setIsRescheduling(true)} disabled={loadingAction}>Reagendar</Button>
-                  <Button variant="success" size="sm" onClick={() => handleAction('complete')} disabled={loadingAction}>
-                    {loadingAction ? <Spinner as="span" size="sm" /> : 'Concluir'}
-                  </Button>
-                </>
-              )}
-            </div>
-        </Modal.Footer>
+    <div className="space-y-6">
+      {scheduled.length > 0 && (
+        <div>
+          <h3 className="text-sm font-bold uppercase text-slate-500 mb-2 pl-1">AGENDADAS</h3>
+          <div className="space-y-3">{scheduled.map(event => renderEventCard(event, false))}</div>
+        </div>
       )}
-    </Modal>
+      {completed.length > 0 && (
+        <div>
+          <h3 className="text-sm font-bold uppercase text-slate-500 mb-2 pl-1">FINALIZADAS</h3>
+          <div className="space-y-3">{completed.map(event => renderEventCard(event, true))}</div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -351,85 +358,62 @@ export function TechnicianAgenda() {
 
   const fetchInstallations = useCallback(async () => {
     setLoading(true);
-    setError(null);
     try {
       const { data: { user: currentUser } } = await supabase.auth.getUser();
-      if (!currentUser) {
-        throw new Error("Usuário não autenticado.");
-      }
+      if (!currentUser) throw new Error("Usuário não autenticado.");
       setUser(currentUser);
-      const userRole = currentUser.app_metadata?.role;
-
-      let query = supabase
-        .from('instalacoes')
-        .select('*, profiles:tecnico_id (full_name)')
-        .in('status', ['Agendado', 'Concluído']);
-
-      if (userRole === 'tecnico') {
-        query = query.eq('tecnico_id', currentUser.id);
-      }
-      // Se for admin, não adiciona filtro de técnico, buscando todas as OS.
       
-      const { data, error: queryError } = await query;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Sessão não encontrada.");
+      
+      // Chamada para a Netlify Function
+      const response = await fetch('/.netlify/functions/get-installations', {
+        headers: { 'Authorization': `Bearer ${session.access_token}` },
+      });
+      if (!response.ok) {
+          const errData = await response.json();
+          throw new Error(errData.message || 'Falha ao buscar dados da agenda.');
+      }
+      
+      const data: Installation[] = await response.json();
+      setAllEvents(data.filter(event => ['Agendado', 'Concluído'].includes(event.status)) || []);
 
-      if (queryError) throw queryError;
-      setAllEvents(data as Installation[] || []);
     } catch (err: any) {
       setError(err.message || 'Falha ao carregar agenda.');
     } finally {
       setLoading(false);
     }
   }, []);
-  
-  const handleSetView = (newView: 'day' | 'week' | 'month') => {
-    setNavDate(moment(selectedDate));
-    setView(newView);
-  }
-  
-  const handleSetNavDate = (date: moment.Moment) => {
-      setNavDate(date);
-      if(view === 'day'){
-          setSelectedDate(date);
-      }
-  }
-  
-  const handleDateSelect = (date: moment.Moment) => {
-      setSelectedDate(date);
-      if(view !== 'day'){
-        // opcional: mudar para a visualização de dia ao selecionar uma data
-        // setView('day');
-      }
-  }
 
-  useEffect(() => {
-    fetchInstallations();
-  }, [fetchInstallations]);
+  useEffect(() => { fetchInstallations(); }, [fetchInstallations]);
 
-  const daysWithEvents = useMemo(() => {
-    return new Set(allEvents.map(event => moment(event.data_instalacao).format('YYYY-MM-DD')));
-  }, [allEvents]);
-  
-  const filteredEvents = useMemo(() => {
-      return allEvents.filter(event => moment(event.data_instalacao).isSame(selectedDate, 'day'));
-  }, [allEvents, selectedDate]);
+  const daysWithEvents = useMemo(() => new Set(allEvents.map(event => moment(event.data_instalacao).format('YYYY-MM-DD'))), [allEvents]);
+  const filteredEvents = useMemo(() => allEvents.filter(event => moment(event.data_instalacao).isSame(selectedDate, 'day')), [allEvents, selectedDate]);
 
   const handleUpdate = async () => {
-    if(user) {
+    if (user) {
         setSelectedEvent(null);
         await fetchInstallations();
     }
   }
 
-  if (loading) return <div className="text-center p-5"><Spinner animation="border" /></div>;
-  if (error) return <Alert variant="danger">{error}</Alert>;
+  const handleDateNavigation = (newDate: moment.Moment) => {
+    setNavDate(newDate);
+    setSelectedDate(newDate);
+  };
+
+  if (loading) return <div className="text-center p-5"><div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mx-auto"></div></div>;
+  if (error) return <div className="p-4 text-sm text-red-400 bg-red-500/10 border border-red-500/30 rounded-lg">{error}</div>;
 
   return (
-    <div>
-      <h4 className="fw-bold mb-3">Minha Agenda</h4>
-      <DateNavigator currentDate={navDate} setCurrentDate={handleSetNavDate} view={view} setView={handleSetView} />
+    <div className="space-y-6">
+      <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-6 shadow-lg">
+        <h1 className="text-2xl font-bold text-white"><i className="bi bi-calendar-week mr-3"></i>Minha Agenda</h1>
+      </div>
 
-      {view === 'week' && <WeekView navDate={navDate} selectedDate={selectedDate} onDateSelect={handleDateSelect} daysWithEvents={daysWithEvents} />}
-      {view === 'month' && <MonthView navDate={navDate} selectedDate={selectedDate} onDateSelect={handleDateSelect} daysWithEvents={daysWithEvents} />}
+      <DateNavigator currentDate={navDate} onDateChange={handleDateNavigation} view={view} setView={setView} />
+      {view === 'week' && <WeekView navDate={navDate} selectedDate={selectedDate} onDateSelect={setSelectedDate} daysWithEvents={daysWithEvents} />}
+      {view === 'month' && <MonthView navDate={navDate} selectedDate={selectedDate} onDateSelect={setSelectedDate} daysWithEvents={daysWithEvents} />}
       
       <EventList events={filteredEvents} onEventClick={setSelectedEvent} userRole={user?.app_metadata?.role} />
       

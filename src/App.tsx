@@ -1,7 +1,6 @@
 // src/App.tsx
 import { useState, useEffect, type ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom';
-import { Container, Navbar, Nav, Button, Spinner } from 'react-bootstrap';
 import { InstallationForm } from './components/InstallationForm';
 import { Dashboard } from './components/Dashboard';
 import { TechnicianAgenda } from './components/TechnicianAgenda';
@@ -40,85 +39,111 @@ function useAuth() {
   }, []);
   return { session, user, userRole, loading };
 }
+
+function LoadingSpinner() {
+    return (
+        <div className="flex items-center justify-center h-screen w-screen">
+            <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500"></div>
+        </div>
+    );
+}
+
 function ProtectedRoute({ session, loading, children }: { session: Session | null, loading: boolean, children: ReactNode }) {
-  if (loading) return <div className="text-center p-5"><Spinner animation="border" /></div>;
+  if (loading) return <LoadingSpinner />;
   return session ? children : <Navigate to="/login" />;
 }
 function AdminProtectedRoute({ session, userRole, loading, children }: { session: Session | null, userRole: string | null, loading: boolean, children: ReactNode }) {
-  if (loading) return <div className="text-center p-5"><Spinner animation="border" /></div>;
+  if (loading) return <LoadingSpinner />;
   if (!session) return <Navigate to="/login" />;
   return userRole === 'admin' ? children : <Navigate to="/" />;
 }
 
 // --- NAVBAR SUPERIOR (PARA ADMIN E SEGURADORA) ---
-function AppNavbar({ session, userRole }: { session: Session | null, userRole: string | null }) {
+function AppHeader({ userRole }: { userRole: string | null }) {
     const handleLogout = async () => {
         await supabase.auth.signOut();
         window.location.href = '/login';
     };
+
+    const navLinkClasses = ({ isActive }: { isActive: boolean }) =>
+        `px-3 py-2 rounded-md text-sm font-medium transition-colors duration-300 ${
+        isActive
+            ? 'bg-slate-700 text-white'
+            : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+        }`;
+
     return (
-        <Navbar expand="lg" className="mb-4 shadow-sm">
-            <Container>
-                <Navbar.Brand as={NavLink} to={session ? "/" : "/login"} className="d-flex align-items-center">
-                    <img src="/logo-icon.png" height="40" className="d-inline-block align-top me-2" alt="Logo Autocontrol" />
-                    <div className="d-flex flex-column lh-1">
-                        <span className="fw-bold fs-6">AUTOCONTROL</span>
-                        <small className="text-muted" style={{ fontSize: '0.65rem' }}>Rastreamento Veicular</small>
+        <header className="bg-slate-900/70 backdrop-blur-md shadow-lg sticky top-0 z-50">
+            <nav className="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="flex items-center justify-between h-16">
+                    <div className="flex items-center">
+                        <NavLink to="/" className="flex-shrink-0 flex items-center space-x-2">
+                            <img src="/logo-icon.png" height="40" width="40" alt="Logo Autocontrol" />
+                            <span className="text-white font-bold text-xl">AUTOCONTROL</span>
+                        </NavLink>
                     </div>
-                </Navbar.Brand>
-                <Navbar.Toggle aria-controls="basic-navbar-nav" />
-                <Navbar.Collapse id="basic-navbar-nav">
-                    {session && (
-                        <Nav className="me-auto">
-                            <Nav.Link as={NavLink} to="/"><i className="bi bi-plus-circle me-1"></i> Cadastrar</Nav.Link>
-                            <Nav.Link as={NavLink} to="/consulta"><i className="bi bi-search me-1"></i> Consulta</Nav.Link>
-                            {userRole === 'admin' && (<>
-                                <Nav.Link as={NavLink} to="/painel"><i className="bi bi-clipboard-data me-1"></i> Painel</Nav.Link>
-                                <Nav.Link as={NavLink} to="/agenda"><i className="bi bi-calendar-week me-1"></i> Agenda</Nav.Link>
-                                <Nav.Link as={NavLink} to="/usuarios"><i className="bi bi-people-fill me-1"></i> Usuários</Nav.Link></>)}
-                        </Nav>
-                    )}
-                    <Nav className="ms-auto">
-                        {session && (<Button variant="outline-danger" onClick={handleLogout}><i className="bi bi-box-arrow-right me-2"></i>Sair</Button>)}
-                    </Nav>
-                </Navbar.Collapse>
-            </Container>
-        </Navbar>
+                    <div className="hidden md:block">
+                        <div className="ml-10 flex items-baseline space-x-4">
+                            <NavLink to="/" className={navLinkClasses}><i className="bi bi-plus-circle mr-2"></i>Cadastrar</NavLink>
+                            <NavLink to="/consulta" className={navLinkClasses}><i className="bi bi-search mr-2"></i>Consulta</NavLink>
+                            {userRole === 'admin' && (
+                                <>
+                                    <NavLink to="/painel" className={navLinkClasses}><i className="bi bi-clipboard-data mr-2"></i>Painel</NavLink>
+                                    <NavLink to="/agenda" className={navLinkClasses}><i className="bi bi-calendar-week mr-2"></i>Agenda</NavLink>
+                                    <NavLink to="/usuarios" className={navLinkClasses}><i className="bi bi-people-fill mr-2"></i>Usuários</NavLink>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                    <div className="hidden md:block">
+                        <button onClick={handleLogout} className="ml-4 px-3 py-2 rounded-md text-sm font-medium text-slate-300 hover:bg-red-500/20 hover:text-red-400 transition-colors duration-300">
+                            <i className="bi bi-box-arrow-right mr-2"></i>Sair
+                        </button>
+                    </div>
+                </div>
+            </nav>
+        </header>
     );
 }
 
 // --- BOTÃO DE TEMA ---
 function ThemeToggleButton({ theme, toggleTheme }: { theme: string, toggleTheme: () => void }) {
-  return (<Button variant="primary" onClick={toggleTheme} className="theme-toggle"><i className={`bi bi-${theme === 'light' ? 'moon-stars-fill' : 'sun-fill'}`}></i></Button>);
+  return (
+    <button onClick={toggleTheme} className="theme-toggle h-12 w-12 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg hover:bg-blue-500 transition-colors duration-300">
+        <i className={`bi bi-${theme === 'light' ? 'moon-stars-fill' : 'sun-fill'} text-xl`}></i>
+    </button>
+  );
 }
 
 // --- COMPONENTE PRINCIPAL APP ---
 function App() {
   const { session, userRole, loading } = useAuth();
-  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
+
   useEffect(() => {
-    document.documentElement.setAttribute('data-bs-theme', theme);
+    const root = window.document.documentElement;
+    const isDark = theme === 'dark';
+    root.classList.toggle('dark', isDark);
     localStorage.setItem('theme', theme);
   }, [theme]);
+  
   const toggleTheme = () => setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
 
   const renderLayout = () => {
-    if (loading) return <div className="text-center p-5"><Spinner animation="border" /></div>;
+    if (loading) return <LoadingSpinner />;
     if (!session) return (<Routes><Route path="*" element={<Login />} /><Route path="/update-password" element={<ResetPassword />} /></Routes>);
     
     // LAYOUT DO TÉCNICO
     if (userRole === 'tecnico') {
       return (
         <>
-          <main className="py-4 pb-5 mb-5">
-            <Container>
-              <Routes>
-                <Route path="/agenda" element={<TechnicianAgenda />} />
-                <Route path="/consulta" element={<InsuranceView />} />
-                <Route path="/tarefas" element={<TaskList />} />
-                <Route path="*" element={<Navigate to="/agenda" />} />
-              </Routes>
-            </Container>
+          <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 mb-20">
+            <Routes>
+              <Route path="/agenda" element={<TechnicianAgenda />} />
+              <Route path="/consulta" element={<InsuranceView />} />
+              <Route path="/tarefas" element={<TaskList />} />
+              <Route path="*" element={<Navigate to="/agenda" />} />
+            </Routes>
           </main>
           <BottomNavBar />
         </>
@@ -127,18 +152,16 @@ function App() {
     // LAYOUT PADRÃO (ADMIN E SEGURADORA)
     return (
       <>
-        <AppNavbar session={session} userRole={userRole} />
-        <main className="py-4">
-          <Container>
-             <Routes>
-              <Route path="/" element={<ProtectedRoute session={session} loading={loading}><InstallationForm /></ProtectedRoute>} />
-              <Route path="/consulta" element={<ProtectedRoute session={session} loading={loading}><InsuranceView /></ProtectedRoute>} />
-              <Route path="/painel" element={<AdminProtectedRoute session={session} userRole={userRole} loading={loading}><Dashboard /></AdminProtectedRoute>} />
-              <Route path="/usuarios" element={<AdminProtectedRoute session={session} userRole={userRole} loading={loading}><UserManagement /></AdminProtectedRoute>} />
-              <Route path="/agenda" element={<AdminProtectedRoute session={session} userRole={userRole} loading={loading}><TechnicianAgenda /></AdminProtectedRoute>} />
-              <Route path="*" element={<Navigate to="/" />} />
-            </Routes>
-          </Container>
+        <AppHeader userRole={userRole} />
+        <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+           <Routes>
+            <Route path="/" element={<ProtectedRoute session={session} loading={loading}><InstallationForm /></ProtectedRoute>} />
+            <Route path="/consulta" element={<ProtectedRoute session={session} loading={loading}><InsuranceView /></ProtectedRoute>} />
+            <Route path="/painel" element={<AdminProtectedRoute session={session} userRole={userRole} loading={loading}><Dashboard /></AdminProtectedRoute>} />
+            <Route path="/usuarios" element={<AdminProtectedRoute session={session} userRole={userRole} loading={loading}><UserManagement /></AdminProtectedRoute>} />
+            <Route path="/agenda" element={<AdminProtectedRoute session={session} userRole={userRole} loading={loading}><TechnicianAgenda /></AdminProtectedRoute>} />
+            <Route path="*" element={<Navigate to="/" />} />
+          </Routes>
         </main>
       </>
     );
@@ -146,7 +169,7 @@ function App() {
 
   return (
     <BrowserRouter>
-      <div className={`app-container theme-${theme}`}>
+      <div className="app-container min-h-screen">
         {renderLayout()}
         {session && <ThemeToggleButton theme={theme} toggleTheme={toggleTheme} />}
       </div>
