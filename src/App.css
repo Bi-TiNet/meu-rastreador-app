@@ -4,31 +4,92 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* TEMA ESCURO (DARK) */
+/* TEMA ESCURO (DARK) - Sem alterações */
 html.dark body {
   background-color: #0f172a; /* bg-slate-900 */
   color: #cbd5e1; /* text-slate-300 */
 }
 
-/* TEMA CLARO (LIGHT) - CORES APRIMORADAS */
+/* TEMA CLARO (LIGHT) - CLÁSSICO, LIMPO E DE ALTO CONTRASTE */
 html.light body {
-  background-color: #f8fafc; /* bg-slate-50 - Um branco um pouco mais suave */
-  color: #1e293b; /* text-slate-800 - Um preto mais suave */
+  background-color: #f8fafc; /* bg-slate-50: Fundo principal quase branco */
+  color: #1e293b; /* bg-slate-800: Texto principal escuro e legível */
 }
 
-/* Sobrescrevendo classes do Tailwind para o tema claro */
-html.light .bg-slate-900 { background-color: #ffffff !important; } /* Fundo principal branco puro */
-html.light .bg-slate-800\/50 { background-color: rgba(241, 245, 249, 0.7) !important; } /* bg-slate-100/70 */
-html.light .backdrop-blur-sm { --tw-backdrop-blur: blur(4px); backdrop-filter: var(--tw-backdrop-filter,); }
-html.light .border-slate-700 { border-color: #e2e8f0 !important; } /* border-slate-200 */
-html.light .text-white { color: #1e293b !important; } /* text-slate-800 */
-html.light .text-slate-300 { color: #475569 !important; } /* text-slate-600 */
-html.light .text-slate-400 { color: #64748b !important; } /* text-slate-500 */
-html.light .bg-slate-700\/50 { background-color: rgba(226, 232, 240, 0.5) !important; } /* bg-slate-200/50 */
-html.light .bg-slate-800 { background-color: #f1f5f9 !important; } /* bg-slate-100 */
+/* --- Sobrescrevendo classes GERAIS do Tailwind para o tema claro --- */
+
+/* Fundos de Cartões e Seções */
+html.light .bg-slate-900 { background-color: #ffffff !important; } /* Cartões brancos */
+html.light .bg-slate-800 { background-color: #f1f5f9 !important; } /* Fundo secundário (cabeçalhos de card) em cinza muito claro */
+html.light .bg-slate-800\/50 { background-color: rgba(241, 245, 249, 0.7) !important; }
+html.light .bg-slate-900\/50 { background-color: #f1f5f9 !important; }
 html.light .bg-slate-900\/70 { background-color: rgba(255, 255, 255, 0.7) !important; }
-html.light .hover\:bg-slate-800:hover { background-color: #f1f5f9 !important; } /* hover:bg-slate-100 */
+
+/* Bordas */
+html.light .border-slate-700 { border-color: #e2e8f0 !important; } /* border-slate-200 */
+
+/* Textos */
+html.light .text-white { color: #1e293b !important; } /* Cor principal de texto (era branco) */
+html.light .text-slate-300 { color: #475569 !important; } /* Cor de texto secundário, com ótimo contraste */
+html.light .text-slate-400 { color: #64748b !important; } /* Cor de texto de apoio */
+
+/* Inputs e Fundos de Componentes */
+html.light .bg-slate-700\/50 { background-color: #ffffff !important; }
+html.light .bg-slate-700 { background-color: #f1f5f9 !important; }
+html.light .border-slate-600 { border-color: #cbd5e1 !important; } /* border-slate-300 */
+html.light .text-white input,
+html.light .text-white select,
+html.light .text-white textarea {
+    color: #1e293b !important;
+}
+
+/* Hovers */
+html.light .hover\:bg-slate-800:hover { background-color: #e2e8f0 !important; } /* hover:bg-slate-200 */
+html.light .hover\:bg-slate-700\/50:hover { background-color: rgba(226, 232, 240, 0.5) !important; }
 html.light .hover\:text-white:hover { color: #0f172a !important; } /* hover:text-slate-900 */
 
-/* Ajuste de cor para o link ativo na navegação do tema claro */
-html.light .bg-slate-700 { background-color: #3b82f6 !important; } /* bg-blue-500 */
+/* Link ativo na navegação do tema claro */
+html.light .bg-slate-700.active, html.light .bg-slate-700[aria-current="page"] {
+    background-color: #3b82f6 !important; /* Azul para indicar seleção, é uma cor de ação e não de tema */
+    color: #ffffff !important;
+}
+html.light .bg-slate-700.active .text-slate-300, html.light .bg-slate-700[aria-current="page"] .text-slate-300 {
+    color: #f8fafc !important; /* Texto secundário do menu ativo fica mais claro */
+}
+
+
+/* --- BADGES DE STATUS E SERVIÇO (MELHOR CONTRASTE) --- */
+
+/* Green (Instalação, Concluído) */
+html.light .bg-green-900\/50 { background-color: #dcfce7 !important; } /* bg-green-100 */
+html.light .text-green-300 { color: #166534 !important; } /* text-green-800 */
+
+/* Yellow (Manutenção, A agendar) */
+html.light .bg-yellow-900\/50 { background-color: #fef9c3 !important; } /* bg-yellow-100 */
+html.light .text-yellow-300 { color: #854d0e !important; } /* text-yellow-800 */
+
+/* Red (Remoção) */
+html.light .bg-red-900\/50 { background-color: #fee2e2 !important; } /* bg-red-100 */
+html.light .text-red-300 { color: #991b1b !important; } /* text-red-800 */
+
+/* Blue (Agendado) */
+html.light .bg-blue-900\/50 { background-color: #dbeafe !important; } /* bg-blue-100 */
+html.light .text-blue-300 { color: #1e40af !important; } /* text-blue-800 */
+
+/* Purple (Base) */
+html.light .bg-purple-900\/50 { background-color: #f3e8ff !important; } /* bg-purple-100 */
+html.light .text-purple-300 { color: #581c87 !important; } /* text-purple-800 */
+
+/* Observação em Destaque */
+html.light .bg-yellow-900\/50.border-yellow-400,
+html.light .bg-yellow-900\/50 {
+    background-color: #fef9c3 !important;
+    border-color: #facc15 !important;
+}
+html.light .text-yellow-300 { color: #854d0e !important; }
+.form-validated :invalid {
+  border-color: #ef4444; /* red-500 */
+}
+.form-validated :invalid:focus {
+  --tw-ring-color: #ef4444; /* red-500 */
+}
