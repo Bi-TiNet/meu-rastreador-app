@@ -1,11 +1,8 @@
 // src/components/TechnicianAgenda.tsx
 import { useEffect, useState, useCallback, useMemo, type FormEvent } from 'react';
 import moment from 'moment';
-import 'moment/locale/pt-br'; // Importa a localização para português do Brasil
 import { supabase } from '../supabaseClient';
 import type { User } from '@supabase/supabase-js';
-
-moment.locale('pt-br'); // Define o Moment.js para usar português do Brasil globalmente
 
 // --- INTERFACES ---
 interface Observacao {
