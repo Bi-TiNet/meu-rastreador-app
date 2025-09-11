@@ -78,7 +78,7 @@ function AppHeader({ userRole, theme, toggleTheme }: { userRole: string | null, 
                 <div className="flex items-center justify-between h-16">
                     <div className="flex items-center">
                         <NavLink to="/" className="flex-shrink-0 flex items-center space-x-2">
-                            <img src="/logo-icon.png" height="40" width="40" alt="Logo Autocontrol" />
+                            <img src={theme === 'dark' ? "/logo-icon.png" : "/logo-icon-claro.png"} height="40" width="40" alt="Logo Autocontrol" />
                             <span className="text-white font-bold text-xl">AUTOCONTROL</span>
                         </NavLink>
                     </div>

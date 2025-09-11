@@ -277,7 +277,7 @@ export function InsuranceView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'danger'; text: string } | null>(null);
-  const [openAccordions, setOpenAccordions] = useState<string[]>(['pending', 'scheduled', 'completed']);
+  const [openAccordions, setOpenAccordions] = useState<string[]>([]);
 
   const selectedInstallation = useMemo(() => allInstallations.find(inst => inst.id === selectedId), [allInstallations, selectedId]);
 
@@ -390,4 +390,3 @@ export function InsuranceView() {
     </div>
   );
 }
-

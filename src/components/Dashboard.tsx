@@ -189,7 +189,7 @@ export function Dashboard() {
   const [historyTarget, setHistoryTarget] = useState<Installation | null>(null);
   const [message, setMessage] = useState<{type: 'success' | 'danger' | 'info', text: string} | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [openAccordions, setOpenAccordions] = useState<string[]>(['pending', 'scheduled']);
+  const [openAccordions, setOpenAccordions] = useState<string[]>([]);
 
   const fetchInstallations = useCallback(async () => {
     setLoading(true);
