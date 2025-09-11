@@ -1,5 +1,7 @@
 // Arquivo: src/components/InstallationForm.tsx
-import { useState, useRef, FC, FormEvent } from 'react';
+import { useState, useRef } from 'react';
+// CORREÇÃO: Importando tipos com 'import type'
+import type { FC, FormEvent } from 'react';
 import { supabase } from '../supabaseClient'; 
 
 interface InstallationFormProps {
@@ -11,7 +13,6 @@ interface Observacao {
   destaque: boolean;
 }
 
-// 1. CORREÇÃO: Defina um tipo para todo o formulário
 interface FormData {
   nome_completo: string;
   contato: string;
@@ -28,7 +29,6 @@ interface FormData {
   observacoes: Observacao[];
 }
 
-// 2. CORREÇÃO: Crie uma constante para o estado inicial
 const initialState: FormData = {
   nome_completo: '',
   contato: '',
@@ -46,13 +46,10 @@ const initialState: FormData = {
 };
 
 export const InstallationForm: FC<InstallationFormProps> = ({ onSuccess }) => {
-  // 3. CORREÇÃO: Use a constante para inicializar o estado
   const [formData, setFormData] = useState<FormData>(initialState);
-
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'danger'; text: string } | null>(null);
-  
   const formRef = useRef<HTMLFormElement>(null);
   const [formWasValidated, setFormWasValidated] = useState(false);
 
@@ -132,24 +129,20 @@ export const InstallationForm: FC<InstallationFormProps> = ({ onSuccess }) => {
     setMessage(null);
 
     try {
-      const dadosParaSalvar = {
-        ...formData,
-        observacoes: JSON.stringify(formData.observacoes.filter(obs => obs.texto.trim() !== ''))
-      };
+      const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error("Acesso negado.");
 
-      const { error } = await supabase
-        .from('installations')
-        .insert([dadosParaSalvar]);
+        const response = await fetch('/.netlify/functions/create-installation', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        });
 
-      if (error) {
-        throw new Error(error.message);
-      }
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.message || 'Falha ao criar solicitação.');
 
       setMessage({ type: 'success', text: 'Solicitação cadastrada com sucesso!' });
-      
-      // 4. CORREÇÃO: Use a constante para resetar o formulário
       setFormData(initialState); 
-      
       setCurrentStep(1);
       setFormWasValidated(false);
       if (onSuccess) onSuccess();
@@ -175,7 +168,6 @@ export const InstallationForm: FC<InstallationFormProps> = ({ onSuccess }) => {
   const inputClasses = "w-full p-2.5 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-blue-500 focus:border-blue-500";
   
   return (
-    // O restante do seu código JSX continua aqui, sem alterações...
     <div className="max-w-4xl mx-auto p-6 md:p-8 bg-slate-800/50 border border-slate-700 shadow-xl rounded-lg">
       <div className="text-center mb-10">
         <h2 className="text-2xl md:text-3xl font-bold text-white">Nova Solicitação de Instalação</h2>
@@ -212,7 +204,8 @@ export const InstallationForm: FC<InstallationFormProps> = ({ onSuccess }) => {
         </div>
       )}
       
-      <form ref={formRef} noValidate className={`space-y-8 ${formWasValidated ? 'form-validated' : ''}`}>
+      {/* CORREÇÃO: Adicionado o onSubmit={handleSubmit} */}
+      <form ref={formRef} noValidate className={`space-y-8 ${formWasValidated ? 'form-validated' : ''}`} onSubmit={handleSubmit}>
         {/* Etapa 1: Cliente */}
         <div className={`transition-opacity duration-500 ${currentStep === 1 ? 'block opacity-100' : 'hidden opacity-0'} form-step active`}>
             <h4 className="text-xl font-bold text-white mb-6">Dados do Cliente</h4>
