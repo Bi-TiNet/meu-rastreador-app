@@ -93,3 +93,7 @@ html.light .text-yellow-300 { color: #854d0e !important; }
 .form-validated :invalid:focus {
   --tw-ring-color: #ef4444; /* red-500 */
 }
+
+.modal-open {
+  overflow: hidden !important;
+}

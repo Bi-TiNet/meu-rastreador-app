@@ -36,7 +36,7 @@ interface Installation {
   };
 }
 
-// --- MODAL DE DETALHES (COM CORREÇÃO DE SCROLL) ---
+// --- MODAL DE DETALHES (COM CORREÇÃO FINAL DE SCROLL) ---
 function EventDetailsModal({ event, show, onClose, onUpdate }: { event: Installation | null, show: boolean, onClose: () => void, onUpdate: () => Promise<void> }) {
   const [isRescheduling, setIsRescheduling] = useState(false);
   const [dateTime, setDateTime] = useState('');
@@ -45,22 +45,28 @@ function EventDetailsModal({ event, show, onClose, onUpdate }: { event: Installa
   const [copySuccess, setCopySuccess] = useState('');
 
   // ==================================================================
-  // INÍCIO DA CORREÇÃO: Efeito para travar o scroll da página de fundo
+  // INÍCIO DA CORREÇÃO FINAL: Efeito para travar o scroll da página
   // ==================================================================
   useEffect(() => {
+    const rootEl = document.documentElement; // Pega o elemento <html>
+    const bodyEl = document.body; // Pega o elemento <body>
+
     if (show) {
-      // Quando o modal abre, impede a rolagem do body
-      document.body.style.overflow = 'hidden';
+      // Adiciona a classe que desabilita o scroll
+      rootEl.classList.add('modal-open');
+      bodyEl.classList.add('modal-open');
     } else {
-      // Quando o modal fecha, restaura a rolagem do body
-      document.body.style.overflow = 'unset';
+      // Remove a classe para reabilitar o scroll
+      rootEl.classList.remove('modal-open');
+      bodyEl.classList.remove('modal-open');
     }
     
-    // Função de limpeza: Garante que a rolagem seja restaurada se o componente for "desmontado" inesperadamente
+    // Função de limpeza para garantir que as classes sejam removidas
     return () => {
-      document.body.style.overflow = 'unset';
+      rootEl.classList.remove('modal-open');
+      bodyEl.classList.remove('modal-open');
     };
-  }, [show]); // Este efeito é executado sempre que a visibilidade (show) do modal muda
+  }, [show]); // O efeito é executado sempre que a visibilidade (show) do modal muda
   // ==================================================================
   // FIM DA CORREÇÃO
   // ==================================================================
