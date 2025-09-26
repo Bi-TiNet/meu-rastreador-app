@@ -1,4 +1,4 @@
-// src/App.tsx
+// Arquivo: src/App.tsx
 import { useState, useEffect, type ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom';
 import { InstallationForm } from './components/InstallationForm';
@@ -141,7 +141,8 @@ function App() {
     if (userRole === 'tecnico') {
       return (
         <>
-          <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 mb-20">
+          {/* CORREÇÃO APLICADA AQUI: Adicionado 'pb-24' para dar espaço para a navbar */}
+          <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24">
             <Routes>
               <Route path="/agenda" element={<TechnicianAgenda />} />
               <Route path="/consulta" element={<InsuranceView />} />

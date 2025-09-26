@@ -1,35 +1,35 @@
-// netlify/functions/get-installations.js
+// Arquivo: netlify/functions/get-installations.js
 const { createClient } = require('@supabase/supabase-js');
 
 exports.handler = async function(event) {
+  // Use a chave de administrador (service_key) para ter acesso total
   const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_KEY;
+  const supabaseAdminKey = process.env.SUPABASE_SERVICE_KEY; // Use a chave de serviço aqui
 
-  if (!supabaseUrl || !supabaseKey) {
+  if (!supabaseUrl || !supabaseAdminKey) {
     return { statusCode: 500, body: JSON.stringify({ message: "Configuração do servidor incompleta." }) };
   }
-  
-  const supabase = createClient(supabaseUrl, supabaseKey, {
-    global: {
-      headers: { Authorization: event.headers.authorization }
-    }
-  });
+
+  // Inicialize o cliente Supabase com a chave de administrador
+  const supabase = createClient(supabaseUrl, supabaseAdminKey);
 
   try {
     const token = event.headers.authorization?.split('Bearer ')[1];
     if (!token) {
       return { statusCode: 401, body: JSON.stringify({ message: "Acesso não autorizado." }) };
     }
-    
-    const { data: { user } } = await supabase.auth.getUser(token);
-    if (!user) {
+
+    // Use o token do usuário apenas para validar a sessão e obter suas informações
+    // Note que um novo cliente é criado aqui com a chave pública para essa finalidade específica.
+    const { data: { user }, error: userError } = await createClient(supabaseUrl, process.env.SUPABASE_KEY).auth.getUser(token);
+    if (userError || !user) {
       return { statusCode: 401, body: JSON.stringify({ message: "Token inválido." }) };
     }
 
     const userRole = user.app_metadata?.role;
     const userEmail = user.email;
 
-    // Inicia a query base para buscar as instalações e suas relações
+    // A query agora é feita pelo cliente com privilégios de administrador
     let query = supabase
       .from('instalacoes')
       .select(`
@@ -39,28 +39,19 @@ exports.handler = async function(event) {
         profiles:tecnico_id (full_name)
       `);
 
-    // --- LÓGICA DE FILTRO DE ACORDO COM O PERFIL DO USUÁRIO ---
-
-    // 1. Se for TÉCNICO, vê apenas os serviços atribuídos a ele.
+    // A lógica de filtro baseada no perfil do usuário permanece a mesma
     if (userRole === 'tecnico') {
       query = query.eq('tecnico_id', user.id);
-    } 
-    // 2. Se for SEGURADORA, aplica a lógica específica.
-    else if (userRole === 'seguradora') {
-      // O usuário especial "Atena" vê todos os cadastros da base "Atena"
+    } else if (userRole === 'seguradora') {
       if (userEmail && userEmail.toLowerCase().includes('atena')) {
         query = query.eq('base', 'Atena');
       } else {
-        // Outras seguradoras veem apenas o que elas mesmas criaram
         query = query.eq('created_by', user.id);
       }
     }
-    // 3. Se for ADMIN, nenhum filtro é aplicado, e ele vê tudo.
 
-    // Ordena os resultados pela data de criação
     query = query.order('created_at', { ascending: false });
     
-    // Executa a query
     let { data, error } = await query;
 
     if (error) throw error;
@@ -78,4 +69,3 @@ exports.handler = async function(event) {
     };
   }
 };
-
