@@ -13,31 +13,32 @@ import { BottomNavBar } from './components/BottomNavBar';
 import { supabase } from './supabaseClient';
 import type { Session, User } from '@supabase/supabase-js';
 
-// --- HOOKS E COMPONENTES DE PROTEÇÃO DE ROTA ---
+// --- HOOKS E COMPONENTES AUXILIARES ---
 function useAuth() {
   const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  
   useEffect(() => {
     const getSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
-      setUser(session?.user ?? null);
       setUserRole(session?.user?.app_metadata?.role || null);
       setLoading(false);
     };
     getSession();
+
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      setUser(session?.user ?? null);
       setUserRole(session?.user?.app_metadata?.role || null);
     });
+
     return () => {
       authListener.subscription.unsubscribe();
     };
   }, []);
-  return { session, user, userRole, loading };
+
+  return { session, userRole, loading };
 }
 
 function LoadingSpinner() {
@@ -48,17 +49,7 @@ function LoadingSpinner() {
     );
 }
 
-function ProtectedRoute({ session, loading, children }: { session: Session | null, loading: boolean, children: ReactNode }) {
-  if (loading) return <LoadingSpinner />;
-  return session ? children : <Navigate to="/login" />;
-}
-function AdminProtectedRoute({ session, userRole, loading, children }: { session: Session | null, userRole: string | null, loading: boolean, children: ReactNode }) {
-  if (loading) return <LoadingSpinner />;
-  if (!session) return <Navigate to="/login" />;
-  return userRole === 'admin' ? children : <Navigate to="/" />;
-}
-
-// --- NAVBAR SUPERIOR (PARA ADMIN E SEGURADORA) ---
+// --- NAVBAR SUPERIOR ---
 function AppHeader({ userRole, theme, toggleTheme }: { userRole: string | null, theme: string, toggleTheme: () => void }) {
     const handleLogout = async () => {
         await supabase.auth.signOut();
@@ -72,7 +63,6 @@ function AppHeader({ userRole, theme, toggleTheme }: { userRole: string | null, 
             : 'text-slate-300 hover:bg-slate-800 hover:text-white'
         }`;
     
-    // Links para o perfil de Seguradora
     const insuranceLinks = (
       <>
         <NavLink to="/" className={navLinkClasses}><i className="bi bi-plus-circle mr-2"></i>Cadastrar</NavLink>
@@ -80,7 +70,6 @@ function AppHeader({ userRole, theme, toggleTheme }: { userRole: string | null, 
       </>
     );
 
-    // Links para o perfil de Administrador
     const adminLinks = (
       <>
         <NavLink to="/painel" className={navLinkClasses}><i className="bi bi-clipboard-data mr-2"></i>Painel</NavLink>
@@ -90,8 +79,6 @@ function AppHeader({ userRole, theme, toggleTheme }: { userRole: string | null, 
         <NavLink to="/consulta" className={navLinkClasses}><i className="bi bi-search mr-2"></i>Consulta</NavLink>
       </>
     );
-    
-    // O perfil de técnico não usa o AppHeader, então não precisamos de links para ele aqui.
 
     return (
         <header className="bg-slate-900/70 backdrop-blur-md shadow-lg sticky top-0 z-50">
@@ -103,7 +90,6 @@ function AppHeader({ userRole, theme, toggleTheme }: { userRole: string | null, 
                             <span className="text-white font-bold text-xl">AUTOCONTROL</span>
                         </NavLink>
                     </div>
-                    {/* Links de navegação aparecem apenas em telas médias ou maiores */}
                     <div className="hidden md:block">
                         <div className="ml-10 flex items-baseline space-x-4">
                             {userRole === 'admin' ? adminLinks : insuranceLinks}
@@ -123,10 +109,9 @@ function AppHeader({ userRole, theme, toggleTheme }: { userRole: string | null, 
     );
 }
 
-
 // --- LAYOUT AUTENTICADO ---
 function AuthenticatedLayout() {
-  const { session, userRole, loading, user } = useAuth();
+  const { userRole } = useAuth();
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
 
   useEffect(() => {
@@ -148,7 +133,6 @@ function AuthenticatedLayout() {
     window.location.href = '/login';
   };
 
-  // Define as rotas para cada perfil de usuário
   const getRoutesForRole = (role: string | null) => {
     switch(role) {
       case 'admin':
@@ -185,20 +169,14 @@ function AuthenticatedLayout() {
 
   return (
     <>
-      {/* O Header só não é exibido para técnicos, que usam a BottomNavBar */}
       {userRole !== 'tecnico' && <AppHeader userRole={userRole} theme={theme} toggleTheme={toggleTheme} />}
-
-      {/* Adiciona padding na parte inferior para a barra não cobrir o conteúdo */}
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24 md:pb-8">
         {getRoutesForRole(userRole)}
       </main>
-
-      {/* A BottomNavBar é exibida para todos os perfis em telas pequenas */}
       <BottomNavBar theme={theme} toggleTheme={toggleTheme} handleLogout={handleLogout} userRole={userRole} />
     </>
   );
 }
-
 
 // --- COMPONENTE PRINCIPAL APP ---
 function App() {
