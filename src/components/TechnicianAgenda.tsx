@@ -36,7 +36,7 @@ interface Installation {
   };
 }
 
-// --- MODAL DE DETALHES ---
+// --- MODAL DE DETALHES (VERSÃO REFINADA) ---
 function EventDetailsModal({ event, show, onClose, onUpdate }: { event: Installation | null, show: boolean, onClose: () => void, onUpdate: () => Promise<void> }) {
   const [isRescheduling, setIsRescheduling] = useState(false);
   const [dateTime, setDateTime] = useState('');
@@ -48,6 +48,7 @@ function EventDetailsModal({ event, show, onClose, onUpdate }: { event: Installa
     if (event) {
       const initialDateTime = event.data_instalacao && event.horario ? moment(`${event.data_instalacao}T${event.horario}`).format('YYYY-MM-DDTHH:mm') : '';
       setDateTime(initialDateTime);
+      // Reseta os estados ao abrir um novo evento
       setIsRescheduling(false);
       setError('');
       setCopySuccess('');
@@ -56,6 +57,7 @@ function EventDetailsModal({ event, show, onClose, onUpdate }: { event: Installa
 
   if (!show || !event) return null;
 
+  // Ordena as observações para que as destacadas apareçam primeiro
   const sortedObservacoes = [...(event.observacoes || [])].sort((a,b) => (b.destaque ? 1 : -1) - (a.destaque ? 1 : -1) || new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   const getServiceBadgeColor = (serviceType: string) => {
@@ -95,26 +97,14 @@ function EventDetailsModal({ event, show, onClose, onUpdate }: { event: Installa
 
   const handleCopy = () => {
     setCopySuccess('');
-    const baseString = event.base === 'Atena' 
-        ? '*BASE* Atena (X)   Base Autocontrol ( )' 
-        : '*BASE* Atena ( )   Base Autocontrol (X)';
-    const bloqueioString = event.bloqueio === 'Sim' 
-        ? '*Bloqueio* sim (X)   nao ( )' 
-        : '*Bloqueio* sim ( )   nao (X)';
+    const baseString = event.base === 'Atena' ? '*BASE* Atena (X)   Base Autocontrol ( )' : '*BASE* Atena ( )   Base Autocontrol (X)';
+    const bloqueioString = event.bloqueio === 'Sim' ? '*Bloqueio* sim (X)   nao ( )' : '*Bloqueio* sim ( )   nao (X)';
 
     const textToCopy = [
-        `*Veículo* ${event.modelo}`,
-        `*Modelo:* ${event.modelo}`,
-        `*Ano Fabricação:* ${event.ano || 'N/A'}`,
-        `*Placa:* ${event.placa}`,
-        `*Cor:* ${event.cor || 'N/A'}`,
-        `*Nome:* ${event.nome_completo}`,
-        `*Telefone:* ${event.contato}`,
-        `*Endereço:* ${event.endereco}`,
-        `*Usuário:* ${event.usuario || 'N/A'}`,
-        `*Senha:* ${event.senha || 'N/A'}`,
-        baseString,
-        bloqueioString
+        `*Veículo* ${event.modelo}`, `*Modelo:* ${event.modelo}`, `*Ano Fabricação:* ${event.ano || 'N/A'}`,
+        `*Placa:* ${event.placa}`, `*Cor:* ${event.cor || 'N/A'}`, `*Nome:* ${event.nome_completo}`,
+        `*Telefone:* ${event.contato}`, `*Endereço:* ${event.endereco}`, `*Usuário:* ${event.usuario || 'N/A'}`,
+        `*Senha:* ${event.senha || 'N/A'}`, baseString, bloqueioString
     ].join('\n');
 
     navigator.clipboard.writeText(textToCopy).then(() => {
@@ -130,15 +120,22 @@ function EventDetailsModal({ event, show, onClose, onUpdate }: { event: Installa
   };
 
   return (
+    // Fundo do Modal
     <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 p-4">
-        <div className="bg-slate-800 rounded-lg shadow-xl w-full max-w-2xl border border-slate-700">
-            <div className="p-4 border-b border-slate-700 flex justify-between items-center">
+        {/* Container do Modal com altura máxima */}
+        <div className="bg-slate-800 rounded-lg shadow-xl w-full max-w-2xl border border-slate-700 flex flex-col max-h-[90vh]">
+            
+            {/* 1. CABEÇALHO (Não rola) */}
+            <div className="p-4 border-b border-slate-700 flex justify-between items-center flex-shrink-0">
                 <h3 className="text-lg font-medium text-white">{event.nome_completo}</h3>
                 <button onClick={onClose} className="text-slate-400 hover:text-white text-2xl">&times;</button>
             </div>
-            <div className="p-6 max-h-[70vh] overflow-y-auto">
+
+            {/* 2. CORPO (Área de Rolagem) */}
+            <div className="p-6 overflow-y-auto">
                 {error && <div className="p-3 mb-4 text-sm rounded-lg bg-red-800/50 text-red-300 border border-red-700">{error}</div>}
                 {copySuccess && <div className="p-3 mb-4 text-sm rounded-lg bg-blue-800/50 text-blue-300 border border-blue-700">{copySuccess}</div>}
+                
                 {isRescheduling ? (
                     <form onSubmit={handleRescheduleSubmit}>
                         <h4 className="text-white font-semibold mb-4">Reagendar Serviço</h4>
@@ -153,6 +150,7 @@ function EventDetailsModal({ event, show, onClose, onUpdate }: { event: Installa
                     </form>
                 ) : (
                     <div className="space-y-3 text-slate-300">
+                        {/* Detalhes do evento aqui... */}
                         <p><strong>Status:</strong> <span className={`px-2 py-1 text-xs font-medium rounded-full ${event.status === 'Agendado' ? 'bg-blue-900/50 text-blue-300' : 'bg-green-900/50 text-green-300'}`}>{event.status}</span></p>
                         <p><strong>Data:</strong> {moment(event.data_instalacao).format('DD/MM/YYYY')} às {event.horario}</p>
                         <p><strong>Serviço:</strong> <span className={`px-2 py-1 text-xs font-medium rounded-full ${getServiceBadgeColor(event.tipo_servico)}`}>{event.tipo_servico}</span></p>
@@ -179,11 +177,13 @@ function EventDetailsModal({ event, show, onClose, onUpdate }: { event: Installa
                     </div>
                 )}
             </div>
+
+            {/* 3. RODAPÉ (Não rola) */}
             {!isRescheduling && (
-                <div className="p-4 bg-slate-800/50 border-t border-slate-700 flex justify-between items-center">
+                <div className="p-4 bg-slate-800/50 border-t border-slate-700 flex flex-wrap justify-between items-center gap-2 flex-shrink-0">
                     <button onClick={handleCopy} className="px-3 py-2 rounded-lg bg-slate-600 hover:bg-slate-500 text-white text-sm" title="Copiar Dados"><i className="bi bi-whatsapp"></i></button>
                     {event.status === 'Agendado' && (
-                        <div className="space-x-2">
+                        <div className="flex items-center space-x-2 flex-wrap gap-2">
                             <button onClick={() => handleAction('return_to_pending')} disabled={loadingAction} className="px-3 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm">Pendente</button>
                             <button onClick={() => setIsRescheduling(true)} disabled={loadingAction} className="px-3 py-2 rounded-lg bg-yellow-600 hover:bg-yellow-700 text-white text-sm">Reagendar</button>
                             <button onClick={() => handleAction('complete')} disabled={loadingAction} className="px-3 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm">{loadingAction ? '...' : 'Concluir'}</button>
