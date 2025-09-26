@@ -11,7 +11,7 @@ import { UserManagement } from './components/UserManagement';
 import { TaskList } from './components/TaskList';
 import { BottomNavBar } from './components/BottomNavBar';
 import { supabase } from './supabaseClient';
-import type { Session, User } from '@supabase/supabase-js';
+import type { Session } from '@supabase/supabase-js';
 
 // --- HOOKS E COMPONENTES AUXILIARES ---
 function useAuth() {

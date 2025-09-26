@@ -15,10 +15,6 @@ export default defineConfig({
         theme_color: '#ffffff',
         background_color: '#ffffff',
         display: 'standalone',
-        // --- PROPRIEDADES ADICIONADAS PARA MAIOR COMPATIBILIDADE ---
-        scope: '/',
-        start_url: '/',
-        // --- FIM DA ADIÇÃO ---
         icons: [
           {
             src: 'logo-icon-192.png',
