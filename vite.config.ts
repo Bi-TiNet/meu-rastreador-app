@@ -2,8 +2,15 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import tailwindcss from 'tailwindcss' // Importa o TailwindCSS
 
 export default defineConfig({
+  // Adiciona a configuração de CSS diretamente aqui
+  css: {
+    postcss: {
+      plugins: [tailwindcss()],
+    },
+  },
   plugins: [
     react(),
     VitePWA({
