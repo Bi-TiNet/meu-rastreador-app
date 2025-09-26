@@ -36,7 +36,7 @@ interface Installation {
   };
 }
 
-// --- MODAL DE DETALHES (COM CORREÇÃO DE BOTÕES) ---
+// --- MODAL DE DETALHES (VERSÃO FINAL) ---
 function EventDetailsModal({ event, show, onClose, onUpdate }: { event: Installation | null, show: boolean, onClose: () => void, onUpdate: () => Promise<void> }) {
   const [isRescheduling, setIsRescheduling] = useState(false);
   const [dateTime, setDateTime] = useState('');
@@ -44,6 +44,7 @@ function EventDetailsModal({ event, show, onClose, onUpdate }: { event: Installa
   const [error, setError] = useState('');
   const [copySuccess, setCopySuccess] = useState('');
 
+  // Efeito para travar o scroll da página de fundo quando o modal está aberto
   useEffect(() => {
     const rootEl = document.documentElement;
     const bodyEl = document.body;
@@ -137,7 +138,8 @@ function EventDetailsModal({ event, show, onClose, onUpdate }: { event: Installa
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 p-4">
-        <div className="bg-slate-800 rounded-lg shadow-xl w-full max-w-2xl border border-slate-700 flex flex-col max-h-[90vh]">
+        {/* AQUI ESTÁ A MUDANÇA: max-h-[85vh] para dar uma margem visual inferior/superior */}
+        <div className="bg-slate-800 rounded-lg shadow-xl w-full max-w-2xl border border-slate-700 flex flex-col max-h-[85vh]">
             <div className="p-4 border-b border-slate-700 flex justify-between items-center flex-shrink-0">
                 <h3 className="text-lg font-medium text-white">{event.nome_completo}</h3>
                 <button onClick={onClose} className="text-slate-400 hover:text-white text-2xl">&times;</button>
@@ -185,15 +187,11 @@ function EventDetailsModal({ event, show, onClose, onUpdate }: { event: Installa
                     </div>
                 )}
             </div>
-             {/* ================================================================== */}
-             {/* INÍCIO DA CORREÇÃO DO RODAPÉ DOS BOTÕES                        */}
-             {/* ================================================================== */}
             {!isRescheduling && (
                 <div className="p-3 bg-slate-800/50 border-t border-slate-700 flex justify-between items-center gap-2 flex-shrink-0">
                     <button onClick={handleCopy} className="px-3 py-2 rounded-lg bg-slate-600 hover:bg-slate-500 text-white" title="Copiar Dados">
                         <i className="bi bi-whatsapp text-lg"></i>
                     </button>
-                    
                     {event.status === 'Agendado' && (
                         <div className="flex items-center justify-end flex-nowrap gap-2">
                             <button onClick={() => handleAction('return_to_pending')} disabled={loadingAction} className="px-3 py-2 rounded-md bg-red-600 hover:bg-red-700 text-white text-xs font-medium transition-colors whitespace-nowrap">
@@ -209,9 +207,6 @@ function EventDetailsModal({ event, show, onClose, onUpdate }: { event: Installa
                     )}
                 </div>
             )}
-            {/* ================================================================== */}
-            {/* FIM DA CORREÇÃO DO RODAPÉ                                       */}
-            {/* ================================================================== */}
         </div>
     </div>
   );
