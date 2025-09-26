@@ -11,7 +11,6 @@ interface History {
   realizado_por: string;
 }
 
-// NOVA INTERFACE
 interface Observacao {
     id: number;
     texto: string;
@@ -34,7 +33,6 @@ interface Installation {
   horario?: string;
   historico: History[];
   tipo_servico: string;
-  // CAMPO ATUALIZADO
   observacoes: Observacao[]; 
   usuario: string;
   senha?: string;
@@ -285,12 +283,10 @@ export function Dashboard() {
                 </thead>
                 <tbody>
                     {installationsList.map((inst) => {
-                        // VERIFICA SE EXISTE OBSERVAÇÃO EM DESTAQUE
                         const hasHighlight = inst.observacoes?.some(o => o.destaque);
                         return (
                             <tr key={inst.id} className="border-b border-slate-700 hover:bg-slate-800/50">
                                 <td className="px-6 py-4 text-white font-medium">
-                                    {/* ADICIONA O ÍCONE DE ALERTA */}
                                     <div className="flex items-center">
                                         <span>{inst.nome_completo}</span>
                                         {hasHighlight && <span className="ml-2 text-yellow-400" title="Possui observação em destaque">⚠️</span>}
@@ -373,13 +369,12 @@ export function Dashboard() {
     <div className="space-y-6">
       <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-6 shadow-lg">
         <h1 className="text-2xl font-bold text-white mb-4"><i className="bi bi-clipboard-data mr-3"></i>Painel de Agendamentos</h1>
+        {/* CORREÇÃO DO ÍCONE DE BUSCA APLICADA AQUI */}
         <div className="relative">
-            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                <i className="bi bi-search text-slate-400"></i>
-            </div>
+            <i className="bi bi-search text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
             <input 
                 type="text" 
-                className="w-full p-2 pl-10 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-blue-500 focus:border-blue-500"
+                className="w-full p-2.5 pl-10 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Buscar por cliente, placa ou modelo..."
                 value={searchTerm} 
                 onChange={(e) => setSearchTerm(e.target.value)} 

@@ -377,7 +377,17 @@ export function InsuranceView() {
       <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-6 shadow-lg">
         <h1 className="text-2xl font-bold text-white mb-4"><i className="bi bi-search mr-3"></i>Consulta de Solicitações</h1>
         {message && <div className={`p-4 mb-4 text-sm rounded-lg ${message.type === 'success' ? 'bg-green-800/50 text-green-300 border border-green-700' : 'bg-red-800/50 text-red-300 border border-red-700'}`} role="alert">{message.text}</div>}
-        <div className="relative"><div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none"><i className="bi bi-search text-slate-400"></i></div><input type="text" className="w-full p-2 pl-10 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-blue-500 focus:border-blue-500" placeholder="Buscar por nome ou placa..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></div>
+        {/* CORREÇÃO DO ÍCONE DE BUSCA APLICADA AQUI */}
+        <div className="relative">
+            <i className="bi bi-search text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+            <input 
+                type="text" 
+                className="w-full p-2.5 pl-10 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Buscar por nome ou placa..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)} 
+            />
+        </div>
       </div>
       <div>
           <AccordionItem isOpen={openAccordions.includes('pending')} onToggle={() => toggleAccordion('pending')} title={<><i className="bi bi-clock-history mr-2"></i>Pendentes ({pending.length})</>}>{renderInstallationsList(pending)}</AccordionItem>
@@ -389,4 +399,5 @@ export function InsuranceView() {
       {historyTarget && <HistoryModal isOpen={!!historyTarget} onClose={() => setHistoryTarget(null)} installation={historyTarget} />}
     </div>
   );
+}
 }

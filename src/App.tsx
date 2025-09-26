@@ -71,6 +71,27 @@ function AppHeader({ userRole, theme, toggleTheme }: { userRole: string | null, 
             ? 'bg-slate-700 text-white'
             : 'text-slate-300 hover:bg-slate-800 hover:text-white'
         }`;
+    
+    // Links para o perfil de Seguradora
+    const insuranceLinks = (
+      <>
+        <NavLink to="/" className={navLinkClasses}><i className="bi bi-plus-circle mr-2"></i>Cadastrar</NavLink>
+        <NavLink to="/consulta" className={navLinkClasses}><i className="bi bi-search mr-2"></i>Consulta</NavLink>
+      </>
+    );
+
+    // Links para o perfil de Administrador
+    const adminLinks = (
+      <>
+        <NavLink to="/painel" className={navLinkClasses}><i className="bi bi-clipboard-data mr-2"></i>Painel</NavLink>
+        <NavLink to="/agenda" className={navLinkClasses}><i className="bi bi-calendar-week mr-2"></i>Agenda</NavLink>
+        <NavLink to="/usuarios" className={navLinkClasses}><i className="bi bi-people-fill mr-2"></i>Usuários</NavLink>
+        <NavLink to="/" className={navLinkClasses}><i className="bi bi-plus-circle mr-2"></i>Cadastrar</NavLink>
+        <NavLink to="/consulta" className={navLinkClasses}><i className="bi bi-search mr-2"></i>Consulta</NavLink>
+      </>
+    );
+    
+    // O perfil de técnico não usa o AppHeader, então não precisamos de links para ele aqui.
 
     return (
         <header className="bg-slate-900/70 backdrop-blur-md shadow-lg sticky top-0 z-50">
@@ -82,17 +103,10 @@ function AppHeader({ userRole, theme, toggleTheme }: { userRole: string | null, 
                             <span className="text-white font-bold text-xl">AUTOCONTROL</span>
                         </NavLink>
                     </div>
+                    {/* Links de navegação aparecem apenas em telas médias ou maiores */}
                     <div className="hidden md:block">
                         <div className="ml-10 flex items-baseline space-x-4">
-                            <NavLink to="/" className={navLinkClasses}><i className="bi bi-plus-circle mr-2"></i>Cadastrar</NavLink>
-                            <NavLink to="/consulta" className={navLinkClasses}><i className="bi bi-search mr-2"></i>Consulta</NavLink>
-                            {userRole === 'admin' && (
-                                <>
-                                    <NavLink to="/painel" className={navLinkClasses}><i className="bi bi-clipboard-data mr-2"></i>Painel</NavLink>
-                                    <NavLink to="/agenda" className={navLinkClasses}><i className="bi bi-calendar-week mr-2"></i>Agenda</NavLink>
-                                    <NavLink to="/usuarios" className={navLinkClasses}><i className="bi bi-people-fill mr-2"></i>Usuários</NavLink>
-                                </>
-                            )}
+                            {userRole === 'admin' ? adminLinks : insuranceLinks}
                         </div>
                     </div>
                     <div className="hidden md:block">
@@ -109,9 +123,10 @@ function AppHeader({ userRole, theme, toggleTheme }: { userRole: string | null, 
     );
 }
 
-// --- COMPONENTE PRINCIPAL APP ---
-function App() {
-  const { session, userRole, loading } = useAuth();
+
+// --- LAYOUT AUTENTICADO ---
+function AuthenticatedLayout() {
+  const { session, userRole, loading, user } = useAuth();
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
 
   useEffect(() => {
@@ -125,59 +140,92 @@ function App() {
     }
     localStorage.setItem('theme', theme);
   }, [theme]);
-  
+
   const toggleTheme = () => setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     window.location.href = '/login';
   };
-  
-  const renderLayout = () => {
-    if (loading) return <LoadingSpinner />;
-    if (!session) return (<Routes><Route path="*" element={<Login />} /><Route path="/update-password" element={<ResetPassword />} /></Routes>);
-    
-    // LAYOUT DO TÉCNICO
-    if (userRole === 'tecnico') {
-      return (
-        <>
-          {/* CORREÇÃO APLICADA AQUI: Adicionado 'pb-24' para dar espaço para a navbar */}
-          <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24">
-            <Routes>
-              <Route path="/agenda" element={<TechnicianAgenda />} />
-              <Route path="/consulta" element={<InsuranceView />} />
-              <Route path="/tarefas" element={<TaskList />} />
-              <Route path="*" element={<Navigate to="/agenda" />} />
-            </Routes>
-          </main>
-          <BottomNavBar theme={theme} toggleTheme={toggleTheme} handleLogout={handleLogout} />
-        </>
-      );
-    }
-    // LAYOUT PADRÃO (ADMIN E SEGURADORA)
-    return (
-      <>
-        <AppHeader userRole={userRole} theme={theme} toggleTheme={toggleTheme} />
-        <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-           <Routes>
-            <Route path="/" element={<ProtectedRoute session={session} loading={loading}><InstallationForm /></ProtectedRoute>} />
-            <Route path="/consulta" element={<ProtectedRoute session={session} loading={loading}><InsuranceView /></ProtectedRoute>} />
-            <Route path="/painel" element={<AdminProtectedRoute session={session} userRole={userRole} loading={loading}><Dashboard /></AdminProtectedRoute>} />
-            <Route path="/usuarios" element={<AdminProtectedRoute session={session} userRole={userRole} loading={loading}><UserManagement /></AdminProtectedRoute>} />
-            <Route path="/agenda" element={<AdminProtectedRoute session={session} userRole={userRole} loading={loading}><TechnicianAgenda /></AdminProtectedRoute>} />
+
+  // Define as rotas para cada perfil de usuário
+  const getRoutesForRole = (role: string | null) => {
+    switch(role) {
+      case 'admin':
+        return (
+          <Routes>
+            <Route path="/painel" element={<Dashboard />} />
+            <Route path="/agenda" element={<TechnicianAgenda />} />
+            <Route path="/usuarios" element={<UserManagement />} />
+            <Route path="/" element={<InstallationForm />} />
+            <Route path="/consulta" element={<InsuranceView />} />
+            <Route path="*" element={<Navigate to="/painel" />} />
+          </Routes>
+        );
+      case 'tecnico':
+        return (
+          <Routes>
+            <Route path="/agenda" element={<TechnicianAgenda />} />
+            <Route path="/consulta" element={<InsuranceView />} />
+            <Route path="/tarefas" element={<TaskList />} />
+            <Route path="*" element={<Navigate to="/agenda" />} />
+          </Routes>
+        );
+      case 'seguradora':
+      default:
+        return (
+          <Routes>
+            <Route path="/" element={<InstallationForm />} />
+            <Route path="/consulta" element={<InsuranceView />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
-        </main>
-      </>
-    );
+        );
+    }
   };
+
+  return (
+    <>
+      {/* O Header só não é exibido para técnicos, que usam a BottomNavBar */}
+      {userRole !== 'tecnico' && <AppHeader userRole={userRole} theme={theme} toggleTheme={toggleTheme} />}
+
+      {/* Adiciona padding na parte inferior para a barra não cobrir o conteúdo */}
+      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24 md:pb-8">
+        {getRoutesForRole(userRole)}
+      </main>
+
+      {/* A BottomNavBar é exibida para todos os perfis em telas pequenas */}
+      <BottomNavBar theme={theme} toggleTheme={toggleTheme} handleLogout={handleLogout} userRole={userRole} />
+    </>
+  );
+}
+
+
+// --- COMPONENTE PRINCIPAL APP ---
+function App() {
+  const { session, loading } = useAuth();
+  
+  if (loading) {
+    return <LoadingSpinner />;
+  }
 
   return (
     <BrowserRouter>
       <div className="app-container min-h-screen">
-        {renderLayout()}
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/update-password" element={<ResetPassword />} />
+          <Route 
+            path="/*"
+            element={
+              session 
+                ? <AuthenticatedLayout /> 
+                : <Navigate to="/login" />
+            } 
+          />
+        </Routes>
       </div>
     </BrowserRouter>
   );
 }
+
 export default App;

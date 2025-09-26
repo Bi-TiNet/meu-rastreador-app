@@ -3,15 +3,26 @@ const { createClient } = require('@supabase/supabase-js');
 
 exports.handler = async function(event) {
   const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_KEY;
-  const supabase = createClient(supabaseUrl, supabaseKey);
+  // CORREÇÃO: Usar a chave de serviço (admin) para operações no banco de dados
+  const supabaseAdminKey = process.env.SUPABASE_SERVICE_KEY;
+
+  if (!supabaseUrl || !supabaseAdminKey) {
+    return { statusCode: 500, body: JSON.stringify({ message: "Configuração do servidor incompleta." }) };
+  }
+
+  // Cliente com privilégios de administrador para modificar o banco
+  const supabase = createClient(supabaseUrl, supabaseAdminKey);
+  
+  // Cliente com a chave pública apenas para validar o usuário
+  const supabaseUserClient = createClient(supabaseUrl, process.env.SUPABASE_KEY);
 
   try {
     const token = event.headers.authorization?.split('Bearer ')[1];
     if (!token) return { statusCode: 401, body: JSON.stringify({ message: "Acesso não autorizado." }) };
     
-    const { data: { user } } = await supabase.auth.getUser(token);
-    if (!user) return { statusCode: 401, body: JSON.stringify({ message: "Token inválido." }) };
+    // Valida o token do usuário para garantir que ele está autenticado
+    const { data: { user }, error: userError } = await supabaseUserClient.auth.getUser(token);
+    if (userError || !user) return { statusCode: 401, body: JSON.stringify({ message: "Token inválido." }) };
 
     const data = JSON.parse(event.body);
     const { id, status, date, time, type, completionType, tecnico_id, action, nova_observacao_texto, nova_observacao_destaque } = data;
@@ -22,7 +33,6 @@ exports.handler = async function(event) {
     let updatePayload = {};
 
     // --- LÓGICA DE ADIÇÃO DE OBSERVAÇÃO ---
-    // Se um novo texto de observação for enviado, insere na tabela 'observacoes'
     if (nova_observacao_texto && nova_observacao_texto.trim() !== '') {
         await supabase.from('observacoes').insert({
             instalacao_id: id,
@@ -30,7 +40,6 @@ exports.handler = async function(event) {
             destaque: nova_observacao_destaque || false,
             criado_por: user.email
         });
-        // Também registra um evento no histórico para a nova observação
         await supabase.from('historico').insert({
             instalacao_id: id,
             evento: `Nova observação adicionada: "${nova_observacao_texto}"`,
@@ -47,7 +56,6 @@ exports.handler = async function(event) {
       updatePayload = { data_instalacao: date, horario: time };
       eventoText = `Serviço reagendado pelo técnico para ${date} às ${time}.`;
     }
-    // Lógica de agendamento/status (usada pelo painel do admin e técnico)
     else if (status && !data.nome_completo) {
         updatePayload = { status };
         if (status === 'Concluído') {
@@ -67,21 +75,17 @@ exports.handler = async function(event) {
             else eventoText = 'Instalação Agendada';
         }
     } 
-    // Lógica de edição geral de dados cadastrais
     else if (data.nome_completo) {
-      // Remove campos que não pertencem à tabela 'instalacoes' antes de atualizar
       const { observacoes, historico, nova_observacao_texto, nova_observacao_destaque, profiles, ...restOfData } = data;
       updatePayload = restOfData;
       eventoText = 'Dados cadastrais atualizados';
     }
 
-    // Apenas atualiza a tabela 'instalacoes' se houver dados para atualizar
     if (Object.keys(updatePayload).length > 0) {
         const { error: updateError } = await supabase.from('instalacoes').update(updatePayload).eq('id', id);
         if (updateError) throw updateError;
     }
 
-    // Insere no histórico o evento principal (se houver)
     if (eventoText) {
       await supabase.from('historico').insert({
         instalacao_id: id,
@@ -98,4 +102,3 @@ exports.handler = async function(event) {
     return { statusCode: 500, body: JSON.stringify({ message: error.message || "Ocorreu um erro interno." }) };
   }
 };
-
