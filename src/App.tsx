@@ -1,5 +1,5 @@
 // Arquivo: src/App.tsx
-import { useState, useEffect, type ReactNode } from 'react';
+import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom';
 import { InstallationForm } from './components/InstallationForm';
 import { Dashboard } from './components/Dashboard';
