@@ -1,4 +1,4 @@
-// Cole este código em src/components/TechnicianAgenda.tsx APÓS corrigir a configuração do Tailwind
+// src/components/TechnicianAgenda.tsx
 import { useEffect, useState, useCallback, useMemo, type FormEvent } from 'react';
 import moment from 'moment';
 import { supabase } from '../supabaseClient';
@@ -36,7 +36,7 @@ interface Installation {
   };
 }
 
-// --- MODAL DE DETALHES (VERSÃO FINAL COM CSS GRID) ---
+// --- MODAL DE DETALHES (VERSÃO FINAL COM POSICIONAMENTO ABSOLUTO) ---
 function EventDetailsModal({ event, show, onClose, onUpdate }: { event: Installation | null, show: boolean, onClose: () => void, onUpdate: () => Promise<void> }) {
   const [isRescheduling, setIsRescheduling] = useState(false);
   const [dateTime, setDateTime] = useState('');
@@ -136,17 +136,20 @@ function EventDetailsModal({ event, show, onClose, onUpdate }: { event: Installa
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 p-4">
-        <div className="bg-slate-800 rounded-lg shadow-xl w-full max-w-2xl border border-slate-700 h-full grid grid-rows-[auto_1fr_auto]">
+    <div className="fixed inset-0 bg-black bg-opacity-75 z-50 p-4">
+        <div 
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[95%] max-w-2xl max-h-[90%] bg-slate-800 rounded-lg shadow-xl border border-slate-700 grid grid-rows-[auto_1fr_auto]"
+        >
             <div className="p-4 border-b border-slate-700 flex justify-between items-center">
                 <h3 className="text-lg font-medium text-white">{event.nome_completo}</h3>
                 <button onClick={onClose} className="text-slate-400 hover:text-white text-2xl">&times;</button>
             </div>
+            
             <div className="p-6 overflow-y-auto min-h-0">
                 {error && <div className="p-3 mb-4 text-sm rounded-lg bg-red-800/50 text-red-300 border border-red-700">{error}</div>}
                 {copySuccess && <div className="p-3 mb-4 text-sm rounded-lg bg-blue-800/50 text-blue-300 border border-blue-700">{copySuccess}</div>}
                 {isRescheduling ? (
-                     <form onSubmit={handleRescheduleSubmit}>
+                    <form onSubmit={handleRescheduleSubmit}>
                         <h4 className="text-white font-semibold mb-4">Reagendar Serviço</h4>
                         <div>
                             <label className="block mb-2 text-sm font-medium text-slate-300">Nova Data e Hora</label>
