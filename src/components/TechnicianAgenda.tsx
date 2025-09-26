@@ -36,7 +36,7 @@ interface Installation {
   };
 }
 
-// --- MODAL DE DETALHES (COM CORREÇÃO FINAL DE SCROLL) ---
+// --- MODAL DE DETALHES (COM CORREÇÃO DE BOTÕES) ---
 function EventDetailsModal({ event, show, onClose, onUpdate }: { event: Installation | null, show: boolean, onClose: () => void, onUpdate: () => Promise<void> }) {
   const [isRescheduling, setIsRescheduling] = useState(false);
   const [dateTime, setDateTime] = useState('');
@@ -44,32 +44,23 @@ function EventDetailsModal({ event, show, onClose, onUpdate }: { event: Installa
   const [error, setError] = useState('');
   const [copySuccess, setCopySuccess] = useState('');
 
-  // ==================================================================
-  // INÍCIO DA CORREÇÃO FINAL: Efeito para travar o scroll da página
-  // ==================================================================
   useEffect(() => {
-    const rootEl = document.documentElement; // Pega o elemento <html>
-    const bodyEl = document.body; // Pega o elemento <body>
+    const rootEl = document.documentElement;
+    const bodyEl = document.body;
 
     if (show) {
-      // Adiciona a classe que desabilita o scroll
       rootEl.classList.add('modal-open');
       bodyEl.classList.add('modal-open');
     } else {
-      // Remove a classe para reabilitar o scroll
       rootEl.classList.remove('modal-open');
       bodyEl.classList.remove('modal-open');
     }
     
-    // Função de limpeza para garantir que as classes sejam removidas
     return () => {
       rootEl.classList.remove('modal-open');
       bodyEl.classList.remove('modal-open');
     };
-  }, [show]); // O efeito é executado sempre que a visibilidade (show) do modal muda
-  // ==================================================================
-  // FIM DA CORREÇÃO
-  // ==================================================================
+  }, [show]);
 
   useEffect(() => {
     if (event) {
@@ -194,18 +185,33 @@ function EventDetailsModal({ event, show, onClose, onUpdate }: { event: Installa
                     </div>
                 )}
             </div>
+             {/* ================================================================== */}
+             {/* INÍCIO DA CORREÇÃO DO RODAPÉ DOS BOTÕES                        */}
+             {/* ================================================================== */}
             {!isRescheduling && (
-                <div className="p-4 bg-slate-800/50 border-t border-slate-700 flex flex-wrap justify-between items-center gap-2 flex-shrink-0">
-                    <button onClick={handleCopy} className="px-3 py-2 rounded-lg bg-slate-600 hover:bg-slate-500 text-white text-sm" title="Copiar Dados"><i className="bi bi-whatsapp"></i></button>
+                <div className="p-3 bg-slate-800/50 border-t border-slate-700 flex justify-between items-center gap-2 flex-shrink-0">
+                    <button onClick={handleCopy} className="px-3 py-2 rounded-lg bg-slate-600 hover:bg-slate-500 text-white" title="Copiar Dados">
+                        <i className="bi bi-whatsapp text-lg"></i>
+                    </button>
+                    
                     {event.status === 'Agendado' && (
-                        <div className="flex items-center space-x-2 flex-wrap gap-2">
-                            <button onClick={() => handleAction('return_to_pending')} disabled={loadingAction} className="px-3 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm">Pendente</button>
-                            <button onClick={() => setIsRescheduling(true)} disabled={loadingAction} className="px-3 py-2 rounded-lg bg-yellow-600 hover:bg-yellow-700 text-white text-sm">Reagendar</button>
-                            <button onClick={() => handleAction('complete')} disabled={loadingAction} className="px-3 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm">{loadingAction ? '...' : 'Concluir'}</button>
+                        <div className="flex items-center justify-end flex-nowrap gap-2">
+                            <button onClick={() => handleAction('return_to_pending')} disabled={loadingAction} className="px-3 py-2 rounded-md bg-red-600 hover:bg-red-700 text-white text-xs font-medium transition-colors whitespace-nowrap">
+                                Pendente
+                            </button>
+                            <button onClick={() => setIsRescheduling(true)} disabled={loadingAction} className="px-3 py-2 rounded-md bg-yellow-600 hover:bg-yellow-700 text-white text-xs font-medium transition-colors whitespace-nowrap">
+                                Reagendar
+                            </button>
+                            <button onClick={() => handleAction('complete')} disabled={loadingAction} className="px-3 py-2 rounded-md bg-green-600 hover:bg-green-700 text-white text-xs font-medium transition-colors whitespace-nowrap">
+                                {loadingAction ? '...' : 'Concluir'}
+                            </button>
                         </div>
                     )}
                 </div>
             )}
+            {/* ================================================================== */}
+            {/* FIM DA CORREÇÃO DO RODAPÉ                                       */}
+            {/* ================================================================== */}
         </div>
     </div>
   );
