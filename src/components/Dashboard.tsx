@@ -1,6 +1,6 @@
 // src/components/Dashboard.tsx
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { supabase } from '../supabaseClient.ts'; // Caminho corrigido
+import { supabase } from '../supabaseClient';
 import type { User } from '@supabase/supabase-js';
 
 // --- Interfaces ---
@@ -159,7 +159,7 @@ function HistoryModal({ isOpen, onClose, installation }: { isOpen: boolean, onCl
     );
 }
 
-// *** NOVO MODAL DE DETALHES (COPIADO DO INSURANCEVIEW) ***
+// *** MODAL DE DETALHES (COPIADO DO INSURANCEVIEW) ***
 function DetailsModal({ installation, onClose, onViewHistory, setMessage }: { 
   installation: Installation; 
   onClose: () => void; 
@@ -190,11 +190,9 @@ function DetailsModal({ installation, onClose, onViewHistory, setMessage }: {
     ].join('\n');
 
     try {
-      // Tenta usar a API de Clipboard moderna
       if (navigator.clipboard && window.isSecureContext) {
         await navigator.clipboard.writeText(textToCopy);
       } else {
-        // Fallback para campos de texto (pode não funcionar em todos os browsers)
         const textArea = document.createElement('textarea');
         textArea.value = textToCopy;
         document.body.appendChild(textArea);
@@ -276,7 +274,6 @@ function DetailsModal({ installation, onClose, onViewHistory, setMessage }: {
             </div>
             <div className="p-4 bg-slate-800/50 border-t border-slate-700 flex flex-wrap justify-between items-center gap-2">
                 <div className="flex items-center space-x-2">
-                    {/* O Botão "Editar" foi removido do Dashboard, pois as ações principais são de agendamento */}
                     <button onClick={() => onViewHistory(installation)} className="px-4 py-2 rounded-lg bg-slate-600 hover:bg-slate-500 text-white font-medium transition-colors text-sm">Histórico</button>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -288,7 +285,7 @@ function DetailsModal({ installation, onClose, onViewHistory, setMessage }: {
     </div>
   );
 }
-// *** FIM DO NOVO MODAL ***
+// *** FIM DO MODAL DE DETALHES ***
 
 
 function AccordionItem({ title, children, isOpen, onToggle }: { title: React.ReactNode, children: React.ReactNode, isOpen: boolean, onToggle: () => void }) {
@@ -318,7 +315,7 @@ export function Dashboard() {
   const [selected, setSelected] = useState<{installation: Installation, type: 'installation' | 'maintenance' | 'removal'} | null>(null);
   const [historyTarget, setHistoryTarget] = useState<Installation | null>(null);
   
-  // *** NOVO ESTADO PARA O MODAL DE DETALHES ***
+  // *** ESTADO PARA O MODAL DE DETALHES ***
   const [detailsTarget, setDetailsTarget] = useState<Installation | null>(null);
 
   const [message, setMessage] = useState<{type: 'success' | 'danger' | 'info', text: string} | null>(null);
@@ -344,8 +341,7 @@ export function Dashboard() {
       if (!response.ok) throw new Error('Falha ao buscar dados.');
       const data: Installation[] = await response.json();
       setInstallations(data);
-    } catch (err: any)
-{
+    } catch (err: any) {
       setError(err.message || 'Não foi possível carregar as instalações.');
     } finally {
       setLoading(false);
@@ -422,8 +418,6 @@ export function Dashboard() {
   }, [filteredInstallations, filterDay, filterMonth, filterYear]);
 
 
-  // *** FUNÇÃO getServiceBadgeColor MOVIDA PARA FORA ***
-  // para ser usada pelo DetailsModal (mesmo que ele tenha a sua, é uma boa prática)
   const getServiceBadgeColor = (serviceType: string) => {
       switch (serviceType) {
           case 'Instalação': return 'bg-green-900/50 text-green-300';
@@ -461,18 +455,19 @@ export function Dashboard() {
                         return (
                             <tr key={inst.id} className="border-b border-slate-700 hover:bg-slate-800/50">
                                 
-                                {/* *** NOME DO CLIENTE AGORA É CLICÁVEL *** */}
+                                {/* *** ALTERAÇÃO AQUI: de <button> para <span> *** */}
                                 <td className="px-6 py-4">
                                     <div className="flex items-center">
-                                        <button
+                                        <span
                                           onClick={() => setDetailsTarget(inst)} // <-- Abre o modal
-                                          className="font-medium text-white hover:text-blue-400 transition-colors text-left"
+                                          className="font-medium text-white hover:text-blue-400 transition-colors cursor-pointer"
                                         >
                                           {inst.nome_completo}
-                                        </button>
+                                        </span>
                                         {hasHighlight && <span className="ml-2 text-yellow-400" title="Possui observação em destaque">⚠️</span>}
                                     </div>
                                 </td>
+                                
                                 <td className="px-6 py-4">{`${inst.modelo} (${inst.placa})`}</td>
                                 
                                 {listType === 'scheduled' && <td className="px-6 py-4">{inst.data_instalacao && inst.horario ? `${new Date(inst.data_instalacao + 'T00:00:00').toLocaleDateString('pt-BR')} às ${inst.horario}`: 'N/A'}</td>}
@@ -656,7 +651,7 @@ export function Dashboard() {
       )}
       {historyTarget && <HistoryModal isOpen={!!historyTarget} onClose={() => setHistoryTarget(null)} installation={historyTarget} />}
 
-      {/* *** RENDERIZAÇÃO DO NOVO MODAL DE DETALHES *** */}
+      {/* *** RENDERIZAÇÃO DO MODAL DE DETALHES *** */}
       {detailsTarget && (
         <DetailsModal
           installation={detailsTarget}
