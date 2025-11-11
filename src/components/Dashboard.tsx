@@ -1,8 +1,8 @@
 // src/components/Dashboard.tsx
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { supabase } from '../supabaseClient.ts'; // Caminho corrigido
+import { supabase } from '../supabaseClient';
 import type { User } from '@supabase/supabase-js';
-import moment from 'moment'; // Importar o moment para os filtros de data
+import moment from 'moment';
 
 // --- Interfaces ---
 interface History {
@@ -49,8 +49,6 @@ interface Installation {
 
 
 // --- Modais ---
-
-// Modal de Agendamento (Original do seu arquivo)
 function ScheduleModal({ isOpen, onClose, installation, onSchedule, scheduleType }: { isOpen: boolean; onClose: () => void; installation: Installation; onSchedule: (id: number, date: string, time: string, tecnico_id: string) => void; scheduleType: 'installation' | 'maintenance' | 'removal'; }) {
   const [dateTime, setDateTime] = useState('');
   const [selectedTechnician, setSelectedTechnician] = useState('');
@@ -122,7 +120,6 @@ function ScheduleModal({ isOpen, onClose, installation, onSchedule, scheduleType
   );
 }
 
-// Modal de Histórico (Original do seu arquivo)
 function HistoryModal({ isOpen, onClose, installation }: { isOpen: boolean, onClose: () => void, installation: Installation }) {
     const sortedHistory = useMemo(() => installation.historico ? [...installation.historico].sort((a, b) => new Date(b.data_evento).getTime() - new Date(a.data_evento).getTime()) : [], [installation.historico]);
     if (!isOpen) return null;
@@ -164,7 +161,6 @@ function HistoryModal({ isOpen, onClose, installation }: { isOpen: boolean, onCl
     );
 }
 
-// *** NOVO MODAL DE DETALHES (Baseado no InsuranceView) ***
 function DetailsModal({ installation, onClose, onViewHistory, setMessage }: { 
   installation: Installation; 
   onClose: () => void; 
@@ -291,7 +287,7 @@ function DetailsModal({ installation, onClose, onViewHistory, setMessage }: {
   );
 }
 
-// *** NOVO MODAL DE RELATÓRIOS ***
+// *** INÍCIO DO MODAL DE RELATÓRIOS (COM FILTRO DE TIPO DE SERVIÇO) ***
 type ReportType = 'pending' | 'reschedule' | 'scheduled' | 'completed' | 'general';
 type ReportFormat = 'summary' | 'detailed';
 type DatePreset = 'all' | 'custom' | 'week' | 'month' | 'lastMonth' | 'last30';
@@ -303,7 +299,7 @@ interface GeneratedReport {
   details: { nome: string; placa: string; servico: string; }[] | null;
 }
 
-function ReportModal({ isOpen, onClose, installationsData }: { 
+function ReportModal({ isOpen, onClose, installationsData, allBases }: { 
   isOpen: boolean; 
   onClose: () => void;
   installationsData: {
@@ -313,9 +309,12 @@ function ReportModal({ isOpen, onClose, installationsData }: {
     completed: Installation[];
     all: Installation[];
   }
+  allBases: string[]; 
 }) {
   const [reportType, setReportType] = useState<ReportType>('general');
   const [reportFormat, setReportFormat] = useState<ReportFormat>('summary');
+  const [selectedBase, setSelectedBase] = useState<string>('all'); 
+  const [serviceType, setServiceType] = useState<string>('all'); // <-- Novo estado para Tipo de Serviço
   const [datePreset, setDatePreset] = useState<DatePreset>('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -328,6 +327,8 @@ function ReportModal({ isOpen, onClose, installationsData }: {
       setReportType('general');
       setReportFormat('summary');
       setDatePreset('all');
+      setSelectedBase('all'); 
+      setServiceType('all'); // <-- Resetar Tipo de Serviço
       setStartDate('');
       setEndDate('');
     }
@@ -402,7 +403,6 @@ function ReportModal({ isOpen, onClose, installationsData }: {
       dateRangeStr = `${start.format('DD/MM/YY')} - ${end.format('DD/MM/YY')}`;
 
       filteredData = dataToFilter.filter(inst => {
-        // Usar data_instalacao para agendados/concluídos, created_at para o resto
         const dateToCompare = (inst.status === 'Agendado' || inst.status === 'Concluído')
           ? inst.data_instalacao
           : inst.created_at;
@@ -410,11 +410,23 @@ function ReportModal({ isOpen, onClose, installationsData }: {
         if (!dateToCompare) return false;
         
         const itemDate = moment(dateToCompare);
-        return itemDate.isBetween(start, end, 'day', '[]'); // '[]' inclui início e fim
+        return itemDate.isBetween(start, end, 'day', '[]');
       });
     }
+
+    // 3. Filtrar por Base
+    if (selectedBase !== 'all') {
+      filteredData = filteredData.filter(inst => inst.base === selectedBase);
+      title += ` (Base: ${selectedBase})`; 
+    }
     
-    // 3. Formatar saída
+    // *** 4. NOVO: Filtrar por Tipo de Serviço ***
+    if (serviceType !== 'all') {
+      filteredData = filteredData.filter(inst => inst.tipo_servico === serviceType);
+      title += ` (${serviceType})`; // Adiciona o tipo ao título
+    }
+    
+    // 5. Formatar saída
     if (reportFormat === 'summary') {
       setGeneratedReport({
         title,
@@ -442,7 +454,6 @@ function ReportModal({ isOpen, onClose, installationsData }: {
     if (printContent) {
       const win = window.open('', '', 'height=700,width=900');
       win?.document.write('<html><head><title>Relatório - Agenda Autocontrol</title>');
-      // Adiciona estilos básicos para impressão
       win?.document.write(`
         <style>
           body { font-family: Arial, sans-serif; }
@@ -459,7 +470,7 @@ function ReportModal({ isOpen, onClose, installationsData }: {
       win?.print();
     }
   };
-
+  
   if (!isOpen) return null; // Renderiza nada se não estiver aberto
 
   const inputClasses = "w-full p-2.5 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-blue-500 focus:border-blue-500";
@@ -493,6 +504,30 @@ function ReportModal({ isOpen, onClose, installationsData }: {
             </div>
           </div>
           
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="selectedBase" className="block mb-2 text-sm text-slate-400">Base</label>
+              <select id="selectedBase" value={selectedBase} onChange={(e) => setSelectedBase(e.target.value)} className={inputClasses}>
+                <option value="all">Todas as Bases</option>
+                {allBases.map(base => (
+                  <option key={base} value={base}>{base}</option>
+                ))}
+              </select>
+            </div>
+            
+            {/* *** NOVO FILTRO DE TIPO DE SERVIÇO *** */}
+            <div>
+              <label htmlFor="serviceType" className="block mb-2 text-sm text-slate-400">Tipo de Serviço</label>
+              <select id="serviceType" value={serviceType} onChange={(e) => setServiceType(e.target.value)} className={inputClasses}>
+                <option value="all">Todos os Tipos</option>
+                <option value="Instalação">Instalação</option>
+                <option value="Manutenção">Manutenção</option>
+                <option value="Remoção">Remoção</option>
+              </select>
+            </div>
+          </div>
+
+
           <div>
             <label htmlFor="datePreset" className="block mb-2 text-sm text-slate-400">Período</label>
             <select id="datePreset" value={datePreset} onChange={(e) => handleDatePresetChange(e.target.value as DatePreset)} className={inputClasses}>
@@ -578,11 +613,9 @@ function AccordionItem({ title, children, isOpen, onToggle }: { title: React.Rea
                 className="w-full flex justify-between items-center p-4 bg-slate-800 hover:bg-slate-700/50 transition-colors duration-300"
             >
                 <span className="font-medium text-white">{title}</span>
-                {/* *** CORREÇÃO APLICADA AQUI (crases) *** */}
                 <i className={`bi bi-chevron-down transition-transform duration-300 ${isOpen ? 'transform rotate-180' : ''}`}></i>
             </button>
             
-            {/* *** CORREÇÃO APLICADA AQUI (crases) *** */}
             <div className={`transition-all duration-500 ease-in-out ${isOpen ? 'max-h-[10000px]' : 'max-h-0'} overflow-hidden`}>
                 <div className="bg-slate-900">
                     {children}
@@ -658,6 +691,12 @@ export function Dashboard() {
     }
   };
 
+  // *** Extrai lista de Bases únicas para o filtro do relatório ***
+  const allBases = useMemo(() => {
+    const bases = new Set(installations.map(inst => inst.base));
+    return Array.from(bases).filter(Boolean); // Filtra valores nulos/vazios
+  }, [installations]);
+
   // Listas para exibição (filtradas pela busca)
   const filteredInstallations = useMemo(() =>
     installations.filter(inst =>
@@ -698,7 +737,7 @@ export function Dashboard() {
   }, [filteredInstallations, filterDay, filterMonth, filterYear]);
   
   
-  // *** DADOS PARA O RELATÓRIO (baseado na lista completa, não no filtro de busca) ***
+  // DADOS PARA O RELATÓRIO (baseado na lista completa, não no filtro de busca)
   const reportData = useMemo(() => {
     const all = installations; // Usa a lista completa
     const pending = all.filter(inst => inst.status === 'A agendar');
@@ -969,6 +1008,7 @@ export function Dashboard() {
         isOpen={showReportModal}
         onClose={() => setShowReportModal(false)}
         installationsData={reportData}
+        allBases={allBases} // <-- Prop de Bases adicionada
       />
     </div>
   );
