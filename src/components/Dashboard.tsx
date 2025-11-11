@@ -187,7 +187,9 @@ export function Dashboard() {
   const [historyTarget, setHistoryTarget] = useState<Installation | null>(null);
   const [message, setMessage] = useState<{type: 'success' | 'danger' | 'info', text: string} | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [openAccordions, setOpenAccordions] = useState<string[]>(['pending', 'scheduled', 'reschedule', 'completed']); // Adicionado 'reschedule'
+  
+  // *** ALTERAÇÃO AQUI: Abas fechadas por padrão ***
+  const [openAccordions, setOpenAccordions] = useState<string[]>([]); 
 
   // *** NOVOS ESTADOS PARA FILTRO DE DATA ***
   const [filterDay, setFilterDay] = useState('');

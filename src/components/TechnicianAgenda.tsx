@@ -1,7 +1,7 @@
 // src/components/TechnicianAgenda.tsx
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
-// A linha 'import type { User }' foi removida daqui.
+// import type { User } from '@supabase/supabase-js'; // Removido na correção anterior
 
 // --- Interfaces ---
 interface History {
@@ -47,6 +47,50 @@ interface Installation {
 
 
 // --- Modais ---
+
+// *** NOVO MODAL PARA MOTIVO DA DEVOLUÇÃO ***
+function ReturnReasonModal({ isOpen, onClose, onSubmit, reason, setReason }: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  onSubmit: () => void;
+  reason: string;
+  setReason: (reason: string) => void;
+}) {
+  if (!isOpen) return null;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 p-4">
+      <form onSubmit={handleSubmit} className="bg-slate-800 rounded-lg shadow-xl w-full max-w-lg border border-slate-700">
+        <div className="p-4 border-b border-slate-700 flex justify-between items-center">
+            <h3 className="text-lg font-medium text-white">Motivo da Devolução</h3>
+            <button type="button" onClick={onClose} className="text-slate-400 hover:text-white text-2xl">&times;</button>
+        </div>
+        <div className="p-6">
+            <label htmlFor="return_reason" className="block mb-2 text-sm font-medium text-slate-300">
+              Por favor, descreva por que este serviço precisa ser reagendado pela central.
+            </label>
+            <textarea 
+              id="return_reason" 
+              className="w-full p-2.5 bg-slate-700 border border-slate-600 rounded-lg text-white h-24" 
+              value={reason} 
+              onChange={(e) => setReason(e.target.value)}
+              required
+            />
+            <div className="pt-4 flex justify-end space-x-2">
+                <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg bg-slate-600 hover:bg-slate-500 text-white font-medium transition-colors">Cancelar</button>
+                <button type="submit" className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium transition-colors">Confirmar Devolução</button>
+            </div>
+        </div>
+      </form>
+    </div>
+  );
+}
+
 function RescheduleModal({ isOpen, onClose, installation, onReschedule }: { isOpen: boolean; onClose: () => void; installation: Installation; onReschedule: (id: number, date: string, time: string) => void; }) {
   const [dateTime, setDateTime] = useState('');
 
@@ -162,6 +206,10 @@ export function TechnicianAgenda() {
   const [searchTerm, setSearchTerm] = useState('');
   const [openAccordions, setOpenAccordions] = useState<string[]>(['scheduled']);
   
+  // *** NOVOS ESTADOS PARA MODAL DE MOTIVO ***
+  const [returnTarget, setReturnTarget] = useState<Installation | null>(null);
+  const [returnReason, setReturnReason] = useState('');
+
   const fetchInstallations = useCallback(async () => {
     setLoading(true);
     try {
@@ -187,12 +235,19 @@ export function TechnicianAgenda() {
     setOpenAccordions(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
   };
   
-  const handleUpdate = async (id: number, options: { action: 'return_to_pending' | 'reschedule_self' | 'complete_installation' | 'complete_maintenance' | 'complete_removal', date?: string; time?: string; }) => {
+  // *** FUNÇÃO handleUpdate MODIFICADA ***
+  const handleUpdate = async (id: number, options: { 
+    action: 'return_to_pending' | 'reschedule_self' | 'complete_installation' | 'complete_maintenance' | 'complete_removal', 
+    date?: string; 
+    time?: string; 
+    nova_observacao_texto?: string; // <-- Adicionado
+    nova_observacao_destaque?: boolean; // <-- Adicionado
+  }) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Usuário não autenticado.');
 
-      const { action, date, time } = options;
+      const { action, date, time, nova_observacao_texto, nova_observacao_destaque } = options;
       let completionType: string | undefined = undefined;
       
       if(action === 'complete_installation') completionType = 'installation';
@@ -202,7 +257,7 @@ export function TechnicianAgenda() {
       const response = await fetch('/.netlify/functions/update-installation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
-        body: JSON.stringify({ id, action, date, time, completionType }),
+        body: JSON.stringify({ id, action, date, time, completionType, nova_observacao_texto, nova_observacao_destaque }), // <-- Adicionado
       });
       
       if (!response.ok) {
@@ -210,12 +265,31 @@ export function TechnicianAgenda() {
           throw new Error(errorData.message || 'Falha na operação.');
       }
       setMessage({type: 'success', text: `Operação realizada com sucesso!`});
-      setRescheduleTarget(null);
+      setRescheduleTarget(null); // Fecha modal de reagendamento (se estiver aberto)
+      setReturnTarget(null); // Fecha modal de devolução (se estiver aberto)
       await fetchInstallations();
     } catch (error: any) {
         setMessage({type: 'danger', text: error.message || 'Erro ao processar a solicitação.'});
     }
   };
+
+  // *** NOVA FUNÇÃO PARA SUBMETER O MOTIVO DA DEVOLUÇÃO ***
+  const handleReturnSubmit = () => {
+    if (!returnTarget || !returnReason.trim()) {
+      setMessage({ type: 'danger', text: 'Por favor, informe o motivo da devolução.' });
+      return;
+    }
+    
+    handleUpdate(returnTarget.id, { 
+      action: 'return_to_pending', 
+      nova_observacao_texto: returnReason,
+      nova_observacao_destaque: true // Destaca a observação da devolução
+    });
+    
+    setReturnTarget(null);
+    setReturnReason('');
+  };
+
 
   const filteredInstallations = useMemo(() =>
     installations.filter(inst =>
@@ -289,11 +363,14 @@ export function TechnicianAgenda() {
                                         >
                                             Reagendar
                                         </button>
-                                        <button onClick={() => handleUpdate(inst.id, { action: 'return_to_pending' })}
+                                        
+                                        {/* *** BOTÃO "DEVOLVER" ATUALIZADO *** */}
+                                        <button onClick={() => setReturnTarget(inst)}
                                             className="font-medium text-red-300 bg-red-900/50 hover:bg-red-900/80 rounded-lg text-xs px-4 py-2 transition-colors duration-300"
                                         >
                                             Devolver
                                         </button>
+                                        
                                         <button onClick={() => setHistoryTarget(inst)} className="h-8 w-8 flex items-center justify-center rounded-full bg-slate-700 text-slate-400 hover:bg-slate-600 hover:text-white transition-colors duration-300">
                                             <i className="bi bi-clock-history"></i>
                                         </button>
@@ -327,7 +404,7 @@ export function TechnicianAgenda() {
         </div>
       </div>
 
-      {message && <div className={`p-4 mb-4 text-sm rounded-lg ${message.type === 'success' ? 'bg-green-800/50 text-green-300 border border-green-700' : 'bg-red-800/50 text-red-300 border border-red-700'}`} role="alert">{message.text}</div>}
+      {message && <div onClick={() => setMessage(null)} className={`cursor-pointer p-4 mb-4 text-sm rounded-lg ${message.type === 'success' ? 'bg-green-800/50 text-green-300 border border-green-700' : 'bg-red-800/50 text-red-300 border border-red-700'}`} role="alert">{message.text}</div>}
       
       <div>
             <AccordionItem 
@@ -350,6 +427,15 @@ export function TechnicianAgenda() {
         />
       )}
       {historyTarget && <HistoryModal isOpen={!!historyTarget} onClose={() => setHistoryTarget(null)} installation={historyTarget} />}
+      
+      {/* *** RENDERIZAÇÃO DO NOVO MODAL DE MOTIVO *** */}
+      <ReturnReasonModal 
+        isOpen={!!returnTarget}
+        onClose={() => { setReturnTarget(null); setReturnReason(''); setMessage(null); }}
+        reason={returnReason}
+        setReason={setReturnReason}
+        onSubmit={handleReturnSubmit}
+      />
     </div>
   );
 }

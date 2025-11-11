@@ -204,6 +204,18 @@ function DetailsModal({ installation, onClose, onViewHistory, onEdit, setMessage
     }
   };
 
+  // *** FUNÇÃO ATUALIZADA PARA LIDAR COM O NOVO STATUS 'REAGENDAR' ***
+  const getStatusBadgeColor = (status: string) => {
+     switch (status) {
+        case 'Agendado': return 'bg-blue-900/50 text-blue-300';
+        case 'Concluído': return 'bg-green-900/50 text-green-300';
+        case 'Reagendar': return 'bg-red-900/50 text-red-300'; // Vermelho para 'Reagendar'
+        case 'A agendar': 
+        default:
+            return 'bg-yellow-900/50 text-yellow-300';
+    }
+  }
+
   if (!installation) return null;
   const sortedObservacoes = [...(installation.observacoes || [])].sort((a,b) => (b.destaque ? 1 : -1) - (a.destaque ? 1 : -1) || new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
@@ -223,7 +235,7 @@ function DetailsModal({ installation, onClose, onViewHistory, onEdit, setMessage
                     </div>
                      <div className="space-y-4">
                         <h4 className="text-blue-400 font-semibold border-b border-slate-700 pb-2">Serviço e Acesso</h4>
-                        <p><strong>Status:</strong> <span className={`px-2 py-1 text-xs font-medium rounded-full ${installation.status === 'Agendado' ? 'bg-blue-900/50 text-blue-300' : installation.status === 'Concluído' ? 'bg-green-900/50 text-green-300' : 'bg-yellow-900/50 text-yellow-300'}`}>{installation.status}</span></p>
+                        <p><strong>Status:</strong> <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusBadgeColor(installation.status)}`}>{installation.status}</span></p>
                         {installation.status === 'Agendado' && installation.data_instalacao && (
                             <p><strong>Agendado para:</strong> {new Date(installation.data_instalacao + 'T00:00:00').toLocaleDateString('pt-BR')} às {installation.horario}</p>
                         )}
@@ -277,7 +289,7 @@ export function InsuranceView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'danger'; text: string } | null>(null);
-  const [openAccordions, setOpenAccordions] = useState<string[]>([]);
+  const [openAccordions, setOpenAccordions] = useState<string[]>([]); // Começa fechado por padrão
 
   const selectedInstallation = useMemo(() => allInstallations.find(inst => inst.id === selectedId), [allInstallations, selectedId]);
 
@@ -329,9 +341,12 @@ export function InsuranceView() {
   };
 
   const filteredInstallations = useMemo(() => allInstallations.filter((inst) => inst.nome_completo.toLowerCase().includes(searchTerm.toLowerCase()) || inst.placa.toLowerCase().includes(searchTerm.toLowerCase())), [allInstallations, searchTerm]);
+  
+  // *** LISTAS ATUALIZADAS ***
   const scheduled = filteredInstallations.filter((inst) => inst.status === 'Agendado');
   const completed = filteredInstallations.filter((inst) => inst.status === 'Concluído');
   const pending = filteredInstallations.filter((inst) => inst.status === 'A agendar');
+  const reschedule = filteredInstallations.filter((inst) => inst.status === 'Reagendar'); // <-- NOVA LISTA
 
   if (loading) return <div className="text-center p-5"><div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mx-auto"></div></div>;
   if (error) return <div className="p-4 text-sm text-red-400 bg-red-500/10 border border-red-500/30 rounded-lg">{error}</div>;
@@ -345,6 +360,19 @@ export function InsuranceView() {
     }
   };
 
+  // *** FUNÇÃO ATUALIZADA PARA LIDAR COM O NOVO STATUS 'REAGENDAR' ***
+   const getStatusBadgeColor = (status: string) => {
+     switch (status) {
+        case 'Agendado': return 'bg-blue-900/50 text-blue-300';
+        case 'Concluído': return 'bg-green-900/50 text-green-300';
+        case 'Reagendar': return 'bg-red-900/50 text-red-300'; // Vermelho para 'Reagendar'
+        case 'A agendar': 
+        default:
+            return 'bg-yellow-900/50 text-yellow-300';
+    }
+  }
+
+
   const renderInstallationsList = (installations: Installation[]) => {
     if (installations.length === 0) return <p className="text-slate-500 p-4 text-center italic">Nenhum registro encontrado.</p>;
     return (
@@ -357,7 +385,7 @@ export function InsuranceView() {
                   <p className="font-bold text-white flex items-center">{inst.nome_completo} {hasHighlight && <span className="ml-2 text-yellow-400" title="Possui observação em destaque">⚠️</span>}</p>
                   <p className="text-sm text-slate-400">{inst.modelo} ({inst.placa})</p>
                   <div className="flex items-center flex-wrap gap-2 mt-2">
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${ inst.status === 'Agendado' ? 'bg-blue-900/50 text-blue-300' : inst.status === 'Concluído' ? 'bg-green-900/50 text-green-300' : 'bg-yellow-900/50 text-yellow-300' }`}>
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusBadgeColor(inst.status)}`}>
                       {inst.status === 'Agendado' && inst.data_instalacao ? new Date(inst.data_instalacao + 'T00:00:00').toLocaleDateString('pt-BR') : inst.status}
                     </span>
                     <span className={`px-2 py-1 text-xs font-medium rounded-full ${getServiceBadgeColor(inst.tipo_servico)}`}>{inst.tipo_servico}</span>
@@ -389,7 +417,9 @@ export function InsuranceView() {
         </div>
       </div>
       <div>
+          {/* *** ABAS ATUALIZADAS *** */}
           <AccordionItem isOpen={openAccordions.includes('pending')} onToggle={() => toggleAccordion('pending')} title={<><i className="bi bi-clock-history mr-2"></i>Pendentes ({pending.length})</>}>{renderInstallationsList(pending)}</AccordionItem>
+          <AccordionItem isOpen={openAccordions.includes('reschedule')} onToggle={() => toggleAccordion('reschedule')} title={<><i className="bi bi-exclamation-triangle-fill mr-2 text-red-500"></i>Necessário Reagendar ({reschedule.length})</>}>{renderInstallationsList(reschedule)}</AccordionItem>
           <AccordionItem isOpen={openAccordions.includes('scheduled')} onToggle={() => toggleAccordion('scheduled')} title={<><i className="bi bi-calendar-check mr-2"></i>Agendadas ({scheduled.length})</>}>{renderInstallationsList(scheduled)}</AccordionItem>
           <AccordionItem isOpen={openAccordions.includes('completed')} onToggle={() => toggleAccordion('completed')} title={<><i className="bi bi-check-circle-fill mr-2"></i>Concluídas ({completed.length})</>}>{renderInstallationsList(completed)}</AccordionItem>
       </div>
