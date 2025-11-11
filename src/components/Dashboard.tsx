@@ -2,7 +2,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { supabase } from '../supabaseClient.ts'; // Caminho corrigido
 import type { User } from '@supabase/supabase-js';
-import moment from 'moment'; // Importado para os filtros de data
+import moment from 'moment'; // Importar o moment para os filtros de data
 
 // --- Interfaces ---
 interface History {
@@ -569,7 +569,7 @@ function ReportModal({ isOpen, onClose, installationsData }: {
 // *** FIM DO MODAL DE RELATÓRIOS ***
 
 
-// Componente AccordionItem (Original do seu arquivo, com a correção de crases)
+// Componente AccordionItem (Original do seu arquivo)
 function AccordionItem({ title, children, isOpen, onToggle }: { title: React.ReactNode, children: React.ReactNode, isOpen: boolean, onToggle: () => void }) {
     return (
         <div className="border border-slate-700 rounded-lg overflow-hidden mb-3">
@@ -965,13 +965,11 @@ export function Dashboard() {
       )}
 
       {/* RENDERIZAÇÃO DO MODAL DE RELATÓRIO */}
-      {showReportModal && (
-        <ReportModal 
-          isOpen={showReportModal}
-          onClose={() => setShowReportModal(false)}
-          installationsData={reportData}
-        />
-      )}
+      <ReportModal 
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        installationsData={reportData}
+      />
     </div>
   );
 }
