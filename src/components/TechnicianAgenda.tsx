@@ -1,6 +1,7 @@
+// src/components/TechnicianAgenda.tsx
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
-import type { User } from '@supabase/supabase-js';
+// A linha 'import type { User }' foi removida daqui.
 
 // --- Interfaces ---
 interface History {
@@ -352,5 +353,3 @@ export function TechnicianAgenda() {
     </div>
   );
 }
-
-export default TechnicianAgenda;
