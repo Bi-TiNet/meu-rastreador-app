@@ -2,7 +2,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { supabase } from '../supabaseClient.ts'; // Caminho corrigido
 import type { User } from '@supabase/supabase-js';
-import moment from 'moment'; // Importar o moment para os filtros de data
+import moment from 'moment'; // Importado para os filtros de data
 
 // --- Interfaces ---
 interface History {
@@ -49,6 +49,8 @@ interface Installation {
 
 
 // --- Modais ---
+
+// Modal de Agendamento (Original do seu arquivo)
 function ScheduleModal({ isOpen, onClose, installation, onSchedule, scheduleType }: { isOpen: boolean; onClose: () => void; installation: Installation; onSchedule: (id: number, date: string, time: string, tecnico_id: string) => void; scheduleType: 'installation' | 'maintenance' | 'removal'; }) {
   const [dateTime, setDateTime] = useState('');
   const [selectedTechnician, setSelectedTechnician] = useState('');
@@ -120,6 +122,7 @@ function ScheduleModal({ isOpen, onClose, installation, onSchedule, scheduleType
   );
 }
 
+// Modal de Histórico (Original do seu arquivo)
 function HistoryModal({ isOpen, onClose, installation }: { isOpen: boolean, onClose: () => void, installation: Installation }) {
     const sortedHistory = useMemo(() => installation.historico ? [...installation.historico].sort((a, b) => new Date(b.data_evento).getTime() - new Date(a.data_evento).getTime()) : [], [installation.historico]);
     if (!isOpen) return null;
@@ -161,6 +164,7 @@ function HistoryModal({ isOpen, onClose, installation }: { isOpen: boolean, onCl
     );
 }
 
+// *** NOVO MODAL DE DETALHES (Baseado no InsuranceView) ***
 function DetailsModal({ installation, onClose, onViewHistory, setMessage }: { 
   installation: Installation; 
   onClose: () => void; 
@@ -287,7 +291,7 @@ function DetailsModal({ installation, onClose, onViewHistory, setMessage }: {
   );
 }
 
-// *** INÍCIO DO MODAL DE RELATÓRIOS ***
+// *** NOVO MODAL DE RELATÓRIOS ***
 type ReportType = 'pending' | 'reschedule' | 'scheduled' | 'completed' | 'general';
 type ReportFormat = 'summary' | 'detailed';
 type DatePreset = 'all' | 'custom' | 'week' | 'month' | 'lastMonth' | 'last30';
@@ -328,6 +332,7 @@ function ReportModal({ isOpen, onClose, installationsData }: {
       setEndDate('');
     }
   }, [isOpen]);
+
 
   const handleDatePresetChange = (preset: DatePreset) => {
     setDatePreset(preset);
@@ -454,7 +459,7 @@ function ReportModal({ isOpen, onClose, installationsData }: {
       win?.print();
     }
   };
-  
+
   if (!isOpen) return null; // Renderiza nada se não estiver aberto
 
   const inputClasses = "w-full p-2.5 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-blue-500 focus:border-blue-500";
@@ -564,6 +569,7 @@ function ReportModal({ isOpen, onClose, installationsData }: {
 // *** FIM DO MODAL DE RELATÓRIOS ***
 
 
+// Componente AccordionItem (Original do seu arquivo, com a correção de crases)
 function AccordionItem({ title, children, isOpen, onToggle }: { title: React.ReactNode, children: React.ReactNode, isOpen: boolean, onToggle: () => void }) {
     return (
         <div className="border border-slate-700 rounded-lg overflow-hidden mb-3">
@@ -692,19 +698,16 @@ export function Dashboard() {
   }, [filteredInstallations, filterDay, filterMonth, filterYear]);
   
   
-  // *** AJUSTE: DADOS PARA O RELATÓRIO (baseado na lista completa, não no filtro de busca) ***
+  // *** DADOS PARA O RELATÓRIO (baseado na lista completa, não no filtro de busca) ***
   const reportData = useMemo(() => {
-    const all = installations;
+    const all = installations; // Usa a lista completa
     const pending = all.filter(inst => inst.status === 'A agendar');
     const scheduled = all.filter(inst => inst.status === 'Agendado');
     const reschedule = all.filter(inst => inst.status === 'Reagendar');
-    
-    // O filtro de data (dia/mês/ano) do accordion de "Concluídos" NÃO deve
-    // afetar o relatório. O relatório tem seus próprios filtros de data.
     const completed = all.filter(inst => inst.status === 'Concluído');
     
     return { all, pending, scheduled, reschedule, completed };
-  }, [installations]);
+  }, [installations]); // Depende apenas da lista completa 'installations'
 
 
   const getServiceBadgeColor = (serviceType: string) => {
@@ -962,11 +965,13 @@ export function Dashboard() {
       )}
 
       {/* RENDERIZAÇÃO DO MODAL DE RELATÓRIO */}
-      <ReportModal 
-        isOpen={showReportModal}
-        onClose={() => setShowReportModal(false)}
-        installationsData={reportData} {/* *** AJUSTE APLICADO AQUI *** */}
-      />
+      {showReportModal && (
+        <ReportModal 
+          isOpen={showReportModal}
+          onClose={() => setShowReportModal(false)}
+          installationsData={reportData}
+        />
+      )}
     </div>
   );
 }
