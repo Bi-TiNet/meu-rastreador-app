@@ -2,6 +2,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
 import type { User } from '@supabase/supabase-js';
+import moment from 'moment'; // Importar o moment para os filtros de data
 
 // --- Interfaces ---
 interface History {
@@ -39,6 +40,7 @@ interface Installation {
   ano?: string;
   cor?: string;
   tecnico_id?: string;
+  created_at: string; // Garantir que created_at existe para filtros
   profiles?: {
     id: string;
     full_name: string;
@@ -159,7 +161,6 @@ function HistoryModal({ isOpen, onClose, installation }: { isOpen: boolean, onCl
     );
 }
 
-// *** MODAL DE DETALHES (COPIADO DO INSURANCEVIEW) ***
 function DetailsModal({ installation, onClose, onViewHistory, setMessage }: { 
   installation: Installation; 
   onClose: () => void; 
@@ -285,8 +286,6 @@ function DetailsModal({ installation, onClose, onViewHistory, setMessage }: {
     </div>
   );
 }
-// *** FIM DO MODAL DE DETALHES ***
-
 
 function AccordionItem({ title, children, isOpen, onToggle }: { title: React.ReactNode, children: React.ReactNode, isOpen: boolean, onToggle: () => void }) {
     return (
@@ -307,6 +306,269 @@ function AccordionItem({ title, children, isOpen, onToggle }: { title: React.Rea
     )
 }
 
+// *** INÍCIO DO NOVO MODAL DE RELATÓRIOS ***
+type ReportType = 'pending' | 'reschedule' | 'scheduled' | 'completed' | 'general';
+type ReportFormat = 'summary' | 'detailed';
+type DatePreset = 'all' | 'custom' | 'week' | 'month' | 'lastMonth' | 'last30';
+
+interface GeneratedReport {
+  title: string;
+  dateRange: string;
+  count: number;
+  details: { nome: string; placa: string; servico: string; }[] | null;
+}
+
+function ReportModal({ isOpen, onClose, installationsData }: { 
+  isOpen: boolean; 
+  onClose: () => void;
+  installationsData: {
+    pending: Installation[];
+    reschedule: Installation[];
+    scheduled: Installation[];
+    completed: Installation[];
+    all: Installation[];
+  }
+}) {
+  const [reportType, setReportType] = useState<ReportType>('general');
+  const [reportFormat, setReportFormat] = useState<ReportFormat>('summary');
+  const [datePreset, setDatePreset] = useState<DatePreset>('all');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [generatedReport, setGeneratedReport] = useState<GeneratedReport | null>(null);
+
+  const handleDatePresetChange = (preset: DatePreset) => {
+    setDatePreset(preset);
+    if (preset === 'all' || preset === 'custom') {
+      setStartDate('');
+      setEndDate('');
+      return;
+    }
+    
+    let start = moment();
+    let end = moment();
+
+    if (preset === 'week') {
+      start = moment().startOf('week');
+      end = moment().endOf('week');
+    } else if (preset === 'month') {
+      start = moment().startOf('month');
+      end = moment().endOf('month');
+    } else if (preset === 'lastMonth') {
+      start = moment().subtract(1, 'month').startOf('month');
+      end = moment().subtract(1, 'month').endOf('month');
+    } else if (preset === 'last30') {
+      start = moment().subtract(30, 'days');
+      // end é 'hoje', já está setado
+    }
+    
+    setStartDate(start.format('YYYY-MM-DD'));
+    setEndDate(end.format('YYYY-MM-DD'));
+  };
+
+  const handleGenerateReport = (e: React.FormEvent) => {
+    e.preventDefault();
+    let dataToFilter: Installation[] = [];
+    let title = '';
+    let dateRangeStr = 'Todo o período';
+
+    // 1. Selecionar dados
+    switch (reportType) {
+      case 'pending':
+        dataToFilter = installationsData.pending;
+        title = 'Relatório de Pendentes';
+        break;
+      case 'reschedule':
+        dataToFilter = installationsData.reschedule;
+        title = 'Relatório de "Necessário Reagendar"';
+        break;
+      case 'scheduled':
+        dataToFilter = installationsData.scheduled;
+        title = 'Relatório de Agendados';
+        break;
+      case 'completed':
+        dataToFilter = installationsData.completed;
+        title = 'Relatório de Concluídos';
+        break;
+      case 'general':
+      default:
+        dataToFilter = installationsData.all;
+        title = 'Relatório Geral';
+        break;
+    }
+
+    // 2. Filtrar por data
+    let filteredData = dataToFilter;
+    if (datePreset !== 'all' && startDate && endDate) {
+      const start = moment(startDate);
+      const end = moment(endDate);
+      dateRangeStr = `${start.format('DD/MM/YY')} - ${end.format('DD/MM/YY')}`;
+
+      filteredData = dataToFilter.filter(inst => {
+        // Usar data_instalacao para agendados/concluídos, created_at para o resto
+        const dateToCompare = (inst.status === 'Agendado' || inst.status === 'Concluído')
+          ? inst.data_instalacao
+          : inst.created_at;
+          
+        if (!dateToCompare) return false;
+        
+        const itemDate = moment(dateToCompare);
+        return itemDate.isBetween(start, end, 'day', '[]'); // '[]' inclui início e fim
+      });
+    }
+    
+    // 3. Formatar saída
+    if (reportFormat === 'summary') {
+      setGeneratedReport({
+        title,
+        dateRange: dateRangeStr,
+        count: filteredData.length,
+        details: null,
+      });
+    } else { // 'detailed'
+      const details = filteredData.map(inst => ({
+        nome: inst.nome_completo,
+        placa: inst.placa,
+        servico: inst.tipo_servico,
+      }));
+      setGeneratedReport({
+        title,
+        dateRange: dateRangeStr,
+        count: filteredData.length,
+        details,
+      });
+    }
+  };
+  
+  const handlePrint = () => {
+    const printContent = document.getElementById('report-to-print');
+    if (printContent) {
+      const win = window.open('', '', 'height=700,width=900');
+      win?.document.write('<html><head><title>Relatório - Agenda Autocontrol</title>');
+      // Adiciona estilos básicos para impressão
+      win?.document.write(`
+        <style>
+          body { font-family: Arial, sans-serif; }
+          table { width: 100%; border-collapse: collapse; }
+          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+          th { background-color: #f2f2f2; }
+          h1, h2, h3 { color: #333; }
+        </style>
+      `);
+      win?.document.write('</head><body>');
+      win?.document.write(printContent.innerHTML);
+      win?.document.write('</body></html>');
+      win?.document.close();
+      win?.print();
+    }
+  };
+
+  const inputClasses = "w-full p-2.5 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-blue-500 focus:border-blue-500";
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 p-4">
+      <div className="bg-slate-800 rounded-lg shadow-xl w-full max-w-2xl border border-slate-700">
+        <div className="p-4 border-b border-slate-700 flex justify-between items-center">
+            <h3 className="text-lg font-medium text-white"><i className="bi bi-file-earmark-text mr-2"></i>Gerar Relatório</h3>
+            <button onClick={onClose} className="text-slate-400 hover:text-white text-2xl">&times;</button>
+        </div>
+        
+        <form onSubmit={handleGenerateReport} className="p-6 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="reportType" className="block mb-2 text-sm text-slate-400">Tipo de Relatório</label>
+              <select id="reportType" value={reportType} onChange={(e) => setReportType(e.target.value as ReportType)} className={inputClasses}>
+                <option value="general">Geral</option>
+                <option value="pending">Pendentes</option>
+                <option value="reschedule">Necessário Reagendar</option>
+                <option value="scheduled">Agendados</option>
+                <option value="completed">Concluídos</option>
+              </select>
+            </div>
+            <div>
+              <label htmlFor="reportFormat" className="block mb-2 text-sm text-slate-400">Formato</label>
+              <select id="reportFormat" value={reportFormat} onChange={(e) => setReportFormat(e.target.value as ReportFormat)} className={inputClasses}>
+                <option value="summary">Resumido (Total)</option>
+                <option value="detailed">Detalhado</option>
+              </select>
+            </div>
+          </div>
+          
+          <div>
+            <label htmlFor="datePreset" className="block mb-2 text-sm text-slate-400">Período</label>
+            <select id="datePreset" value={datePreset} onChange={(e) => handleDatePresetChange(e.target.value as DatePreset)} className={inputClasses}>
+              <option value="all">Todo o período</option>
+              <option value="month">Este Mês</option>
+              <option value="lastMonth">Mês Passado</option>
+              <option value="week">Esta Semana</option>
+              <option value="last30">Últimos 30 dias</option>
+              <option value="custom">Personalizado</option>
+            </select>
+          </div>
+
+          {datePreset === 'custom' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="startDate" className="block mb-2 text-sm text-slate-400">Data Inicial</label>
+                <input type="date" id="startDate" value={startDate} onChange={(e) => setStartDate(e.target.value)} className={inputClasses} required />
+              </div>
+              <div>
+                <label htmlFor="endDate" className="block mb-2 text-sm text-slate-400">Data Final</label>
+                <input type="date" id="endDate" value={endDate} onChange={(e) => setEndDate(e.target.value)} className={inputClasses} required />
+              </div>
+            </div>
+          )}
+          
+          <div className="pt-2 flex justify-end">
+            <button type="submit" className="px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors">
+              Gerar Relatório
+            </button>
+          </div>
+        </form>
+
+        {generatedReport && (
+          <div className="p-6 border-t border-slate-700">
+            <div id="report-to-print">
+              <h2 className="text-xl font-bold text-white mb-2">{generatedReport.title}</h2>
+              <p className="text-slate-400 text-sm mb-1">Período: {generatedReport.dateRange}</p>
+              <p className="text-slate-400 text-sm mb-4">Total de Registros: <span className="font-bold text-lg text-white">{generatedReport.count}</span></p>
+
+              {generatedReport.details && (
+                <div className="max-h-60 overflow-y-auto">
+                  <table className="w-full text-sm text-left text-slate-400">
+                    <thead className="text-xs text-slate-300 uppercase bg-slate-700 sticky top-0">
+                      <tr>
+                        <th scope="col" className="px-6 py-3">Cliente</th>
+                        <th scope="col" className="px-6 py-3">Placa</th>
+                        <th scope="col" className="px-6 py-3">Serviço</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {generatedReport.details.map((item, index) => (
+                        <tr key={index} className="bg-slate-800 border-b border-slate-700">
+                          <td className="px-6 py-4 font-medium text-white">{item.nome}</td>
+                          <td className="px-6 py-4">{item.placa}</td>
+                          <td className="px-6 py-4">{item.servico}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+            <div className="pt-4 flex justify-end">
+              <button onClick={handlePrint} className="px-4 py-2 rounded-lg bg-slate-600 hover:bg-slate-500 text-white font-medium transition-colors">
+                <i className="bi bi-printer-fill mr-2"></i> Imprimir
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+// *** FIM DO MODAL DE RELATÓRIOS ***
+
+
 // --- COMPONENTE PRINCIPAL ---
 export function Dashboard() {
   const [installations, setInstallations] = useState<Installation[]>([]);
@@ -314,17 +576,14 @@ export function Dashboard() {
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<{installation: Installation, type: 'installation' | 'maintenance' | 'removal'} | null>(null);
   const [historyTarget, setHistoryTarget] = useState<Installation | null>(null);
-  
-  // *** ESTADO PARA O MODAL DE DETALHES ***
   const [detailsTarget, setDetailsTarget] = useState<Installation | null>(null);
+
+  // *** ESTADO PARA O NOVO MODAL ***
+  const [showReportModal, setShowReportModal] = useState(false);
 
   const [message, setMessage] = useState<{type: 'success' | 'danger' | 'info', text: string} | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  
-  // Abas fechadas por padrão
   const [openAccordions, setOpenAccordions] = useState<string[]>([]); 
-
-  // Estados para filtro de data
   const [filterDay, setFilterDay] = useState('');
   const [filterMonth, setFilterMonth] = useState('');
   const [filterYear, setFilterYear] = useState('');
@@ -455,11 +714,10 @@ export function Dashboard() {
                         return (
                             <tr key={inst.id} className="border-b border-slate-700 hover:bg-slate-800/50">
                                 
-                                {/* *** ALTERAÇÃO AQUI: de <button> para <span> *** */}
                                 <td className="px-6 py-4">
                                     <div className="flex items-center">
                                         <span
-                                          onClick={() => setDetailsTarget(inst)} // <-- Abre o modal
+                                          onClick={() => setDetailsTarget(inst)}
                                           className="font-medium text-white hover:text-blue-400 transition-colors cursor-pointer"
                                         >
                                           {inst.nome_completo}
@@ -550,7 +808,18 @@ export function Dashboard() {
   return (
     <div className="space-y-6">
       <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-6 shadow-lg">
-        <h1 className="text-2xl font-bold text-white mb-4"><i className="bi bi-clipboard-data mr-3"></i>Painel de Agendamentos</h1>
+        <div className="flex justify-between items-center mb-4">
+          <h1 className="text-2xl font-bold text-white"><i className="bi bi-clipboard-data mr-3"></i>Painel de Agendamentos</h1>
+          
+          {/* *** BOTÃO DE CRIAR RELATÓRIO *** */}
+          <button 
+            onClick={() => setShowReportModal(true)}
+            className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors text-sm"
+          >
+            <i className="bi bi-file-earmark-text mr-2"></i>Criar Relatório
+          </button>
+        </div>
+        
         <div className="relative">
             <i className="bi bi-search text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
             <input 
@@ -651,18 +920,30 @@ export function Dashboard() {
       )}
       {historyTarget && <HistoryModal isOpen={!!historyTarget} onClose={() => setHistoryTarget(null)} installation={historyTarget} />}
 
-      {/* *** RENDERIZAÇÃO DO MODAL DE DETALHES *** */}
       {detailsTarget && (
         <DetailsModal
           installation={detailsTarget}
           onClose={() => setDetailsTarget(null)}
           onViewHistory={(inst) => {
-            setDetailsTarget(null); // Fecha o modal de detalhes
-            setHistoryTarget(inst); // Abre o modal de histórico
+            setDetailsTarget(null);
+            setHistoryTarget(inst);
           }}
           setMessage={setMessage}
         />
       )}
+
+      {/* *** RENDERIZAÇÃO DO MODAL DE RELATÓRIO *** */}
+      <ReportModal 
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        installationsData={{
+          pending: pending,
+          reschedule: reschedule,
+          scheduled: scheduled,
+          completed: completed,
+          all: installations, // Passa todas as instalações para o "Geral"
+        }}
+      />
     </div>
   );
 }
