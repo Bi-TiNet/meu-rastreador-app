@@ -1,6 +1,6 @@
 // src/components/Dashboard.tsx
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase } from '../supabaseClient.ts'; // Caminho corrigido
 import type { User } from '@supabase/supabase-js';
 import moment from 'moment'; // Importar o moment para os filtros de data
 
@@ -287,7 +287,7 @@ function DetailsModal({ installation, onClose, onViewHistory, setMessage }: {
   );
 }
 
-// *** NOVO MODAL DE RELATÓRIOS ***
+// *** INÍCIO DO MODAL DE RELATÓRIOS ***
 type ReportType = 'pending' | 'reschedule' | 'scheduled' | 'completed' | 'general';
 type ReportFormat = 'summary' | 'detailed';
 type DatePreset = 'all' | 'custom' | 'week' | 'month' | 'lastMonth' | 'last30';
@@ -316,6 +316,18 @@ function ReportModal({ isOpen, onClose, installationsData }: {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [generatedReport, setGeneratedReport] = useState<GeneratedReport | null>(null);
+
+  // Limpa o relatório gerado ao fechar o modal
+  useEffect(() => {
+    if (!isOpen) {
+      setGeneratedReport(null);
+      setReportType('general');
+      setReportFormat('summary');
+      setDatePreset('all');
+      setStartDate('');
+      setEndDate('');
+    }
+  }, [isOpen]);
 
   const handleDatePresetChange = (preset: DatePreset) => {
     setDatePreset(preset);
@@ -442,6 +454,8 @@ function ReportModal({ isOpen, onClose, installationsData }: {
       win?.print();
     }
   };
+  
+  if (!isOpen) return null; // Renderiza nada se não estiver aberto
 
   const inputClasses = "w-full p-2.5 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-blue-500 focus:border-blue-500";
 
@@ -558,11 +572,11 @@ function AccordionItem({ title, children, isOpen, onToggle }: { title: React.Rea
                 className="w-full flex justify-between items-center p-4 bg-slate-800 hover:bg-slate-700/50 transition-colors duration-300"
             >
                 <span className="font-medium text-white">{title}</span>
+                {/* *** CORREÇÃO APLICADA AQUI (crases) *** */}
                 <i className={`bi bi-chevron-down transition-transform duration-300 ${isOpen ? 'transform rotate-180' : ''}`}></i>
             </button>
             
-            {/* *** CORREÇÃO APLICADA AQUI *** */}
-            {/* Trocado aspas simples por crases (backticks) */}
+            {/* *** CORREÇÃO APLICADA AQUI (crases) *** */}
             <div className={`transition-all duration-500 ease-in-out ${isOpen ? 'max-h-[10000px]' : 'max-h-0'} overflow-hidden`}>
                 <div className="bg-slate-900">
                     {children}
@@ -638,6 +652,7 @@ export function Dashboard() {
     }
   };
 
+  // Listas para exibição (filtradas pela busca)
   const filteredInstallations = useMemo(() =>
     installations.filter(inst =>
       inst.nome_completo.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -675,6 +690,21 @@ export function Dashboard() {
       }
     });
   }, [filteredInstallations, filterDay, filterMonth, filterYear]);
+  
+  
+  // *** AJUSTE: DADOS PARA O RELATÓRIO (baseado na lista completa, não no filtro de busca) ***
+  const reportData = useMemo(() => {
+    const all = installations;
+    const pending = all.filter(inst => inst.status === 'A agendar');
+    const scheduled = all.filter(inst => inst.status === 'Agendado');
+    const reschedule = all.filter(inst => inst.status === 'Reagendar');
+    
+    // O filtro de data (dia/mês/ano) do accordion de "Concluídos" NÃO deve
+    // afetar o relatório. O relatório tem seus próprios filtros de data.
+    const completed = all.filter(inst => inst.status === 'Concluído');
+    
+    return { all, pending, scheduled, reschedule, completed };
+  }, [installations]);
 
 
   const getServiceBadgeColor = (serviceType: string) => {
@@ -935,13 +965,7 @@ export function Dashboard() {
       <ReportModal 
         isOpen={showReportModal}
         onClose={() => setShowReportModal(false)}
-        installationsData={{
-          pending: pending,
-          reschedule: reschedule,
-          scheduled: scheduled,
-          completed: completed,
-          all: installations, // Passa todas as instalações para o "Geral"
-        }}
+        installationsData={reportData} {/* *** AJUSTE APLICADO AQUI *** */}
       />
     </div>
   );
