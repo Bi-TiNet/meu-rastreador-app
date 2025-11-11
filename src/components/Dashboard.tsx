@@ -187,7 +187,12 @@ export function Dashboard() {
   const [historyTarget, setHistoryTarget] = useState<Installation | null>(null);
   const [message, setMessage] = useState<{type: 'success' | 'danger' | 'info', text: string} | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [openAccordions, setOpenAccordions] = useState<string[]>([]);
+  const [openAccordions, setOpenAccordions] = useState<string[]>(['pending', 'scheduled', 'reschedule', 'completed']); // Adicionado 'reschedule'
+
+  // *** NOVOS ESTADOS PARA FILTRO DE DATA ***
+  const [filterDay, setFilterDay] = useState('');
+  const [filterMonth, setFilterMonth] = useState('');
+  const [filterYear, setFilterYear] = useState('');
 
   const fetchInstallations = useCallback(async () => {
     setLoading(true);
@@ -220,6 +225,7 @@ export function Dashboard() {
       if (!session) throw new Error('Usuário não autenticado.');
 
       const { date, time, type, completionType, tecnico_id } = options;
+      // *** LÓGICA ATUALIZADA: Se for de 'Reagendar', o tipo já está correto, apenas agende.
       const finalStatus = (type || status === 'Agendado') ? 'Agendado' : status;
 
       const response = await fetch('/.netlify/functions/update-installation', {
@@ -249,15 +255,53 @@ export function Dashboard() {
 
   const pending = filteredInstallations.filter(inst => inst.status === 'A agendar');
   const scheduled = filteredInstallations.filter(inst => inst.status === 'Agendado');
-  const completed = filteredInstallations.filter(inst => inst.status === 'Concluído');
+  
+  // *** NOVA LISTA "REAGENDAR" ***
+  const reschedule = filteredInstallations.filter(inst => inst.status === 'Reagendar');
+  
+  // *** LISTA "CONCLUÍDAS" COM FILTRO DE DATA ***
+  const completed = useMemo(() => {
+    return filteredInstallations.filter(inst => {
+      if (inst.status !== 'Concluído') return false;
 
-  const renderTable = (installationsList: Installation[], listType: 'pending' | 'scheduled' | 'completed') => {
+      // Se não houver filtros de data, retorna true (passa no filtro de data)
+      if (!filterYear && !filterMonth && !filterDay) {
+        return true;
+      }
+      
+      // Se houver filtro, mas não houver data, não exibe
+      if (!inst.data_instalacao) return false;
+
+      try {
+        // Usa a data de instalação (que é a data de conclusão/agendamento)
+        const date = new Date(inst.data_instalacao);
+        
+        // Ajusta para UTC para evitar problemas de fuso horário na comparação
+        const year = date.getUTCFullYear();
+        const month = date.getUTCMonth() + 1; // Meses em JS são 0-11
+        const day = date.getUTCDate();
+
+        const yearMatch = !filterYear || year === parseInt(filterYear);
+        const monthMatch = !filterMonth || month === parseInt(filterMonth);
+        const dayMatch = !filterDay || day === parseInt(filterDay);
+
+        return yearMatch && monthMatch && dayMatch;
+      } catch (e) {
+        console.error("Erro ao parsear data para filtro:", inst.data_instalacao, e);
+        return false;
+      }
+    });
+  }, [filteredInstallations, filterDay, filterMonth, filterYear]);
+
+
+  const renderTable = (installationsList: Installation[], listType: 'pending' | 'scheduled' | 'completed' | 'reschedule') => {
     if (installationsList.length === 0) {
         return <p className="text-slate-500 p-4 text-center italic">Nenhum registro encontrado.</p>;
     }
 
     const headers = {
       pending: ['Cliente', 'Veículo', 'Serviço', 'Base', 'Ações'],
+      reschedule: ['Cliente', 'Veículo', 'Serviço', 'Base', 'Ações'], // Mesmo header do pendente
       scheduled: ['Cliente', 'Veículo', 'Agendamento', 'Técnico', 'Base', 'Ações'],
       completed: ['Cliente', 'Veículo', 'Serviço', 'Base', 'Ações']
     };
@@ -297,7 +341,7 @@ export function Dashboard() {
                                 {listType === 'scheduled' && <td className="px-6 py-4">{inst.data_instalacao && inst.horario ? `${new Date(inst.data_instalacao + 'T00:00:00').toLocaleDateString('pt-BR')} às ${inst.horario}`: 'N/A'}</td>}
                                 {listType === 'scheduled' && <td className="px-6 py-4">{inst.profiles?.full_name || 'Não definido'}</td>}
                                 
-                                {(listType === 'pending' || listType === 'completed') && 
+                                {(listType === 'pending' || listType === 'completed' || listType === 'reschedule') && 
                                 <td className="px-6 py-4">
                                 <span className={`px-2 py-1 text-xs font-medium rounded-full ${getServiceBadgeColor(inst.tipo_servico)}`}>
                                     {inst.tipo_servico}
@@ -313,7 +357,7 @@ export function Dashboard() {
 
                                 <td className="px-6 py-4">
                                     <div className="flex items-center justify-center space-x-2">
-                                        {listType === 'pending' &&
+                                        {(listType === 'pending' || listType === 'reschedule') &&
                                             <button onClick={() => setSelected({ installation: inst, type: inst.tipo_servico.toLowerCase() as any })}
                                                 className="font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg text-xs px-4 py-2 transition-colors duration-300"
                                             >
@@ -365,11 +409,17 @@ export function Dashboard() {
   if (loading) return <div className="text-center p-5"> <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mx-auto"></div></div>;
   if (error) return <div className="p-4 text-sm text-red-400 bg-red-500/10 border border-red-500/30 rounded-lg">{error}</div>;
 
+  // *** FUNÇÕES PARA LIMPAR FILTROS ***
+  const clearFilters = () => {
+    setFilterDay('');
+    setFilterMonth('');
+    setFilterYear('');
+  };
+  
   return (
     <div className="space-y-6">
       <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-6 shadow-lg">
         <h1 className="text-2xl font-bold text-white mb-4"><i className="bi bi-clipboard-data mr-3"></i>Painel de Agendamentos</h1>
-        {/* CORREÇÃO DO ÍCONE DE BUSCA APLICADA AQUI */}
         <div className="relative">
             <i className="bi bi-search text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
             <input 
@@ -393,6 +443,15 @@ export function Dashboard() {
                 {renderTable(pending, 'pending')}
             </AccordionItem>
             
+            {/* *** NOVA ABA "NECESSÁRIO REAGENDAR" *** */}
+            <AccordionItem 
+                isOpen={openAccordions.includes('reschedule')} 
+                onToggle={() => toggleAccordion('reschedule')}
+                title={<><i className="bi bi-exclamation-triangle-fill mr-2 text-red-500"></i>Necessário Reagendar ({reschedule.length})</>}
+            >
+                {renderTable(reschedule, 'reschedule')}
+            </AccordionItem>
+            
             <AccordionItem 
                 isOpen={openAccordions.includes('scheduled')} 
                 onToggle={() => toggleAccordion('scheduled')}
@@ -404,7 +463,46 @@ export function Dashboard() {
             <AccordionItem 
                 isOpen={openAccordions.includes('completed')} 
                 onToggle={() => toggleAccordion('completed')}
-                title={<><i className="bi bi-check-circle-fill mr-2"></i>Concluídas ({completed.length})</>}
+                title={
+                    <div className="flex flex-col md:flex-row justify-between items-center w-full gap-4 pr-4">
+                        <span className="font-medium text-white"><i className="bi bi-check-circle-fill mr-2"></i>Concluídas ({completed.length})</span>
+                        
+                        {/* *** FILTROS DE DATA *** */}
+                        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                            <input 
+                                type="number" 
+                                placeholder="Dia" 
+                                value={filterDay}
+                                onChange={(e) => setFilterDay(e.target.value)}
+                                className="w-20 p-1.5 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm"
+                                min="1" max="31"
+                            />
+                             <input 
+                                type="number" 
+                                placeholder="Mês" 
+                                value={filterMonth}
+                                onChange={(e) => setFilterMonth(e.target.value)}
+                                className="w-20 p-1.5 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm"
+                                min="1" max="12"
+                            />
+                             <input 
+                                type="number" 
+                                placeholder="Ano" 
+                                value={filterYear}
+                                onChange={(e) => setFilterYear(e.target.value)}
+                                className="w-24 p-1.5 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm"
+                                min="2020"
+                            />
+                            <button 
+                                onClick={clearFilters} 
+                                className="p-1.5 text-slate-400 hover:text-white"
+                                title="Limpar filtros"
+                            >
+                                <i className="bi bi-x-circle-fill"></i>
+                            </button>
+                        </div>
+                    </div>
+                }
             >
                 {renderTable(completed, 'completed')}
             </AccordionItem>
@@ -415,7 +513,11 @@ export function Dashboard() {
             isOpen={!!selected} 
             onClose={() => setSelected(null)} 
             installation={selected.installation}
-            onSchedule={(id, date, time, tecnico_id) => handleUpdate(id, 'Agendado', { date, time, tecnico_id, type: selected.type })}
+            onSchedule={(id, date, time, tecnico_id) => {
+                // Ao agendar, define o tipo de serviço com base no que já estava (para manutenção/remoção)
+                const type = selected.type;
+                handleUpdate(id, 'Agendado', { date, time, tecnico_id, type });
+            }}
             scheduleType={selected.type}
         />
       )}

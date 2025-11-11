@@ -50,8 +50,9 @@ exports.handler = async function(event) {
 
     // --- LÓGICA DE AÇÕES DO TÉCNICO E ADMIN ---
     if (action === 'return_to_pending') {
-      updatePayload = { status: 'A agendar', tecnico_id: null, data_instalacao: null, horario: null };
-      eventoText = 'Serviço devolvido para a lista de pendentes pelo técnico.';
+      // *** MUDANÇA EXECUTADA AQUI ***
+      updatePayload = { status: 'Reagendar', tecnico_id: null, data_instalacao: null, horario: null };
+      eventoText = 'Serviço devolvido para reagendamento pelo técnico.';
     } else if (action === 'reschedule_self') {
       updatePayload = { data_instalacao: date, horario: time };
       eventoText = `Serviço reagendado pelo técnico para ${date} às ${time}.`;
