@@ -287,26 +287,7 @@ function DetailsModal({ installation, onClose, onViewHistory, setMessage }: {
   );
 }
 
-function AccordionItem({ title, children, isOpen, onToggle }: { title: React.ReactNode, children: React.ReactNode, isOpen: boolean, onToggle: () => void }) {
-    return (
-        <div className="border border-slate-700 rounded-lg overflow-hidden mb-3">
-            <button
-                onClick={onToggle}
-                className="w-full flex justify-between items-center p-4 bg-slate-800 hover:bg-slate-700/50 transition-colors duration-300"
-            >
-                <span className="font-medium text-white">{title}</span>
-                <i className={`bi bi-chevron-down transition-transform duration-300 ${isOpen ? 'transform rotate-180' : ''}`}></i>
-            </button>
-            <div className={`transition-all duration-500 ease-in-out ${isOpen ? 'max-h-[10000px]' : 'max-h-0'} overflow-hidden`}>
-                <div className="bg-slate-900">
-                    {children}
-                </div>
-            </div>
-        </div>
-    )
-}
-
-// *** INÍCIO DO NOVO MODAL DE RELATÓRIOS ***
+// *** NOVO MODAL DE RELATÓRIOS ***
 type ReportType = 'pending' | 'reschedule' | 'scheduled' | 'completed' | 'general';
 type ReportFormat = 'summary' | 'detailed';
 type DatePreset = 'all' | 'custom' | 'week' | 'month' | 'lastMonth' | 'last30';
@@ -569,6 +550,28 @@ function ReportModal({ isOpen, onClose, installationsData }: {
 // *** FIM DO MODAL DE RELATÓRIOS ***
 
 
+function AccordionItem({ title, children, isOpen, onToggle }: { title: React.ReactNode, children: React.ReactNode, isOpen: boolean, onToggle: () => void }) {
+    return (
+        <div className="border border-slate-700 rounded-lg overflow-hidden mb-3">
+            <button
+                onClick={onToggle}
+                className="w-full flex justify-between items-center p-4 bg-slate-800 hover:bg-slate-700/50 transition-colors duration-300"
+            >
+                <span className="font-medium text-white">{title}</span>
+                <i className={`bi bi-chevron-down transition-transform duration-300 ${isOpen ? 'transform rotate-180' : ''}`}></i>
+            </button>
+            
+            {/* *** CORREÇÃO APLICADA AQUI *** */}
+            {/* Trocado aspas simples por crases (backticks) */}
+            <div className={`transition-all duration-500 ease-in-out ${isOpen ? 'max-h-[10000px]' : 'max-h-0'} overflow-hidden`}>
+                <div className="bg-slate-900">
+                    {children}
+                </div>
+            </div>
+        </div>
+    )
+}
+
 // --- COMPONENTE PRINCIPAL ---
 export function Dashboard() {
   const [installations, setInstallations] = useState<Installation[]>([]);
@@ -577,10 +580,7 @@ export function Dashboard() {
   const [selected, setSelected] = useState<{installation: Installation, type: 'installation' | 'maintenance' | 'removal'} | null>(null);
   const [historyTarget, setHistoryTarget] = useState<Installation | null>(null);
   const [detailsTarget, setDetailsTarget] = useState<Installation | null>(null);
-
-  // *** ESTADO PARA O NOVO MODAL ***
   const [showReportModal, setShowReportModal] = useState(false);
-
   const [message, setMessage] = useState<{type: 'success' | 'danger' | 'info', text: string} | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [openAccordions, setOpenAccordions] = useState<string[]>([]); 
@@ -808,13 +808,12 @@ export function Dashboard() {
   return (
     <div className="space-y-6">
       <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-6 shadow-lg">
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
           <h1 className="text-2xl font-bold text-white"><i className="bi bi-clipboard-data mr-3"></i>Painel de Agendamentos</h1>
           
-          {/* *** BOTÃO DE CRIAR RELATÓRIO *** */}
           <button 
             onClick={() => setShowReportModal(true)}
-            className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors text-sm"
+            className="w-full md:w-auto px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors text-sm"
           >
             <i className="bi bi-file-earmark-text mr-2"></i>Criar Relatório
           </button>
@@ -932,7 +931,7 @@ export function Dashboard() {
         />
       )}
 
-      {/* *** RENDERIZAÇÃO DO MODAL DE RELATÓRIO *** */}
+      {/* RENDERIZAÇÃO DO MODAL DE RELATÓRIO */}
       <ReportModal 
         isOpen={showReportModal}
         onClose={() => setShowReportModal(false)}
