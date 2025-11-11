@@ -1,8 +1,8 @@
 // src/components/Dashboard.tsx
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase } from '../supabaseClient.ts';
 import type { User } from '@supabase/supabase-js';
-import moment from 'moment';
+import moment from 'moment'; // Importar o moment para os filtros de data
 
 // --- Interfaces ---
 interface History {
@@ -287,16 +287,24 @@ function DetailsModal({ installation, onClose, onViewHistory, setMessage }: {
   );
 }
 
-// *** INÍCIO DO MODAL DE RELATÓRIOS (COM FILTRO DE TIPO DE SERVIÇO) ***
+// *** MODAL DE RELATÓRIOS (ATUALIZADO) ***
 type ReportType = 'pending' | 'reschedule' | 'scheduled' | 'completed' | 'general';
 type ReportFormat = 'summary' | 'detailed';
 type DatePreset = 'all' | 'custom' | 'week' | 'month' | 'lastMonth' | 'last30';
 
+// *** ATUALIZADO: Interface do Relatório Detalhado ***
 interface GeneratedReport {
   title: string;
   dateRange: string;
   count: number;
-  details: { nome: string; placa: string; servico: string; }[] | null;
+  details: { 
+    nome: string; 
+    placa: string; 
+    servico: string; 
+    base: string; 
+    dataCriacao: string;
+    dataFinalizacao: string;
+  }[] | null;
 }
 
 function ReportModal({ isOpen, onClose, installationsData, allBases }: { 
@@ -314,7 +322,7 @@ function ReportModal({ isOpen, onClose, installationsData, allBases }: {
   const [reportType, setReportType] = useState<ReportType>('general');
   const [reportFormat, setReportFormat] = useState<ReportFormat>('summary');
   const [selectedBase, setSelectedBase] = useState<string>('all'); 
-  const [serviceType, setServiceType] = useState<string>('all'); // <-- Novo estado para Tipo de Serviço
+  const [serviceType, setServiceType] = useState<string>('all'); // <-- Novo estado
   const [datePreset, setDatePreset] = useState<DatePreset>('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -328,7 +336,7 @@ function ReportModal({ isOpen, onClose, installationsData, allBases }: {
       setReportFormat('summary');
       setDatePreset('all');
       setSelectedBase('all'); 
-      setServiceType('all'); // <-- Resetar Tipo de Serviço
+      setServiceType('all'); // <-- Resetar
       setStartDate('');
       setEndDate('');
     }
@@ -357,7 +365,6 @@ function ReportModal({ isOpen, onClose, installationsData, allBases }: {
       end = moment().subtract(1, 'month').endOf('month');
     } else if (preset === 'last30') {
       start = moment().subtract(30, 'days');
-      // end é 'hoje', já está setado
     }
     
     setStartDate(start.format('YYYY-MM-DD'));
@@ -420,10 +427,10 @@ function ReportModal({ isOpen, onClose, installationsData, allBases }: {
       title += ` (Base: ${selectedBase})`; 
     }
     
-    // *** 4. NOVO: Filtrar por Tipo de Serviço ***
+    // 4. Filtrar por Tipo de Serviço
     if (serviceType !== 'all') {
       filteredData = filteredData.filter(inst => inst.tipo_servico === serviceType);
-      title += ` (${serviceType})`; // Adiciona o tipo ao título
+      title += ` (${serviceType})`; 
     }
     
     // 5. Formatar saída
@@ -435,10 +442,16 @@ function ReportModal({ isOpen, onClose, installationsData, allBases }: {
         details: null,
       });
     } else { // 'detailed'
+      // *** ATUALIZADO: .map() do Relatório Detalhado ***
       const details = filteredData.map(inst => ({
         nome: inst.nome_completo,
         placa: inst.placa,
         servico: inst.tipo_servico,
+        base: inst.base || 'N/A',
+        dataCriacao: moment(inst.created_at).format('DD/MM/YYYY'),
+        dataFinalizacao: inst.status === 'Concluído' && inst.data_instalacao 
+          ? moment(inst.data_instalacao).format('DD/MM/YYYY') 
+          : '---',
       }));
       setGeneratedReport({
         title,
@@ -471,7 +484,7 @@ function ReportModal({ isOpen, onClose, installationsData, allBases }: {
     }
   };
   
-  if (!isOpen) return null; // Renderiza nada se não estiver aberto
+  if (!isOpen) return null;
 
   const inputClasses = "w-full p-2.5 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-blue-500 focus:border-blue-500";
 
@@ -570,19 +583,27 @@ function ReportModal({ isOpen, onClose, installationsData, allBases }: {
               {generatedReport.details && (
                 <div className="max-h-60 overflow-y-auto">
                   <table className="w-full text-sm text-left text-slate-400">
+                    {/* *** ATUALIZADO: Cabeçalhos da Tabela *** */}
                     <thead className="text-xs text-slate-300 uppercase bg-slate-700 sticky top-0">
                       <tr>
                         <th scope="col" className="px-6 py-3">Cliente</th>
                         <th scope="col" className="px-6 py-3">Placa</th>
                         <th scope="col" className="px-6 py-3">Serviço</th>
+                        <th scope="col" className="px-6 py-3">Base</th>
+                        <th scope="col" className="px-6 py-3">Criação</th>
+                        <th scope="col" className="px-6 py-3">Finalização</th>
                       </tr>
                     </thead>
+                    {/* *** ATUALIZADO: Corpo da Tabela *** */}
                     <tbody>
                       {generatedReport.details.map((item, index) => (
                         <tr key={index} className="bg-slate-800 border-b border-slate-700">
                           <td className="px-6 py-4 font-medium text-white">{item.nome}</td>
                           <td className="px-6 py-4">{item.placa}</td>
                           <td className="px-6 py-4">{item.servico}</td>
+                          <td className="px-6 py-4">{item.base}</td>
+                          <td className="px-6 py-4">{item.dataCriacao}</td>
+                          <td className="px-6 py-4">{item.dataFinalizacao}</td>
                         </tr>
                       ))}
                     </tbody>
