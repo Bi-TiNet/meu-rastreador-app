@@ -1,443 +1,545 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Calendar, momentLocalizer } from 'react-big-calendar';
-// CORREÇÃO (TS1484): 'Event' é um tipo, importado com 'import type' e renomeado
-import type { Event as CalendarEventInterface } from 'react-big-calendar';
+// src/components/TechnicianAgenda.tsx
+import { useEffect, useState, useCallback, useMemo, type FormEvent } from 'react';
 import moment from 'moment';
-import 'moment/locale/pt-br';
-import 'react-big-calendar/lib/css/react-big-calendar.css';
-import { supabase } from '../supabaseClient.ts';
-// CORREÇÃO (TS1484): 'Session' é um tipo, importado com 'import type'
-import type { Session } from '@supabase/supabase-js';
-import { Modal, Button, Badge, Container, Row, Col, Alert, Spinner, Form, FloatingLabel } from 'react-bootstrap';
+import { supabase } from '../supabaseClient';
+import type { User } from '@supabase/supabase-js';
 
-// Configura o moment para português do Brasil
-moment.locale('pt-br');
-const localizer = momentLocalizer(moment);
+// --- INTERFACES ---
+interface Observacao {
+    id: number;
+    texto: string;
+    destaque: boolean;
+    created_at: string;
+    criado_por: string;
+}
 
-// --- Interfaces Atualizadas ---
-interface Instalacao {
-  id: string;
-  status: string;
-  data_agendamento: string | null;
-  tecnico_id: string | null;
-  cliente: { nome: string; telefone: string; endereco: string; };
-  veiculo: { marca: string; modelo: string; placa: string; cor: string; ano: string; };
-  observacoes: { observacao: string; data: string }[];
+interface Installation {
+  id: number;
+  nome_completo: string;
+  contato: string;
+  placa: string;
+  modelo: string;
+  ano?: string;
+  cor?: string;
+  endereco: string;
+  usuario: string;
+  senha?: string;
   base: string;
-  // Adicionado para mostrar o nome do técnico
+  bloqueio: string;
+  status: 'Agendado' | 'Concluído';
+  data_instalacao?: string;
+  horario?: string;
+  tipo_servico: string;
+  observacoes: Observacao[];
   profiles?: {
     full_name: string;
   };
-  // Adicionado para a função de cópia
-  ano?: string;
-  cor?: string;
-  usuario?: string;
-  senha?: string;
-  bloqueio?: string;
-  tipo_servico: string;
-  created_at: string; // Adicionado para consistência
 }
 
-// CORREÇÃO: Interface usa o tipo renomeado
-interface CalendarEvent extends CalendarEventInterface {
-  resource: Instalacao; // Armazena a instalação completa
-}
-
-interface TechnicianAgendaProps {
-  session: Session;
-}
-
-// *** NOVO MODAL PARA MOTIVO DA DEVOLUÇÃO (Estilo React-Bootstrap) ***
-function ReturnReasonModal({ isOpen, onClose, onSubmit, reason, setReason }: { 
-  isOpen: boolean; 
-  onClose: () => void; 
-  onSubmit: () => void;
-  reason: string;
-  setReason: (reason: string) => void;
-}) {
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit();
-  };
+// *** NOVO MODAL PARA MOTIVO DA DEVOLUÇÃO ***
+function ReturnReasonModal(
+  { show, onClose, onSubmit, reason, setReason, error, loading }: 
+  { 
+    show: boolean, 
+    onClose: () => void, 
+    onSubmit: (e: FormEvent) => void,
+    reason: string,
+    setReason: (value: string) => void,
+    error: string,
+    loading: boolean
+  }
+) {
+  if (!show) return null;
 
   return (
-    <Modal show={isOpen} onHide={onClose} centered>
-      <Form onSubmit={handleSubmit}>
-        <Modal.Header closeButton>
-          <Modal.Title>Motivo da Devolução</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <FloatingLabel
-            controlId="return_reason"
-            label="Descreva por que o serviço não foi executado."
-            className="mb-3"
-          >
-            <Form.Control
-              as="textarea"
-              placeholder="Motivo..."
-              style={{ height: '100px' }}
-              value={reason}
+    <div className="fixed inset-0 bg-black bg-opacity-75 z-[60] p-4">
+      <form 
+        onSubmit={onSubmit}
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[95%] max-w-lg bg-slate-800 rounded-lg shadow-xl border border-slate-700"
+      >
+        <div className="p-4 border-b border-slate-700 flex justify-between items-center">
+            <h3 className="text-lg font-medium text-white">Motivo da Devolução</h3>
+            <button type="button" onClick={onClose} className="text-slate-400 hover:text-white text-2xl">&times;</button>
+        </div>
+        <div className="p-6">
+            {error && <div className="p-3 mb-4 text-sm rounded-lg bg-red-800/50 text-red-300 border border-red-700">{error}</div>}
+            <label htmlFor="return_reason" className="block mb-2 text-sm font-medium text-slate-300">
+              Descreva por que este serviço precisa ser reagendado pela central.
+            </label>
+            <textarea 
+              id="return_reason" 
+              className="w-full p-2.5 bg-slate-700 border border-slate-600 rounded-lg text-white h-24" 
+              value={reason} 
               onChange={(e) => setReason(e.target.value)}
               required
             />
-          </FloatingLabel>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button variant="danger" type="submit">
-            Confirmar Devolução
-          </Button>
-        </Modal.Footer>
-      </Form>
-    </Modal>
+        </div>
+        <div className="p-3 bg-slate-800/50 border-t border-slate-700 flex justify-end space-x-2">
+            <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg bg-slate-600 hover:bg-slate-500 text-white font-medium transition-colors">Cancelar</button>
+            <button type="submit" disabled={loading} className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium transition-colors">
+              {loading ? '...' : 'Confirmar Devolução'}
+            </button>
+        </div>
+      </form>
+    </div>
   );
 }
 
 
-// --- COMPONENTE PRINCIPAL ---
-// CORREÇÃO (TS2614): 'export function' para corresponder à importação em App.tsx
-export function TechnicianAgenda({ session }: TechnicianAgendaProps) {
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [copySuccess, setCopySuccess] = useState<string | null>(null);
-  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
-  const [modalShow, setModalShow] = useState(false);
+// --- MODAL DE DETALHES (COM LÓGICA DE DEVOLUÇÃO ATUALIZADA) ---
+function EventDetailsModal({ event, show, onClose, onUpdate }: { event: Installation | null, show: boolean, onClose: () => void, onUpdate: () => Promise<void> }) {
+  const [isRescheduling, setIsRescheduling] = useState(false);
+  const [dateTime, setDateTime] = useState('');
+  const [loadingAction, setLoadingAction] = useState(false);
+  const [error, setError] = useState('');
+  const [copySuccess, setCopySuccess] = useState('');
 
-  // --- Novos estados para o modal de devolução ---
+  // Estados para o modal de devolução
   const [showReturnModal, setShowReturnModal] = useState(false);
   const [returnReason, setReturnReason] = useState('');
-
-  const { messages } = useMemo(() => ({
-    messages: {
-      allDay: 'Dia todo',
-      previous: '<',
-      next: '>',
-      today: 'Hoje',
-      month: 'Mês',
-      week: 'Semana',
-      day: 'Dia',
-      agenda: 'Agenda',
-      date: 'Data',
-      time: 'Hora',
-      event: 'Evento',
-      noEventsInRange: 'Nenhum evento neste período.',
-      showMore: (total: number) => `+${total} mais`,
-    }
-  }), []);
-
-  const fetchTechnicianAgenda = async () => {
-    setLoading(true);
-    setError(null); // Limpa erros antigos
-    try {
-      const response = await fetch('/.netlify/functions/get-installations', {
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`
-        }
-      });
-      if (!response.ok) {
-        throw new Error('Falha ao buscar agenda');
-      }
-      const data: Instalacao[] = await response.json();
-      
-      const technicianEvents = data
-        .filter(inst => (inst.status === 'Agendado' || inst.status === 'Concluído') && inst.data_agendamento)
-        .map(inst => {
-          const startDate = new Date(inst.data_agendamento!);
-          // Adiciona o offset do timezone local para corrigir a exibição
-          const timezoneOffset = startDate.getTimezoneOffset() * 60000;
-          const correctedStartDate = new Date(startDate.getTime() + timezoneOffset);
-          
-          const endDate = new Date(correctedStartDate.getTime() + 60 * 60 * 1000); 
-          
-          return {
-            title: `${inst.cliente.nome} (${inst.veiculo.placa})`,
-            start: correctedStartDate,
-            end: endDate,
-            resource: inst,
-          };
-        });
-
-      setEvents(technicianEvents);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ocorreu um erro desconhecido');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchWithCallback = useCallback(fetchTechnicianAgenda, [session]);
+  const [returnError, setReturnError] = useState('');
 
   useEffect(() => {
-    fetchWithCallback();
+    const rootEl = document.documentElement;
+    const bodyEl = document.body;
 
-    // Listener do Supabase
-    const channel = supabase.channel('instalacoes-tecnico')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'instalacoes', 
-        filter: `tecnico_id=eq.${session.user.id}` 
-      }, 
-      () => { // Payload removido para corrigir erro TS6133 (não utilizado)
-        console.log('Mudança de técnico detectada:');
-        fetchWithCallback(); // Recarrega
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [session, fetchWithCallback]);
-
-  const handleSelectEvent = (event: CalendarEvent) => {
-    setSelectedEvent(event);
-    setCopySuccess(null); // Limpa a mensagem de cópia
-    setError(null); // Limpa erros
-    setModalShow(true);
-  };
-
-  const handleCloseModal = () => {
-    setModalShow(false);
-    setSelectedEvent(null);
-  };
-
-  // *** FUNÇÃO DE ATUALIZAÇÃO CORRIGIDA ***
-  const handleUpdateStatus = async (
-    action: 'complete' | 'return_to_pending', 
-    observacao?: string
-  ) => {
-    if (!selectedEvent) return;
-
-    setLoading(true);
-    setError(null);
+    if (show) {
+      rootEl.classList.add('modal-open');
+      bodyEl.classList.add('modal-open');
+    } else {
+      rootEl.classList.remove('modal-open');
+      bodyEl.classList.remove('modal-open');
+    }
     
-    // Fecha ambos os modais
-    handleCloseModal();
-    setShowReturnModal(false);
+    return () => {
+      rootEl.classList.remove('modal-open');
+      bodyEl.classList.remove('modal-open');
+    };
+  }, [show]);
 
+  useEffect(() => {
+    if (event) {
+      const initialDateTime = event.data_instalacao && event.horario ? moment(`${event.data_instalacao}T${event.horario}`).format('YYYY-MM-DDTHH:mm') : '';
+      setDateTime(initialDateTime);
+      setIsRescheduling(false);
+      setError('');
+      setCopySuccess('');
+      setReturnError('');
+      setReturnReason('');
+    }
+  }, [event]);
+
+  if (!show || !event) return null;
+
+  const sortedObservacoes = [...(event.observacoes || [])].sort((a,b) => (b.destaque ? 1 : -1) - (a.destaque ? 1 : -1) || new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+  const getServiceBadgeColor = (serviceType: string) => {
+    switch (serviceType) {
+        case 'Instalação': return 'bg-green-900/50 text-green-300';
+        case 'Manutenção': return 'bg-yellow-900/50 text-yellow-300';
+        case 'Remoção': return 'bg-red-900/50 text-red-300';
+        default: return 'bg-slate-700 text-slate-300';
+    }
+  };
+  
+  // *** FUNÇÃO handleAction ATUALIZADA ***
+  const handleAction = async (action: 'complete' | 'return_to_pending' | 'reschedule_self', payload?: any, observacao?: string) => {
+    setLoadingAction(true);
+    setError('');
+    setReturnError(''); // Limpa erros
     try {
-      let body: any = { id: selectedEvent.resource.id };
-
-      if (action === 'complete') {
-        body.status = 'Concluído';
-        body.completionType = selectedEvent.resource.tipo_servico.toLowerCase();
-      } else if (action === 'return_to_pending') {
-        body.action = 'return_to_pending';
-        // Adiciona a observação (motivo) se ela existir
-        if (observacao) {
-          body.nova_observacao_texto = observacao;
-          body.nova_observacao_destaque = true;
-        }
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Sessão inválida.");
+      
+      let body: any = { id: event.id };
+      if(action === 'complete') body = {...body, status: 'Concluído', completionType: event.tipo_servico.toLowerCase() };
+      if(action === 'return_to_pending') body = {...body, action: 'return_to_pending'};
+      if(action === 'reschedule_self') body = {...body, action: 'reschedule_self', ...payload};
+      
+      // Adiciona a nova observação (motivo da devolução) se ela existir
+      if (observacao) {
+        body.nova_observacao_texto = observacao;
+        body.nova_observacao_destaque = true; // Sempre destaca o motivo da devolução
       }
 
       const response = await fetch('/.netlify/functions/update-installation', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(body) // Envia o ID e a ação no corpo
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify(body),
       });
 
       if (!response.ok) {
         const errData = await response.json();
-        throw new Error(errData.message || 'Falha ao atualizar status da instalação');
+        throw new Error(errData.message || 'Falha ao executar ação.');
       }
-
-      await fetchTechnicianAgenda(); // Recarrega a agenda
-
-    } catch (error) {
-      console.error('Erro ao atualizar:', error);
-      setError(error instanceof Error ? error.message : 'Erro desconhecido');
-    } finally {
-      setLoading(false);
-      setReturnReason(''); // Limpa o motivo
+      
+      // Se a ação foi 'return_to_pending', fecha o modal de motivo
+      if (action === 'return_to_pending') {
+        setShowReturnModal(false);
+        setReturnReason('');
+      }
+      
+      await onUpdate(); // Atualiza a lista de eventos
+      
+    } catch (err: any) { 
+      if (action === 'return_to_pending') {
+        setReturnError(err.message);
+      } else {
+        setError(err.message); 
+      }
+    } finally { 
+      setLoadingAction(false); 
     }
   };
 
-  // Ação: Concluir
-  const handleComplete = () => {
-    handleUpdateStatus('complete');
-  };
-
-  // Ação: Abrir modal de devolução
-  const handleReschedule = () => {
-    setModalShow(false); // Fecha o modal de detalhes
-    setShowReturnModal(true); // Abre o modal de motivo
-  };
-  
-  // Ação: Enviar motivo da devolução
-  const handleReturnSubmit = () => {
-    handleUpdateStatus('return_to_pending', returnReason);
-  };
-
-  // *** FUNÇÃO PARA COPIAR DADOS ***
-  const handleCopy = async () => {
-    if (!selectedEvent) return;
-    const { resource: inst } = selectedEvent;
-    
-    const baseString = inst.base === 'Atena' 
-        ? '*BASE* Atena (X)   Base Autocontrol ( )' 
-        : '*BASE* Atena ( )   Base Autocontrol (X)';
-    const bloqueioString = inst.bloqueio === 'Sim' 
-        ? '*Bloqueio* sim (X)   nao ( )' 
-        : '*Bloqueio* sim ( )   nao (X)';
+  const handleCopy = () => {
+    setCopySuccess('');
+    const baseString = event.base === 'Atena' ? '*BASE* Atena (X)   Base Autocontrol ( )' : '*BASE* Atena ( )   Base Autocontrol (X)';
+    const bloqueioString = event.bloqueio === 'Sim' ? '*Bloqueio* sim (X)   nao ( )' : '*Bloqueio* sim ( )   nao (X)';
 
     const textToCopy = [
-      `*Veículo:* ${inst.veiculo.modelo}`,
-      `*Ano Fabricação:* ${inst.ano || 'N/A'}`,
-      `*Placa:* ${inst.veiculo.placa}`,
-      `*Cor:* ${inst.veiculo.cor || 'N/A'}`,
-      `*Nome:* ${inst.cliente.nome}`,
-      `*Telefone:* ${inst.cliente.telefone}`,
-      `*Endereço:* ${inst.cliente.endereco}`,
-      `*Usuário:* ${inst.usuario || 'N/A'}`,
-      `*Senha:* ${inst.senha || 'N/A'}`,
-      baseString,
-      bloqueioString
+        `*Veículo* ${event.modelo}`, `*Modelo:* ${event.modelo}`, `*Ano Fabricação:* ${event.ano || 'N/A'}`,
+        `*Placa:* ${event.placa}`, `*Cor:* ${event.cor || 'N/A'}`, `*Nome:* ${event.nome_completo}`,
+        `*Telefone:* ${event.contato}`, `*Endereço:* ${event.endereco}`, `*Usuário:* ${event.usuario || 'N/A'}`,
+        `*Senha:* ${event.senha || 'N/A'}`, baseString, bloqueioString
     ].join('\n');
 
-    try {
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(textToCopy);
-      } else {
-        const textArea = document.createElement('textarea');
-        textArea.value = textToCopy;
-        textArea.style.position = "fixed"; // Evita rolagem
-        textArea.style.top = "-9999px";
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textArea);
-      }
-      setCopySuccess('Dados copiados com sucesso!');
-    } catch (err) {
-      setCopySuccess('Falha ao copiar.');
+    navigator.clipboard.writeText(textToCopy).then(() => {
+        setCopySuccess('Dados copiados!');
+        setTimeout(() => setCopySuccess(''), 3000);
+    });
+  };
+  
+  const handleRescheduleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    const [date, time] = dateTime.split('T');
+    handleAction('reschedule_self', { date, time });
+  };
+
+  // *** NOVA FUNÇÃO PARA ENVIAR MOTIVO DA DEVOLUÇÃO ***
+  const handleReturnSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    if (returnReason.trim() === '') {
+      setReturnError('O motivo é obrigatório.');
+      return;
+    }
+    handleAction('return_to_pending', undefined, returnReason);
+  };
+
+
+  return (
+    <>
+      <div className="fixed inset-0 bg-black bg-opacity-75 z-50 p-4">
+          <div 
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[95%] max-w-2xl max-h-[90%] bg-slate-800 rounded-lg shadow-xl border border-slate-700 grid grid-rows-[auto_1fr_auto]"
+          >
+              <div className="p-4 border-b border-slate-700 flex justify-between items-center">
+                  <h3 className="text-lg font-medium text-white">{event.nome_completo}</h3>
+                  <button onClick={onClose} className="text-slate-400 hover:text-white text-2xl">&times;</button>
+              </div>
+              
+              <div className="p-6 overflow-y-auto min-h-0">
+                  {error && <div className="p-3 mb-4 text-sm rounded-lg bg-red-800/50 text-red-300 border border-red-700">{error}</div>}
+                  {copySuccess && <div className="p-3 mb-4 text-sm rounded-lg bg-blue-800/50 text-blue-300 border border-blue-700">{copySuccess}</div>}
+                  {isRescheduling ? (
+                      <form onSubmit={handleRescheduleSubmit}>
+                          <h4 className="text-white font-semibold mb-4">Reagendar Serviço</h4>
+                          <div>
+                              <label className="block mb-2 text-sm font-medium text-slate-300">Nova Data e Hora</label>
+                              <input type="datetime-local" className="w-full p-2.5 bg-slate-700 border border-slate-600 rounded-lg text-white" value={dateTime} onChange={e => setDateTime(e.target.value)} required/>
+                          </div>
+                          <div className="pt-4 flex justify-end space-x-2">
+                              <button type="button" onClick={() => setIsRescheduling(false)} className="px-4 py-2 rounded-lg bg-slate-600 hover:bg-slate-500 text-white font-medium transition-colors">Cancelar</button>
+                              <button type="submit" disabled={loadingAction} className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors">{loadingAction ? '...' : 'Salvar'}</button>
+                          </div>
+                      </form>
+                  ) : (
+                      <div className="space-y-3 text-slate-300">
+                          <p><strong>Status:</strong> <span className={`px-2 py-1 text-xs font-medium rounded-full ${event.status === 'Agendado' ? 'bg-blue-900/50 text-blue-300' : 'bg-green-900/50 text-green-300'}`}>{event.status}</span></p>
+                          <p><strong>Data:</strong> {moment(event.data_instalacao).format('DD/MM/YYYY')} às {event.horario}</p>
+                          <p><strong>Serviço:</strong> <span className={`px-2 py-1 text-xs font-medium rounded-full ${getServiceBadgeColor(event.tipo_servico)}`}>{event.tipo_servico}</span></p>
+                          {/* *** NOME DO INSTALADOR (TÉCNICO) ADICIONADO AQUI *** */}
+                          {event.profiles?.full_name && (
+                            <p><strong>Técnico:</strong> {event.profiles.full_name}</p>
+                          )}
+                          <p><strong>Contato:</strong> {event.contato}</p>
+                          <p><strong>Endereço:</strong> {event.endereco}</p>
+                          <p><strong>Veículo:</strong> {`${event.modelo} ${event.cor || ''} ${event.ano || ''}`}</p>
+                          <p><strong>Placa:</strong> {event.placa}</p>
+                          <p><strong>Base/Bloqueio:</strong> {event.base} / {event.bloqueio}</p>
+                          <p><strong>Usuário/Senha:</strong> {event.usuario} / {event.senha || 'N/A'}</p>
+                          
+                          {sortedObservacoes.length > 0 && (
+                              <div className="pt-2">
+                                  <h4 className="text-blue-400 font-semibold border-t border-slate-700 pt-3 flex items-center"><i className="bi bi-chat-left-text-fill mr-2"></i> Observações</h4>
+                                  <div className="mt-2 space-y-2">
+                                      {sortedObservacoes.map(obs => (
+                                          <div key={obs.id} className={`p-3 rounded-lg text-sm ${obs.destaque ? 'bg-yellow-900/50 border-l-4 border-yellow-400' : 'bg-slate-700/50'}`}>
+                                              {obs.destaque && <p className="font-bold text-yellow-300 mb-1"><i className="bi bi-star-fill mr-2"></i>Destaque</p>}
+                                              <p className="text-slate-300">{obs.texto}</p>
+                                          </div>
+                                      ))}
+                                  </div>
+                              </div>
+                          )}
+                      </div>
+                  )}
+              </div>
+              <div className="p-3 bg-slate-800/50 border-t border-slate-700 flex justify-between items-center gap-2">
+                  {/* *** BOTÃO DE COPIAR DADOS RESTAURADO *** */}
+                  <button onClick={handleCopy} className="px-3 py-2 rounded-lg bg-slate-600 hover:bg-slate-500 text-white" title="Copiar Dados">
+                      <i className="bi bi-whatsapp text-lg"></i>
+                  </button>
+                  {event.status === 'Agendado' && (
+                      <div className="flex items-center justify-end flex-nowrap gap-2">
+                          {/* *** BOTÃO "PENDENTE" ATUALIZADO PARA ABRIR O MODAL *** */}
+                          <button onClick={() => setShowReturnModal(true)} disabled={loadingAction} className="px-3 py-2 rounded-md bg-red-600 hover:bg-red-700 text-white text-xs font-medium transition-colors whitespace-nowrap">
+                              Devolver
+                          </button>
+                          <button onClick={() => setIsRescheduling(true)} disabled={loadingAction} className="px-3 py-2 rounded-md bg-yellow-600 hover:bg-yellow-700 text-white text-xs font-medium transition-colors whitespace-nowrap">
+                              Reagendar
+                          </button>
+                          <button onClick={() => handleAction('complete')} disabled={loadingAction} className="px-3 py-2 rounded-md bg-green-600 hover:bg-green-700 text-white text-xs font-medium transition-colors whitespace-nowrap">
+                              {loadingAction ? '...' : 'Concluir'}
+                          </button>
+                      </div>
+                  )}
+              </div>
+          </div>
+      </div>
+
+      {/* *** RENDERIZAÇÃO DO MODAL DE MOTIVO *** */}
+      <ReturnReasonModal
+        show={showReturnModal}
+        onClose={() => setShowReturnModal(false)}
+        onSubmit={handleReturnSubmit}
+        reason={returnReason}
+        setReason={setReturnReason}
+        error={returnError}
+        loading={loadingAction}
+      />
+    </>
+  );
+}
+
+// --- COMPONENTES AUXILIARES (DO SEU ARQUIVO ORIGINAL) ---
+
+function CalendarDay({ day, hasEvent, isSelected, isToday, isCurrentMonth, onClick }: { day: moment.Moment, hasEvent: boolean, isSelected: boolean, isToday: boolean, isCurrentMonth: boolean, onClick: (date: moment.Moment) => void }) {
+    const dayClass = isSelected ? 'bg-blue-600 text-white' : isToday ? 'bg-slate-700' : 'hover:bg-slate-700/50';
+    const textClass = isCurrentMonth ? 'text-slate-200' : 'text-slate-600';
+
+    return (
+        <div 
+            onClick={() => onClick(day)} 
+            className={`flex items-center justify-center w-10 h-10 rounded-full cursor-pointer transition-colors ${dayClass}`}
+        >
+            <div className="relative w-full h-full flex items-center justify-center">
+              <span className={textClass}>{day.format('D')}</span>
+              {hasEvent && <div className={`absolute bottom-1.5 w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-blue-500'}`}></div>}
+            </div>
+        </div>
+    );
+}
+
+function DateNavigator({ currentDate, onDateChange, view, setView }: { currentDate: moment.Moment, onDateChange: (date: moment.Moment) => void, view: 'day' | 'week' | 'month', setView: (view: 'day' | 'week' | 'month') => void }) {
+  const handlePrev = () => onDateChange(moment(currentDate).subtract(1, view));
+  const handleNext = () => onDateChange(moment(currentDate).add(1, view));
+  const handleToday = () => onDateChange(moment());
+
+  const formatDateTitle = () => {
+    if (view === 'day') return currentDate.format('DD [de] MMMM [de] YYYY');
+    if (view === 'week') return `Semana de ${currentDate.startOf('week').format('DD/MM')}`;
+    return currentDate.format('MMMM [de] YYYY');
+  };
+  
+  const viewButtonClass = (buttonView: string) => 
+    `px-3 py-1.5 text-sm rounded-md font-medium transition-colors ${view === buttonView ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`;
+
+  return (
+    <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 mb-4 space-y-3">
+      <div className="flex justify-between items-center">
+        <button onClick={handlePrev} className="p-2 rounded-full hover:bg-slate-700"><i className="bi bi-chevron-left text-xl text-slate-400"></i></button>
+        <h3 className="font-semibold text-white text-lg text-center capitalize">{formatDateTitle()}</h3>
+        <button onClick={handleNext} className="p-2 rounded-full hover:bg-slate-700"><i className="bi bi-chevron-right text-xl text-slate-400"></i></button>
+      </div>
+      <div className="flex justify-center items-center gap-2">
+        <button onClick={handleToday} className="px-3 py-1.5 text-sm rounded-md font-medium transition-colors border border-slate-600 text-slate-300 hover:bg-slate-700">Hoje</button>
+        <div className="flex items-center gap-1 p-1 bg-slate-900/50 rounded-lg">
+           <button onClick={() => setView('day')} className={viewButtonClass('day')}>Dia</button>
+           <button onClick={() => setView('week')} className={viewButtonClass('week')}>Semana</button>
+           <button onClick={() => setView('month')} className={viewButtonClass('month')}>Mês</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const WeekView = ({ navDate, selectedDate, onDateSelect, daysWithEvents }: { navDate: moment.Moment, selectedDate: moment.Moment, onDateSelect: (date: moment.Moment) => void, daysWithEvents: Set<string> }) => {
+    const weekDays = Array.from({ length: 7 }, (_, i) => moment(navDate).startOf('week').add(i, 'days'));
+    return (
+        <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 mb-4 flex justify-around">
+            {weekDays.map(day => (
+                <div key={day.format('YYYY-MM-DD')} className="text-center space-y-1">
+                    <small className="text-slate-400 font-bold uppercase text-xs">{day.format('ddd')}</small>
+                    <CalendarDay day={day} hasEvent={daysWithEvents.has(day.format('YYYY-MM-DD'))} isSelected={day.isSame(selectedDate, 'day')} isToday={day.isSame(moment(), 'day')} isCurrentMonth={true} onClick={onDateSelect} />
+                </div>
+            ))}
+        </div>
+    );
+};
+
+const MonthView = ({ navDate, selectedDate, onDateSelect, daysWithEvents }: { navDate: moment.Moment, selectedDate: moment.Moment, onDateSelect: (date: moment.Moment) => void, daysWithEvents: Set<string> }) => {
+    const monthDays = [];
+    const start = moment(navDate).startOf('month').startOf('week');
+    const end = moment(navDate).endOf('month').endOf('week');
+    let day = start.clone();
+    while (day.isSameOrBefore(end)) {
+        monthDays.push(day.clone());
+        day.add(1, 'day');
+    }
+    const weekDayLabels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+    return (
+        <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 mb-4">
+            <div className="grid grid-cols-7 gap-2 text-center mb-2">
+                {weekDayLabels.map(label => <div key={label} className="font-bold text-slate-500 text-xs">{label}</div>)}
+            </div>
+            <div className="grid grid-cols-7 gap-1">
+                {monthDays.map(d => <CalendarDay key={d.format('YYYY-MM-DD')} day={d} hasEvent={daysWithEvents.has(d.format('YYYY-MM-DD'))} isSelected={d.isSame(selectedDate, 'day')} isToday={d.isSame(moment(), 'day')} isCurrentMonth={d.isSame(navDate, 'month')} onClick={onDateSelect} />)}
+            </div>
+        </div>
+    );
+};
+
+const EventList = ({ events, onEventClick, userRole }: { events: Installation[], onEventClick: (event: Installation) => void, userRole: string | null }) => {
+  const scheduled = useMemo(() => events.filter(e => e.status === 'Agendado').sort((a,b) => (a.horario || '').localeCompare(b.horario || '')), [events]);
+  const completed = useMemo(() => events.filter(e => e.status === 'Concluído').sort((a,b) => (a.horario || '').localeCompare(b.horario || '')), [events]);
+
+  if (events.length === 0) {
+    return <div className="text-center text-slate-500 py-10">Nenhuma ordem de serviço para este dia.</div>;
+  }
+  
+  const getServiceBadgeColor = (serviceType: string) => {
+    switch (serviceType) {
+        case 'Instalação': return 'bg-green-900/50 text-green-300';
+        case 'Manutenção': return 'bg-yellow-900/50 text-yellow-300';
+        case 'Remoção': return 'bg-red-900/50 text-red-300';
+        default: return 'bg-slate-700 text-slate-300';
     }
   };
 
-
-  const eventStyleGetter = (event: CalendarEvent) => {
-    // Colore o evento se ele estiver concluído
-    const style = {
-      backgroundColor: event.resource.status === 'Concluído' ? '#198754' : '#3174ad', // Verde para concluído
-      borderRadius: '5px',
-      opacity: 0.8,
-      color: 'white',
-      border: '0px',
-      display: 'block'
-    };
-    return { style };
-  };
+  const renderEventCard = (event: Installation, isCompleted: boolean) => {
+    const hasHighlight = event.observacoes?.some(o => o.destaque);
+    return (
+        <div key={event.id} onClick={() => onEventClick(event)} className={`p-4 rounded-lg shadow-md cursor-pointer transition-colors ${isCompleted ? 'bg-slate-800/60' : 'bg-slate-800 hover:bg-slate-700/50'}`}>
+            <div className="flex justify-between items-start">
+                <div className="flex-grow space-y-2">
+                    <h4 className={`font-bold flex items-center ${isCompleted ? 'text-slate-500 line-through' : 'text-white'}`}>
+                        {event.nome_completo}
+                        {hasHighlight && <span className="ml-2 text-yellow-400" title="Possui observação em destaque">⚠️</span>}
+                    </h4>
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${getServiceBadgeColor(event.tipo_servico)}`}>{event.tipo_servico}</span>
+                    {userRole === 'admin' && event.profiles && (
+                        <p className={`text-sm ${isCompleted ? 'text-slate-600 line-through' : 'text-slate-400'}`}><i className="bi bi-person-fill mr-2"></i>{event.profiles.full_name}</p>
+                    )}
+                    <p className={`text-sm ${isCompleted ? 'text-slate-600 line-through' : 'text-slate-400'}`}><i className="bi bi-geo-alt mr-2"></i>{event.endereco}</p>
+                </div>
+                <span className={`px-2 py-1 text-sm font-semibold rounded-full ${isCompleted ? 'bg-slate-700 text-slate-400' : 'bg-blue-600 text-white'}`}>{event.horario}</span>
+            </div>
+        </div>
+    );
+  }
 
   return (
-    <Container fluid className="mt-3" style={{ height: '80vh' }}>
-      {error && <Alert variant="danger" onClose={() => setError(null)} dismissible>{error}</Alert>}
-      {loading && <div className="text-center"><Spinner animation="border" /></div>}
-      
-      <Calendar
-        localizer={localizer}
-        events={events}
-        startAccessor="start"
-        endAccessor="end"
-        style={{ height: '100%' }}
-        onSelectEvent={handleSelectEvent} // <-- Isso abre o modal
-        messages={messages}
-        eventPropGetter={eventStyleGetter}
-        defaultView="week"
-      />
-
-      {/* Modal de Detalhes do Evento (ATUALIZADO) */}
-      {selectedEvent && (
-        <Modal show={modalShow} onHide={handleCloseModal} centered>
-          <Modal.Header closeButton>
-            <Modal.Title>{selectedEvent.title}</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            {copySuccess && <Alert variant={copySuccess.includes('Falha') ? 'danger' : 'success'}>{copySuccess}</Alert>}
-
-            <h5><i className="bi bi-person-fill"></i> Cliente</h5>
-            <p>{selectedEvent.resource.cliente.nome}</p>
-            
-            <h5><i className="bi bi-geo-alt-fill"></i> Endereço</h5>
-            <p>{selectedEvent.resource.cliente.endereco}</p>
-
-            <h5><i className="bi bi-telephone-fill"></i> Telefone</h5>
-            <p>{selectedEvent.resource.cliente.telefone}</p>
-
-            <h5><i className="bi bi-car-front-fill"></i> Veículo</h5>
-            <p>{selectedEvent.resource.veiculo.marca} {selectedEvent.resource.veiculo.modelo} ({selectedEvent.resource.veiculo.placa})</p>
-            <p>Cor: {selectedEvent.resource.veiculo.cor} | Ano: {selectedEvent.resource.ano}</p>
-            
-            {/* *** NOME DO TÉCNICO (INSTALADOR) ADICIONADO *** */}
-            {session.user.app_metadata?.role === 'admin' && (
-              <>
-                <h5><i className="bi bi-person-badge"></i> Instalador</h5>
-                <p>{selectedEvent.resource.profiles?.full_name || 'Não atribuído'}</p>
-              </>
-            )}
-            
-            <h5><i className="bi bi-building"></i> Base</h5>
-            <p>{selectedEvent.resource.base || 'N/A'}</p>
-
-            <h5><i className="bi bi-card-text"></i> Observações</h5>
-            {selectedEvent.resource.observacoes && selectedEvent.resource.observacoes.length > 0 ? (
-              <ul className="list-unstyled">
-                {selectedEvent.resource.observacoes.slice().reverse().map((obs, index) => (
-                  <li key={index} className="mb-2">
-                    <small className="text-muted">{new Date(obs.data).toLocaleString('pt-BR')}</small>
-                    <p className="mb-0">{obs.observacao}</p>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p>Nenhuma observação.</p>
-            )}
-          </Modal.Body>
-          <Modal.Footer className="justify-content-between">
-            {/* *** BOTÃO DE COPIAR ADICIONADO *** */}
-            <Button variant="success" onClick={handleCopy} className="text-white">
-              <i className="bi bi-whatsapp"></i> Copiar
-            </Button>
-            <Row className="g-2">
-              {/* Botões de Ação */}
-              {selectedEvent.resource.status === 'Agendado' && (
-                <>
-                  <Col xs="auto">
-                    <Button variant="danger" onClick={handleReschedule}>
-                      <i className="bi bi-arrow-return-left"></i> Devolver
-                    </Button>
-                  </Col>
-                  <Col xs="auto">
-                    <Button variant="primary" onClick={handleComplete}>
-                      <i className="bi bi-check-circle"></i> Concluir
-                    </Button>
-                  </Col>
-                </>
-              )}
-              {selectedEvent.resource.status === 'Concluído' && (
-                 <Col xs="auto">
-                    <Badge bg="success" className="p-2">Serviço Concluído</Badge>
-                 </Col>
-              )}
-            </Row>
-          </Modal.Footer>
-        </Modal>
+    <div className="space-y-6">
+      {scheduled.length > 0 && (
+        <div>
+          <h3 className="text-sm font-bold uppercase text-slate-500 mb-2 pl-1">AGENDADAS</h3>
+          <div className="space-y-3">{scheduled.map(event => renderEventCard(event, false))}</div>
+        </div>
       )}
-      
-      {/* *** RENDERIZAÇÃO DO MODAL DE MOTIVO *** */}
-      <ReturnReasonModal 
-        isOpen={showReturnModal}
-        onClose={() => { setShowReturnModal(false); setReturnReason(''); }}
-        reason={returnReason}
-        setReason={setReturnReason}
-        onSubmit={handleReturnSubmit}
-      />
+      {completed.length > 0 && (
+        <div>
+          <h3 className="text-sm font-bold uppercase text-slate-500 mb-2 pl-1">FINALIZADAS</h3>
+          <div className="space-y-3">{completed.map(event => renderEventCard(event, true))}</div>
+        </div>
+      )}
+    </div>
+  );
+}
 
-    </Container>
+// --- COMPONENTE PRINCIPAL (RESTAURADO) ---
+export function TechnicianAgenda() {
+  const [allEvents, setAllEvents] = useState<Installation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [navDate, setNavDate] = useState(moment());
+  const [selectedDate, setSelectedDate] = useState(moment());
+  const [view, setView] = useState<'day' | 'week' | 'month'>('day');
+  const [selectedEvent, setSelectedEvent] = useState<Installation | null>(null);
+
+  const fetchInstallations = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) throw new Error("Usuário não autenticado.");
+      setUser(currentUser);
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Sessão não encontrada.");
+      
+      const response = await fetch('/.netlify/functions/get-installations', {
+        headers: { 'Authorization': `Bearer ${session.access_token}` },
+      });
+      if (!response.ok) {
+          const errData = await response.json();
+          throw new Error(errData.message || 'Falha ao buscar dados da agenda.');
+      }
+      
+      const data: Installation[] = await response.json();
+      setAllEvents(data.filter(event => ['Agendado', 'Concluído'].includes(event.status)) || []);
+
+    } catch (err: any) {
+      setError(err.message || 'Falha ao carregar agenda.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchInstallations(); }, [fetchInstallations]);
+
+  const daysWithEvents = useMemo(() => new Set(allEvents.map(event => moment(event.data_instalacao).format('YYYY-MM-DD'))), [allEvents]);
+  const filteredEvents = useMemo(() => allEvents.filter(event => moment(event.data_instalacao).isSame(selectedDate, 'day')), [allEvents, selectedDate]);
+
+  const handleUpdate = async () => {
+    if (user) {
+        setSelectedEvent(null);
+        await fetchInstallations();
+    }
+  }
+
+  const handleDateNavigation = (newDate: moment.Moment) => {
+    setNavDate(newDate);
+    setSelectedDate(newDate);
+  };
+
+  if (loading) return <div className="text-center p-5"><div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mx-auto"></div></div>;
+  if (error) return <div className="p-4 text-sm text-red-400 bg-red-500/10 border border-red-500/30 rounded-lg">{error}</div>;
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-6 shadow-lg">
+        <h1 className="text-2xl font-bold text-white"><i className="bi bi-calendar-week mr-3"></i>Minha Agenda</h1>
+      </div>
+
+      <DateNavigator currentDate={navDate} onDateChange={handleDateNavigation} view={view} setView={setView} />
+      {view === 'week' && <WeekView navDate={navDate} selectedDate={selectedDate} onDateSelect={setSelectedDate} daysWithEvents={daysWithEvents} />}
+      {view === 'month' && <MonthView navDate={navDate} selectedDate={selectedDate} onDateSelect={setSelectedDate} daysWithEvents={daysWithEvents} />}
+      
+      <EventList events={filteredEvents} onEventClick={setSelectedEvent} userRole={user?.app_metadata?.role} />
+      
+      <EventDetailsModal event={selectedEvent} show={!!selectedEvent} onClose={() => setSelectedEvent(null)} onUpdate={handleUpdate} />
+    </div>
   );
 }

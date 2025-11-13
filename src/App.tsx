@@ -142,7 +142,7 @@ function AuthenticatedLayout() {
           <Routes>
             <Route path="/painel" element={<Dashboard />} />
             {/* *** CORREÇÃO AQUI: Passando a session para o componente *** */}
-            <Route path="/agenda" element={<TechnicianAgenda session={session} />} />
+            <Route path="/agenda" element={<TechnicianAgenda />} />
             <Route path="/usuarios" element={<UserManagement />} />
             <Route path="/" element={<InstallationForm />} />
             <Route path="/consulta" element={<InsuranceView />} />
@@ -153,7 +153,7 @@ function AuthenticatedLayout() {
         return (
           <Routes>
              {/* *** CORREÇÃO AQUI: Passando a session para o componente *** */}
-            <Route path="/agenda" element={<TechnicianAgenda session={session} />} />
+            <Route path="/agenda" element={<TechnicianAgenda />} />
             <Route path="/consulta" element={<InsuranceView />} />
             <Route path="/tarefas" element={<TaskList />} />
             <Route path="*" element={<Navigate to="/agenda" />} />
