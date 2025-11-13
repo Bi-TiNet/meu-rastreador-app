@@ -1,7 +1,14 @@
 // src/components/TechnicianAgenda.tsx
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
-// import type { User } from '@supabase/supabase-js'; // Removido na correção anterior
+import { Calendar, momentLocalizer } from 'react-big-calendar'; // <-- ADICIONADO
+import moment from 'moment'; // <-- ADICIONADO
+import 'moment/locale/pt-br'; // <-- ADICIONADO
+import 'react-big-calendar/lib/css/react-big-calendar.css'; // <-- ADICIONADO
+
+// Configura o Moment.js para português
+moment.locale('pt-br');
+const localizer = momentLocalizer(moment);
 
 // --- Interfaces ---
 interface History {
@@ -176,7 +183,6 @@ function HistoryModal({ isOpen, onClose, installation }: { isOpen: boolean, onCl
     );
 }
 
-// *** INÍCIO DO CÓDIGO ADICIONADO (COPIADO DE DASHBOARD.TSX) ***
 function DetailsModal({ installation, onClose, onViewHistory, setMessage }: { 
   installation: Installation; 
   onClose: () => void; 
@@ -302,26 +308,6 @@ function DetailsModal({ installation, onClose, onViewHistory, setMessage }: {
     </div>
   );
 }
-// *** FIM DO CÓDIGO ADICIONADO ***
-
-function AccordionItem({ title, children, isOpen, onToggle }: { title: string, children: React.ReactNode, isOpen: boolean, onToggle: () => void }) {
-    return (
-        <div className="border border-slate-700 rounded-lg overflow-hidden mb-3">
-            <button
-                onClick={onToggle}
-                className="w-full flex justify-between items-center p-4 bg-slate-800 hover:bg-slate-700/50 transition-colors duration-300"
-            >
-                <span className="font-medium text-white">{title}</span>
-                <i className={`bi bi-chevron-down transition-transform duration-300 ${isOpen ? 'transform rotate-180' : ''}`}></i>
-            </button>
-            <div className={`transition-all duration-500 ease-in-out ${isOpen ? 'max-h-[10000px]' : 'max-h-0'} overflow-hidden`}>
-                <div className="bg-slate-900">
-                    {children}
-                </div>
-            </div>
-        </div>
-    )
-}
 
 // --- COMPONENTE PRINCIPAL ---
 export function TechnicianAgenda() {
@@ -332,15 +318,17 @@ export function TechnicianAgenda() {
   const [historyTarget, setHistoryTarget] = useState<Installation | null>(null);
   const [message, setMessage] = useState<{type: 'success' | 'danger' | 'info', text: string} | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [openAccordions, setOpenAccordions] = useState<string[]>(['scheduled']);
   
-  // *** NOVOS ESTADOS PARA MODAL DE MOTIVO ***
+  // *** ESTADOS REMOVIDOS E ADICIONADOS ***
+  // const [openAccordions, setOpenAccordions] = useState<string[]>(['scheduled']); // REMOVIDO
   const [returnTarget, setReturnTarget] = useState<Installation | null>(null);
   const [returnReason, setReturnReason] = useState('');
-
-  // *** ESTADO ADICIONADO ***
   const [detailsTarget, setDetailsTarget] = useState<Installation | null>(null);
-
+  
+  // Novos estados para o calendário
+  const [calendarView, setCalendarView] = useState<'month' | 'week' | 'day'>('month');
+  const [calendarDate, setCalendarDate] = useState(new Date());
+  // *** FIM DAS MUDANÇAS DE ESTADO ***
 
   const fetchInstallations = useCallback(async () => {
     setLoading(true);
@@ -363,17 +351,14 @@ export function TechnicianAgenda() {
   
   useEffect(() => { fetchInstallations(); }, [fetchInstallations]);
 
-  const toggleAccordion = (id: string) => {
-    setOpenAccordions(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
-  };
+  // REMOVIDO toggleAccordion
   
-  // *** FUNÇÃO handleUpdate MODIFICADA ***
   const handleUpdate = async (id: number, options: { 
     action: 'return_to_pending' | 'reschedule_self' | 'complete_installation' | 'complete_maintenance' | 'complete_removal', 
     date?: string; 
     time?: string; 
-    nova_observacao_texto?: string; // <-- Adicionado
-    nova_observacao_destaque?: boolean; // <-- Adicionado
+    nova_observacao_texto?: string; 
+    nova_observacao_destaque?: boolean; 
   }) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -389,7 +374,7 @@ export function TechnicianAgenda() {
       const response = await fetch('/.netlify/functions/update-installation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
-        body: JSON.stringify({ id, action, date, time, completionType, nova_observacao_texto, nova_observacao_destaque }), // <-- Adicionado
+        body: JSON.stringify({ id, action, date, time, completionType, nova_observacao_texto, nova_observacao_destaque }),
       });
       
       if (!response.ok) {
@@ -397,15 +382,14 @@ export function TechnicianAgenda() {
           throw new Error(errorData.message || 'Falha na operação.');
       }
       setMessage({type: 'success', text: `Operação realizada com sucesso!`});
-      setRescheduleTarget(null); // Fecha modal de reagendamento (se estiver aberto)
-      setReturnTarget(null); // Fecha modal de devolução (se estiver aberto)
+      setRescheduleTarget(null); 
+      setReturnTarget(null); 
       await fetchInstallations();
     } catch (error: any) {
         setMessage({type: 'danger', text: error.message || 'Erro ao processar a solicitação.'});
     }
   };
 
-  // *** NOVA FUNÇÃO PARA SUBMETER O MOTIVO DA DEVOLUÇÃO ***
   const handleReturnSubmit = () => {
     if (!returnTarget || !returnReason.trim()) {
       setMessage({ type: 'danger', text: 'Por favor, informe o motivo da devolução.' });
@@ -415,13 +399,17 @@ export function TechnicianAgenda() {
     handleUpdate(returnTarget.id, { 
       action: 'return_to_pending', 
       nova_observacao_texto: returnReason,
-      nova_observacao_destaque: true // Destaca a observação da devolução
+      nova_observacao_destaque: true 
     });
     
     setReturnTarget(null);
     setReturnReason('');
   };
 
+  // *** NOVO HANDLER PARA O CALENDÁRIO ***
+  const handleSelectEvent = (event: { resource: Installation }) => {
+    setDetailsTarget(event.resource);
+  };
 
   const filteredInstallations = useMemo(() =>
     installations.filter(inst =>
@@ -433,106 +421,44 @@ export function TechnicianAgenda() {
 
   const scheduled = filteredInstallations.filter(inst => inst.status === 'Agendado');
 
-  const getServiceBadgeColor = (serviceType: string) => {
-    switch (serviceType) {
-        case 'Instalação': return 'bg-green-900/50 text-green-300';
-        case 'Manutenção': return 'bg-yellow-900/50 text-yellow-300';
-        case 'Remoção': return 'bg-red-900/50 text-red-300';
-        default: return 'bg-slate-700 text-slate-300';
-    }
-  };
+  // *** NOVO MEMO PARA OS EVENTOS DO CALENDÁRIO ***
+  const calendarEvents = useMemo(() => {
+    return scheduled.map(inst => {
+      if (!inst.data_instalacao || !inst.horario) {
+        return null;
+      }
+      try {
+        const startDateTime = moment(`${inst.data_instalacao} ${inst.horario}`, 'YYYY-MM-DD HH:mm').toDate();
+        if (isNaN(startDateTime.getTime())) {
+          console.error("Data/hora inválida:", inst.data_instalacao, inst.horario);
+          return null;
+        }
+        // Define um 'end' (ex: 1 hora depois).
+        const endDateTime = moment(startDateTime).add(1, 'hour').toDate();
 
-  const renderTable = (installationsList: Installation[]) => {
-    if (installationsList.length === 0) {
-        return <p className="text-slate-500 p-4 text-center italic">Nenhum registro encontrado.</p>;
-    }
+        return {
+          title: `${inst.profiles?.full_name || 'Técnico'}: ${inst.nome_completo} (${inst.placa})`,
+          start: startDateTime,
+          end: endDateTime,
+          resource: inst, // Guarda a instalação original
+        };
+      } catch(e) {
+        console.error("Erro ao processar data/hora:", e);
+        return null;
+      }
+    }).filter(Boolean) as { title: string, start: Date, end: Date, resource: Installation }[];
+  }, [scheduled]);
 
-    return (
-        <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left text-slate-400">
-                <thead className="text-xs text-slate-300 uppercase bg-slate-800">
-                    <tr>
-                        <th scope="col" className="px-6 py-3">Cliente</th>
-                        <th scope="col" className="px-6 py-3">Veículo</th>
-                        <th scope="col" className="px-6 py-3">Agendamento</th>
-                        <th scope="col" className="px-6 py-3">Serviço</th>
-                        <th scope="col" className="px-6 py-3">Base</th>
-                        <th scope="col" className="px-6 py-3 text-center">Ações</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {installationsList.map((inst) => {
-                        const hasHighlight = inst.observacoes?.some(o => o.destaque);
-                        return (
-                            <tr key={inst.id} className="border-b border-slate-700 hover:bg-slate-800/50">
-                                
-                                {/* *** LINHAS MODIFICADAS *** */}
-                                <td className="px-6 py-4">
-                                    <div className="flex items-center">
-                                        <span
-                                          onClick={() => setDetailsTarget(inst)}
-                                          className="font-medium text-white hover:text-blue-400 transition-colors cursor-pointer"
-                                        >
-                                          {inst.nome_completo}
-                                        </span>
-                                        {hasHighlight && <span className="ml-2 text-yellow-400" title="Possui observação em destaque">⚠️</span>}
-                                    </div>
-                                </td>
-                                {/* *** FIM DA MODIFICAÇÃO *** */}
+  // *** FUNÇÃO renderTable E getServiceBadgeColor REMOVIDAS ***
+  // (Elas não são mais necessárias pois o AccordionItem foi removido)
 
-                                <td className="px-6 py-4">{`${inst.modelo} (${inst.placa})`}</td>
-                                <td className="px-6 py-4">{inst.data_instalacao && inst.horario ? `${new Date(inst.data_instalacao + 'T00:00:00').toLocaleDateString('pt-BR')} às ${inst.horario}`: 'N/A'}</td>
-                                <td className="px-6 py-4">
-                                <span className={`px-2 py-1 text-xs font-medium rounded-full ${getServiceBadgeColor(inst.tipo_servico)}`}>
-                                    {inst.tipo_servico}
-                                </span>
-                                </td>
-                                <td className="px-6 py-4">
-                                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${inst.base === 'Atena' ? 'bg-gray-700 text-gray-300' : 'bg-purple-900/50 text-purple-300'}`}>
-                                        {inst.base}
-                                    </span>
-                                </td>
-                                <td className="px-6 py-4">
-                                    <div className="flex items-center justify-center space-x-2">
-                                        <button onClick={() => handleUpdate(inst.id, { action: `complete_${inst.tipo_servico.toLowerCase()}` as any })}
-                                            className="font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg text-xs px-4 py-2 transition-colors duration-300"
-                                        >
-                                            Concluir
-                                        </button>
-                                        <button onClick={() => setRescheduleTarget(inst)}
-                                            className="font-medium text-yellow-300 bg-yellow-900/50 hover:bg-yellow-900/80 rounded-lg text-xs px-4 py-2 transition-colors duration-300"
-                                        >
-                                            Reagendar
-                                        </button>
-                                        
-                                        {/* *** BOTÃO "DEVOLVER" ATUALIZADO *** */}
-                                        <button onClick={() => setReturnTarget(inst)}
-                                            className="font-medium text-red-300 bg-red-900/50 hover:bg-red-900/80 rounded-lg text-xs px-4 py-2 transition-colors duration-300"
-                                        >
-                                            Devolver
-                                        </button>
-                                        
-                                        <button onClick={() => setHistoryTarget(inst)} className="h-8 w-8 flex items-center justify-center rounded-full bg-slate-700 text-slate-400 hover:bg-slate-600 hover:text-white transition-colors duration-300">
-                                            <i className="bi bi-clock-history"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        )
-                    })}
-                </tbody>
-            </table>
-        </div>
-    );
-  };
-  
   if (loading) return <div className="text-center p-5"> <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mx-auto"></div></div>;
   if (error) return <div className="p-4 text-sm text-red-400 bg-red-500/10 border border-red-500/30 rounded-lg">{error}</div>;
 
   return (
     <div className="space-y-6">
       <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-6 shadow-lg">
-        <h1 className="text-2xl font-bold text-white mb-4"><i className="bi bi-calendar-week mr-3"></i>Minha Agenda</h1>
+        <h1 className="text-2xl font-bold text-white mb-4"><i className="bi bi-calendar-week mr-3"></i>Agenda de Serviços</h1>
         <div className="relative">
             <i className="bi bi-search text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
             <input 
@@ -547,15 +473,36 @@ export function TechnicianAgenda() {
 
       {message && <div onClick={() => setMessage(null)} className={`cursor-pointer p-4 mb-4 text-sm rounded-lg ${message.type === 'success' ? 'bg-green-800/50 text-green-300 border border-green-700' : 'bg-red-800/50 text-red-300 border border-red-700'}`} role="alert">{message.text}</div>}
       
-      <div>
-            <AccordionItem 
-                isOpen={openAccordions.includes('scheduled')} 
-                onToggle={() => toggleAccordion('scheduled')}
-                title={`Agendadas (${scheduled.length})`}
-            >
-                {renderTable(scheduled)}
-            </AccordionItem>
+      {/* *** BLOCo DO ACORDEÃO SUBSTITUÍDO PELO CALENDÁRIO ***
+      */}
+      <div className="bg-slate-800/50 border border-slate-700 rounded-lg shadow-lg p-4" style={{ height: '70vh' }}>
+        <Calendar
+          localizer={localizer}
+          events={calendarEvents}
+          startAccessor="start"
+          endAccessor="end"
+          style={{ height: '100%' }}
+          messages={{
+            next: "Próximo",
+            previous: "Anterior",
+            today: "Hoje",
+            month: "Mês",
+            week: "Semana",
+            day: "Dia",
+            agenda: "Agenda",
+            date: "Data",
+            time: "Hora",
+            event: "Evento",
+          }}
+          onSelectEvent={handleSelectEvent}
+          view={calendarView}
+          onView={(view) => setCalendarView(view as 'month' | 'week' | 'day')}
+          date={calendarDate}
+          onNavigate={(date) => setCalendarDate(date)}
+          popup // Adiciona popup para dias com muitos eventos
+        />
       </div>
+      {/* *** FIM DO BLOCO DO CALENDÁRIO *** */}
       
       {rescheduleTarget && (
         <RescheduleModal 
@@ -569,7 +516,6 @@ export function TechnicianAgenda() {
       )}
       {historyTarget && <HistoryModal isOpen={!!historyTarget} onClose={() => setHistoryTarget(null)} installation={historyTarget} />}
       
-      {/* *** RENDERIZAÇÃO DO NOVO MODAL DE MOTIVO *** */}
       <ReturnReasonModal 
         isOpen={!!returnTarget}
         onClose={() => { setReturnTarget(null); setReturnReason(''); setMessage(null); }}
@@ -578,7 +524,6 @@ export function TechnicianAgenda() {
         onSubmit={handleReturnSubmit}
       />
 
-      {/* *** BLOCO ADICIONADO *** */}
       {detailsTarget && (
         <DetailsModal
           installation={detailsTarget}
@@ -590,7 +535,6 @@ export function TechnicianAgenda() {
           setMessage={setMessage}
         />
       )}
-      {/* *** FIM DO BLOCO ADICIONADO *** */}
     </div>
   );
 }
