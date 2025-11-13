@@ -1,4 +1,3 @@
-// src/components/TechnicianAgenda.tsx
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
 // CORREÇÃO (TS1484): 'Event' é um tipo, importado com 'import type' e renomeado
@@ -6,7 +5,7 @@ import type { Event as CalendarEventInterface } from 'react-big-calendar';
 import moment from 'moment';
 import 'moment/locale/pt-br';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
-import { supabase } from '../supabaseClient.ts'; // Corrigido caminho
+import { supabase } from '../supabaseClient.ts';
 // CORREÇÃO (TS1484): 'Session' é um tipo, importado com 'import type'
 import type { Session } from '@supabase/supabase-js';
 import { Modal, Button, Badge, Container, Row, Col, Alert, Spinner, Form, FloatingLabel } from 'react-bootstrap';
@@ -441,9 +440,4 @@ export function TechnicianAgenda({ session }: TechnicianAgendaProps) {
 
     </Container>
   );
-};
-
-// ... e mantido o export default que eu tinha colocado na última correção
-// que o App.tsx (dfa04706...) espera.
-// *** CORREÇÃO: Vamos manter o export NOMEADO como o App.tsx (765b98f) espera. ***
-// Removendo o export default.
+}

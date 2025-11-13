@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom';
 import { InstallationForm } from './components/InstallationForm';
 import { Dashboard } from './components/Dashboard';
-import { TechnicianAgenda } from './components/TechnicianAgenda';
+import { TechnicianAgenda } from './components/TechnicianAgenda'; // Importação nomeada (correta)
 import { InsuranceView } from './components/InsuranceView';
 import { Login } from './components/Login';
 import { ResetPassword } from './components/ResetPassword';
@@ -111,7 +111,7 @@ function AppHeader({ userRole, theme, toggleTheme }: { userRole: string | null, 
 
 // --- LAYOUT AUTENTICADO ---
 function AuthenticatedLayout() {
-  const { userRole } = useAuth();
+  const { session, userRole } = useAuth(); // Adicionado session
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
 
   useEffect(() => {
@@ -134,12 +134,15 @@ function AuthenticatedLayout() {
   };
 
   const getRoutesForRole = (role: string | null) => {
+    if (!session) return <LoadingSpinner />; // Garante que a sessão exista
+    
     switch(role) {
       case 'admin':
         return (
           <Routes>
             <Route path="/painel" element={<Dashboard />} />
-            <Route path="/agenda" element={<TechnicianAgenda />} />
+            {/* *** CORREÇÃO AQUI: Passando a session para o componente *** */}
+            <Route path="/agenda" element={<TechnicianAgenda session={session} />} />
             <Route path="/usuarios" element={<UserManagement />} />
             <Route path="/" element={<InstallationForm />} />
             <Route path="/consulta" element={<InsuranceView />} />
@@ -149,7 +152,8 @@ function AuthenticatedLayout() {
       case 'tecnico':
         return (
           <Routes>
-            <Route path="/agenda" element={<TechnicianAgenda />} />
+             {/* *** CORREÇÃO AQUI: Passando a session para o componente *** */}
+            <Route path="/agenda" element={<TechnicianAgenda session={session} />} />
             <Route path="/consulta" element={<InsuranceView />} />
             <Route path="/tarefas" element={<TaskList />} />
             <Route path="*" element={<Navigate to="/agenda" />} />
