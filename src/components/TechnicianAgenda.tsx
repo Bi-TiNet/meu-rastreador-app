@@ -176,6 +176,134 @@ function HistoryModal({ isOpen, onClose, installation }: { isOpen: boolean, onCl
     );
 }
 
+// *** INÍCIO DO CÓDIGO ADICIONADO (COPIADO DE DASHBOARD.TSX) ***
+function DetailsModal({ installation, onClose, onViewHistory, setMessage }: { 
+  installation: Installation; 
+  onClose: () => void; 
+  onViewHistory: (installation: Installation) => void; 
+  setMessage: (message: { type: 'success' | 'danger'; text: string } | null) => void; 
+}) {
+  
+  const handleCopy = async () => {
+    const baseString = installation.base === 'Atena' 
+        ? '*BASE* Atena (X)   Base Autocontrol ( )' 
+        : '*BASE* Atena ( )   Base Autocontrol (X)';
+    const bloqueioString = installation.bloqueio === 'Sim' 
+        ? '*Bloqueio* sim (X)   nao ( )' 
+        : '*Bloqueio* sim ( )   nao (X)';
+
+    const textToCopy = [
+      `*Veículo:* ${installation.modelo}`,
+      `*Ano Fabricação:* ${installation.ano || 'N/A'}`,
+      `*Placa:* ${installation.placa}`,
+      `*Cor:* ${installation.cor || 'N/A'}`,
+      `*Nome:* ${installation.nome_completo}`,
+      `*Telefone:* ${installation.contato}`,
+      `*Endereço:* ${installation.endereco}`,
+      `*Usuário:* ${installation.usuario || 'N/A'}`,
+      `*Senha:* ${installation.senha || 'N/A'}`,
+      baseString,
+      bloqueioString
+    ].join('\n');
+
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(textToCopy);
+      } else {
+        const textArea = document.createElement('textarea');
+        textArea.value = textToCopy;
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
+      setMessage({ type: 'success', text: 'Dados copiados para a área de transferência!' });
+    } catch {
+      setMessage({ type: 'danger', text: 'Falha ao copiar os dados.' });
+    }
+    setTimeout(() => setMessage(null), 3000);
+  };
+  
+  const getServiceBadgeColor = (serviceType: string) => {
+    switch (serviceType) {
+        case 'Instalação': return 'bg-green-900/50 text-green-300';
+        case 'Manutenção': return 'bg-yellow-900/50 text-yellow-300';
+        case 'Remoção': return 'bg-red-900/50 text-red-300';
+        default: return 'bg-slate-700 text-slate-300';
+    }
+  };
+
+  const getStatusBadgeColor = (status: string) => {
+     switch (status) {
+        case 'Agendado': return 'bg-blue-900/50 text-blue-300';
+        case 'Concluído': return 'bg-green-900/50 text-green-300';
+        case 'Reagendar': return 'bg-red-900/50 text-red-300';
+        case 'A agendar': 
+        default:
+            return 'bg-yellow-900/50 text-yellow-300';
+    }
+  }
+
+  if (!installation) return null;
+  const sortedObservacoes = [...(installation.observacoes || [])].sort((a,b) => (b.destaque ? 1 : -1) - (a.destaque ? 1 : -1) || new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 p-4">
+        <div className="bg-slate-800 rounded-lg shadow-xl w-full max-w-3xl border border-slate-700">
+            <div className="p-4 border-b border-slate-700 flex justify-between items-center"><h3 className="text-lg font-medium text-white"><i className="bi bi-file-text-fill mr-2"></i>Detalhes da Solicitação</h3><button onClick={onClose} className="text-slate-400 hover:text-white text-2xl">&times;</button></div>
+            <div className="p-6 max-h-[70vh] overflow-y-auto">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                        <h4 className="text-blue-400 font-semibold border-b border-slate-700 pb-2">Cliente e Veículo</h4>
+                        <p><strong>Cliente:</strong> {installation.nome_completo}</p>
+                        <p><strong>Contato:</strong> {installation.contato}</p>
+                        <p><strong>Veículo:</strong> {installation.modelo} ({installation.placa})</p>
+                        <p><strong>Ano/Cor:</strong> {installation.ano || 'N/A'} / {installation.cor || 'N/A'}</p>
+                        <p><strong>Endereço:</strong> {installation.endereco}</p>
+                    </div>
+                     <div className="space-y-4">
+                        <h4 className="text-blue-400 font-semibold border-b border-slate-700 pb-2">Serviço e Acesso</h4>
+                        <p><strong>Status:</strong> <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusBadgeColor(installation.status)}`}>{installation.status}</span></p>
+                        {installation.status === 'Agendado' && installation.data_instalacao && (
+                            <p><strong>Agendado para:</strong> {new Date(installation.data_instalacao + 'T00:00:00').toLocaleDateString('pt-BR')} às {installation.horario}</p>
+                        )}
+                        <p><strong>Serviço:</strong> <span className={`px-2 py-1 text-xs font-medium rounded-full ${getServiceBadgeColor(installation.tipo_servico)}`}>{installation.tipo_servico}</span></p>
+                        <p><strong>Base:</strong> {installation.base}</p>
+                        <p><strong>Usuário/Senha:</strong> {installation.usuario || 'N/A'} / {installation.senha || 'N/A'}</p>
+                        <p><strong>Bloqueio:</strong> {installation.bloqueio}</p>
+                    </div>
+                </div>
+                {sortedObservacoes.length > 0 && (
+                    <div className="mt-6">
+                        <h4 className="text-blue-400 font-semibold border-b border-slate-700 pb-2 flex items-center"><i className="bi bi-chat-left-text-fill mr-2"></i> Observações</h4>
+                        <div className="mt-2 space-y-3">
+                            {sortedObservacoes.map(obs => (
+                                <div key={obs.id} className={`p-3 rounded-lg ${obs.destaque ? 'bg-yellow-900/50 border-l-4 border-yellow-400' : 'bg-slate-700/50'}`}>
+                                    {obs.destaque && <p className="text-sm font-bold text-yellow-300 mb-1"><i className="bi bi-star-fill mr-2"></i>Destaque para o Técnico</p>}
+                                    <p className="text-slate-300">{obs.texto}</p>
+                                    <p className="text-xs text-slate-500 text-right mt-2">Adicionado por {obs.criado_por || 'N/A'} em {new Date(obs.created_at).toLocaleDateString('pt-BR')}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+            <div className="p-4 bg-slate-800/50 border-t border-slate-700 flex flex-wrap justify-between items-center gap-2">
+                <div className="flex items-center space-x-2">
+                    <button onClick={() => onViewHistory(installation)} className="px-4 py-2 rounded-lg bg-slate-600 hover:bg-slate-500 text-white font-medium transition-colors text-sm">Histórico</button>
+                </div>
+                <div className="flex items-center space-x-2">
+                    <button onClick={handleCopy} className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium transition-colors text-sm"><i className="bi bi-whatsapp mr-2"></i>Copiar p/ WhatsApp</button>
+                    <button onClick={onClose} className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors text-sm">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+  );
+}
+// *** FIM DO CÓDIGO ADICIONADO ***
+
 function AccordionItem({ title, children, isOpen, onToggle }: { title: string, children: React.ReactNode, isOpen: boolean, onToggle: () => void }) {
     return (
         <div className="border border-slate-700 rounded-lg overflow-hidden mb-3">
@@ -209,6 +337,10 @@ export function TechnicianAgenda() {
   // *** NOVOS ESTADOS PARA MODAL DE MOTIVO ***
   const [returnTarget, setReturnTarget] = useState<Installation | null>(null);
   const [returnReason, setReturnReason] = useState('');
+
+  // *** ESTADO ADICIONADO ***
+  const [detailsTarget, setDetailsTarget] = useState<Installation | null>(null);
+
 
   const fetchInstallations = useCallback(async () => {
     setLoading(true);
@@ -333,12 +465,21 @@ export function TechnicianAgenda() {
                         const hasHighlight = inst.observacoes?.some(o => o.destaque);
                         return (
                             <tr key={inst.id} className="border-b border-slate-700 hover:bg-slate-800/50">
-                                <td className="px-6 py-4 text-white font-medium">
+                                
+                                {/* *** LINHAS MODIFICADAS *** */}
+                                <td className="px-6 py-4">
                                     <div className="flex items-center">
-                                        <span>{inst.nome_completo}</span>
+                                        <span
+                                          onClick={() => setDetailsTarget(inst)}
+                                          className="font-medium text-white hover:text-blue-400 transition-colors cursor-pointer"
+                                        >
+                                          {inst.nome_completo}
+                                        </span>
                                         {hasHighlight && <span className="ml-2 text-yellow-400" title="Possui observação em destaque">⚠️</span>}
                                     </div>
                                 </td>
+                                {/* *** FIM DA MODIFICAÇÃO *** */}
+
                                 <td className="px-6 py-4">{`${inst.modelo} (${inst.placa})`}</td>
                                 <td className="px-6 py-4">{inst.data_instalacao && inst.horario ? `${new Date(inst.data_instalacao + 'T00:00:00').toLocaleDateString('pt-BR')} às ${inst.horario}`: 'N/A'}</td>
                                 <td className="px-6 py-4">
@@ -436,6 +577,20 @@ export function TechnicianAgenda() {
         setReason={setReturnReason}
         onSubmit={handleReturnSubmit}
       />
+
+      {/* *** BLOCO ADICIONADO *** */}
+      {detailsTarget && (
+        <DetailsModal
+          installation={detailsTarget}
+          onClose={() => setDetailsTarget(null)}
+          onViewHistory={(inst) => {
+            setDetailsTarget(null);
+            setHistoryTarget(inst);
+          }}
+          setMessage={setMessage}
+        />
+      )}
+      {/* *** FIM DO BLOCO ADICIONADO *** */}
     </div>
   );
 }
