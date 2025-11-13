@@ -1,61 +1,54 @@
 // src/components/TechnicianAgenda.tsx
-import { useEffect, useState, useMemo, useCallback } from 'react';
-import { supabase } from '../supabaseClient';
-import { Calendar, momentLocalizer } from 'react-big-calendar'; // <-- ADICIONADO
-import moment from 'moment'; // <-- ADICIONADO
-import 'moment/locale/pt-br'; // <-- ADICIONADO
-import 'react-big-calendar/lib/css/react-big-calendar.css'; // <-- ADICIONADO
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { Calendar, momentLocalizer } from 'react-big-calendar';
+// CORREÇÃO (TS1484): 'Event' é um tipo, importado com 'import type' e renomeado
+import type { Event as CalendarEventInterface } from 'react-big-calendar';
+import moment from 'moment';
+import 'moment/locale/pt-br';
+import 'react-big-calendar/lib/css/react-big-calendar.css';
+import { supabase } from '../supabaseClient.ts'; // Corrigido caminho
+// CORREÇÃO (TS1484): 'Session' é um tipo, importado com 'import type'
+import type { Session } from '@supabase/supabase-js';
+import { Modal, Button, Badge, Container, Row, Col, Alert, Spinner, Form, FloatingLabel } from 'react-bootstrap';
 
-// Configura o Moment.js para português
+// Configura o moment para português do Brasil
 moment.locale('pt-br');
 const localizer = momentLocalizer(moment);
 
-// --- Interfaces ---
-interface History {
-  id: number;
-  evento: string;
-  data_evento: string;
-  realizado_por: string;
-}
-
-interface Observacao {
-    id: number;
-    texto: string;
-    destaque: boolean;
-    created_at: string;
-    criado_por: string;
-}
-
-interface Installation {
-  id: number;
-  nome_completo: string;
-  contato: string;
-  placa: string;
-  modelo: string;
-  endereco: string;
-  base: string;
-  bloqueio: string;
+// --- Interfaces Atualizadas ---
+interface Instalacao {
+  id: string;
   status: string;
-  data_instalacao?: string;
-  horario?: string;
-  historico: History[];
-  tipo_servico: string;
-  observacoes: Observacao[]; 
-  usuario: string;
-  senha?: string;
-  ano?: string;
-  cor?: string;
-  tecnico_id?: string;
+  data_agendamento: string | null;
+  tecnico_id: string | null;
+  cliente: { nome: string; telefone: string; endereco: string; };
+  veiculo: { marca: string; modelo: string; placa: string; cor: string; ano: string; };
+  observacoes: { observacao: string; data: string }[];
+  base: string;
+  // Adicionado para mostrar o nome do técnico
   profiles?: {
-    id: string;
     full_name: string;
   };
+  // Adicionado para a função de cópia
+  ano?: string;
+  cor?: string;
+  usuario?: string;
+  senha?: string;
+  bloqueio?: string;
+  tipo_servico: string;
+  created_at: string; // Adicionado para consistência
 }
 
+// CORREÇÃO: Interface usa o tipo renomeado
+interface CalendarEvent extends CalendarEventInterface {
+  resource: Instalacao; // Armazena a instalação completa
+}
 
-// --- Modais ---
+interface TechnicianAgendaProps {
+  session: Session;
+}
 
-// *** NOVO MODAL PARA MOTIVO DA DEVOLUÇÃO ***
+// *** NOVO MODAL PARA MOTIVO DA DEVOLUÇÃO (Estilo React-Bootstrap) ***
 function ReturnReasonModal({ isOpen, onClose, onSubmit, reason, setReason }: { 
   isOpen: boolean; 
   onClose: () => void; 
@@ -63,151 +56,247 @@ function ReturnReasonModal({ isOpen, onClose, onSubmit, reason, setReason }: {
   reason: string;
   setReason: (reason: string) => void;
 }) {
-  if (!isOpen) return null;
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit();
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 p-4">
-      <form onSubmit={handleSubmit} className="bg-slate-800 rounded-lg shadow-xl w-full max-w-lg border border-slate-700">
-        <div className="p-4 border-b border-slate-700 flex justify-between items-center">
-            <h3 className="text-lg font-medium text-white">Motivo da Devolução</h3>
-            <button type="button" onClick={onClose} className="text-slate-400 hover:text-white text-2xl">&times;</button>
-        </div>
-        <div className="p-6">
-            <label htmlFor="return_reason" className="block mb-2 text-sm font-medium text-slate-300">
-              Por favor, descreva por que este serviço precisa ser reagendado pela central.
-            </label>
-            <textarea 
-              id="return_reason" 
-              className="w-full p-2.5 bg-slate-700 border border-slate-600 rounded-lg text-white h-24" 
-              value={reason} 
+    <Modal show={isOpen} onHide={onClose} centered>
+      <Form onSubmit={handleSubmit}>
+        <Modal.Header closeButton>
+          <Modal.Title>Motivo da Devolução</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <FloatingLabel
+            controlId="return_reason"
+            label="Descreva por que o serviço não foi executado."
+            className="mb-3"
+          >
+            <Form.Control
+              as="textarea"
+              placeholder="Motivo..."
+              style={{ height: '100px' }}
+              value={reason}
               onChange={(e) => setReason(e.target.value)}
               required
             />
-            <div className="pt-4 flex justify-end space-x-2">
-                <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg bg-slate-600 hover:bg-slate-500 text-white font-medium transition-colors">Cancelar</button>
-                <button type="submit" className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium transition-colors">Confirmar Devolução</button>
-            </div>
-        </div>
-      </form>
-    </div>
+          </FloatingLabel>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button variant="danger" type="submit">
+            Confirmar Devolução
+          </Button>
+        </Modal.Footer>
+      </Form>
+    </Modal>
   );
 }
 
-function RescheduleModal({ isOpen, onClose, installation, onReschedule }: { isOpen: boolean; onClose: () => void; installation: Installation; onReschedule: (id: number, date: string, time: string) => void; }) {
-  const [dateTime, setDateTime] = useState('');
 
-  useEffect(() => {
-    if (isOpen) {
-      setDateTime(installation.data_instalacao && installation.horario ? `${installation.data_instalacao}T${installation.horario}` : '');
+// --- COMPONENTE PRINCIPAL ---
+// CORREÇÃO (TS2614): 'export function' para corresponder à importação em App.tsx
+export function TechnicianAgenda({ session }: TechnicianAgendaProps) {
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [copySuccess, setCopySuccess] = useState<string | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [modalShow, setModalShow] = useState(false);
+
+  // --- Novos estados para o modal de devolução ---
+  const [showReturnModal, setShowReturnModal] = useState(false);
+  const [returnReason, setReturnReason] = useState('');
+
+  const { messages } = useMemo(() => ({
+    messages: {
+      allDay: 'Dia todo',
+      previous: '<',
+      next: '>',
+      today: 'Hoje',
+      month: 'Mês',
+      week: 'Semana',
+      day: 'Dia',
+      agenda: 'Agenda',
+      date: 'Data',
+      time: 'Hora',
+      event: 'Evento',
+      noEventsInRange: 'Nenhum evento neste período.',
+      showMore: (total: number) => `+${total} mais`,
     }
-  }, [isOpen, installation]);
+  }), []);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!dateTime) return;
-    const [date, time] = dateTime.split('T');
-    onReschedule(installation.id, date, time);
+  const fetchTechnicianAgenda = async () => {
+    setLoading(true);
+    setError(null); // Limpa erros antigos
+    try {
+      const response = await fetch('/.netlify/functions/get-installations', {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      });
+      if (!response.ok) {
+        throw new Error('Falha ao buscar agenda');
+      }
+      const data: Instalacao[] = await response.json();
+      
+      const technicianEvents = data
+        .filter(inst => (inst.status === 'Agendado' || inst.status === 'Concluído') && inst.data_agendamento)
+        .map(inst => {
+          const startDate = new Date(inst.data_agendamento!);
+          // Adiciona o offset do timezone local para corrigir a exibição
+          const timezoneOffset = startDate.getTimezoneOffset() * 60000;
+          const correctedStartDate = new Date(startDate.getTime() + timezoneOffset);
+          
+          const endDate = new Date(correctedStartDate.getTime() + 60 * 60 * 1000); 
+          
+          return {
+            title: `${inst.cliente.nome} (${inst.veiculo.placa})`,
+            start: correctedStartDate,
+            end: endDate,
+            resource: inst,
+          };
+        });
+
+      setEvents(technicianEvents);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ocorreu um erro desconhecido');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  if (!isOpen) return null;
+  const fetchWithCallback = useCallback(fetchTechnicianAgenda, [session]);
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 p-4">
-      <div className="bg-slate-800 rounded-lg shadow-xl w-full max-w-lg border border-slate-700">
-        <div className="p-4 border-b border-slate-700 flex justify-between items-center">
-            <h3 className="text-lg font-medium text-white">Reagendar Serviço (Técnico)</h3>
-            <button onClick={onClose} className="text-slate-400 hover:text-white text-2xl">&times;</button>
-        </div>
-        <div className="p-6">
-            <p className="text-slate-400 mb-2"><strong>Cliente:</strong> {installation.nome_completo}</p>
-            <p className="text-slate-400 mb-4"><strong>Veículo:</strong> {installation.modelo} ({installation.placa})</p>
-            <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                    <label className="block mb-2 text-sm font-medium text-slate-300">Nova Data e Hora</label>
-                    <input type="datetime-local" className="w-full p-2.5 bg-slate-700 border border-slate-600 rounded-lg text-white" value={dateTime} onChange={e => setDateTime(e.target.value)} required/>
-                </div>
-                <div className="pt-4 flex justify-end space-x-2">
-                    <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg bg-slate-600 hover:bg-slate-500 text-white font-medium transition-colors">Cancelar</button>
-                    <button type="submit" className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors">Reagendar</button>
-                </div>
-            </form>
-        </div>
-      </div>
-    </div>
-  );
-}
+  useEffect(() => {
+    fetchWithCallback();
 
-function HistoryModal({ isOpen, onClose, installation }: { isOpen: boolean, onClose: () => void, installation: Installation }) {
-    const sortedHistory = useMemo(() => installation.historico ? [...installation.historico].sort((a, b) => new Date(b.data_evento).getTime() - new Date(a.data_evento).getTime()) : [], [installation.historico]);
-    if (!isOpen) return null;
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 p-4">
-            <div className="bg-slate-800 rounded-lg shadow-xl w-full max-w-2xl border border-slate-700">
-                <div className="p-4 border-b border-slate-700 flex justify-between items-center">
-                    <h3 className="text-lg font-medium text-white">Histórico de {installation.nome_completo}</h3>
-                    <button onClick={onClose} className="text-slate-400 hover:text-white text-2xl">&times;</button>
-                </div>
-                <div className="p-6 max-h-[70vh] overflow-y-auto">
-                    <table className="w-full text-sm text-left text-slate-400">
-                        <thead className="text-xs text-slate-300 uppercase bg-slate-700">
-                            <tr>
-                                <th scope="col" className="px-6 py-3">Data</th>
-                                <th scope="col" className="px-6 py-3">Evento</th>
-                                <th scope="col" className="px-6 py-3">Realizado por</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {sortedHistory.length > 0 ? (
-                                sortedHistory.map(h => (
-                                    <tr key={h.id} className="bg-slate-800 border-b border-slate-700 hover:bg-slate-700/50">
-                                        <td className="px-6 py-4">{new Date(h.data_evento).toLocaleString('pt-BR')}</td>
-                                        <td className="px-6 py-4">{h.evento}</td>
-                                        <td className="px-6 py-4">{h.realizado_por || 'N/A'}</td>
-                                    </tr>
-                                ))
-                            ) : (
-                                <tr>
-                                    <td colSpan={3} className="text-center py-8 text-slate-500">Nenhum histórico encontrado.</td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    );
-}
+    // Listener do Supabase
+    const channel = supabase.channel('instalacoes-tecnico')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'instalacoes', 
+        filter: `tecnico_id=eq.${session.user.id}` 
+      }, 
+      () => { // Payload removido para corrigir erro TS6133 (não utilizado)
+        console.log('Mudança de técnico detectada:');
+        fetchWithCallback(); // Recarrega
+      })
+      .subscribe();
 
-function DetailsModal({ installation, onClose, onViewHistory, setMessage }: { 
-  installation: Installation; 
-  onClose: () => void; 
-  onViewHistory: (installation: Installation) => void; 
-  setMessage: (message: { type: 'success' | 'danger'; text: string } | null) => void; 
-}) {
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [session, fetchWithCallback]);
+
+  const handleSelectEvent = (event: CalendarEvent) => {
+    setSelectedEvent(event);
+    setCopySuccess(null); // Limpa a mensagem de cópia
+    setError(null); // Limpa erros
+    setModalShow(true);
+  };
+
+  const handleCloseModal = () => {
+    setModalShow(false);
+    setSelectedEvent(null);
+  };
+
+  // *** FUNÇÃO DE ATUALIZAÇÃO CORRIGIDA ***
+  const handleUpdateStatus = async (
+    action: 'complete' | 'return_to_pending', 
+    observacao?: string
+  ) => {
+    if (!selectedEvent) return;
+
+    setLoading(true);
+    setError(null);
+    
+    // Fecha ambos os modais
+    handleCloseModal();
+    setShowReturnModal(false);
+
+    try {
+      let body: any = { id: selectedEvent.resource.id };
+
+      if (action === 'complete') {
+        body.status = 'Concluído';
+        body.completionType = selectedEvent.resource.tipo_servico.toLowerCase();
+      } else if (action === 'return_to_pending') {
+        body.action = 'return_to_pending';
+        // Adiciona a observação (motivo) se ela existir
+        if (observacao) {
+          body.nova_observacao_texto = observacao;
+          body.nova_observacao_destaque = true;
+        }
+      }
+
+      const response = await fetch('/.netlify/functions/update-installation', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body) // Envia o ID e a ação no corpo
+      });
+
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.message || 'Falha ao atualizar status da instalação');
+      }
+
+      await fetchTechnicianAgenda(); // Recarrega a agenda
+
+    } catch (error) {
+      console.error('Erro ao atualizar:', error);
+      setError(error instanceof Error ? error.message : 'Erro desconhecido');
+    } finally {
+      setLoading(false);
+      setReturnReason(''); // Limpa o motivo
+    }
+  };
+
+  // Ação: Concluir
+  const handleComplete = () => {
+    handleUpdateStatus('complete');
+  };
+
+  // Ação: Abrir modal de devolução
+  const handleReschedule = () => {
+    setModalShow(false); // Fecha o modal de detalhes
+    setShowReturnModal(true); // Abre o modal de motivo
+  };
   
+  // Ação: Enviar motivo da devolução
+  const handleReturnSubmit = () => {
+    handleUpdateStatus('return_to_pending', returnReason);
+  };
+
+  // *** FUNÇÃO PARA COPIAR DADOS ***
   const handleCopy = async () => {
-    const baseString = installation.base === 'Atena' 
+    if (!selectedEvent) return;
+    const { resource: inst } = selectedEvent;
+    
+    const baseString = inst.base === 'Atena' 
         ? '*BASE* Atena (X)   Base Autocontrol ( )' 
         : '*BASE* Atena ( )   Base Autocontrol (X)';
-    const bloqueioString = installation.bloqueio === 'Sim' 
+    const bloqueioString = inst.bloqueio === 'Sim' 
         ? '*Bloqueio* sim (X)   nao ( )' 
         : '*Bloqueio* sim ( )   nao (X)';
 
     const textToCopy = [
-      `*Veículo:* ${installation.modelo}`,
-      `*Ano Fabricação:* ${installation.ano || 'N/A'}`,
-      `*Placa:* ${installation.placa}`,
-      `*Cor:* ${installation.cor || 'N/A'}`,
-      `*Nome:* ${installation.nome_completo}`,
-      `*Telefone:* ${installation.contato}`,
-      `*Endereço:* ${installation.endereco}`,
-      `*Usuário:* ${installation.usuario || 'N/A'}`,
-      `*Senha:* ${installation.senha || 'N/A'}`,
+      `*Veículo:* ${inst.veiculo.modelo}`,
+      `*Ano Fabricação:* ${inst.ano || 'N/A'}`,
+      `*Placa:* ${inst.veiculo.placa}`,
+      `*Cor:* ${inst.veiculo.cor || 'N/A'}`,
+      `*Nome:* ${inst.cliente.nome}`,
+      `*Telefone:* ${inst.cliente.telefone}`,
+      `*Endereço:* ${inst.cliente.endereco}`,
+      `*Usuário:* ${inst.usuario || 'N/A'}`,
+      `*Senha:* ${inst.senha || 'N/A'}`,
       baseString,
       bloqueioString
     ].join('\n');
@@ -218,323 +307,143 @@ function DetailsModal({ installation, onClose, onViewHistory, setMessage }: {
       } else {
         const textArea = document.createElement('textarea');
         textArea.value = textToCopy;
+        textArea.style.position = "fixed"; // Evita rolagem
+        textArea.style.top = "-9999px";
         document.body.appendChild(textArea);
         textArea.focus();
         textArea.select();
         document.execCommand('copy');
         document.body.removeChild(textArea);
       }
-      setMessage({ type: 'success', text: 'Dados copiados para a área de transferência!' });
-    } catch {
-      setMessage({ type: 'danger', text: 'Falha ao copiar os dados.' });
-    }
-    setTimeout(() => setMessage(null), 3000);
-  };
-  
-  const getServiceBadgeColor = (serviceType: string) => {
-    switch (serviceType) {
-        case 'Instalação': return 'bg-green-900/50 text-green-300';
-        case 'Manutenção': return 'bg-yellow-900/50 text-yellow-300';
-        case 'Remoção': return 'bg-red-900/50 text-red-300';
-        default: return 'bg-slate-700 text-slate-300';
+      setCopySuccess('Dados copiados com sucesso!');
+    } catch (err) {
+      setCopySuccess('Falha ao copiar.');
     }
   };
 
-  const getStatusBadgeColor = (status: string) => {
-     switch (status) {
-        case 'Agendado': return 'bg-blue-900/50 text-blue-300';
-        case 'Concluído': return 'bg-green-900/50 text-green-300';
-        case 'Reagendar': return 'bg-red-900/50 text-red-300';
-        case 'A agendar': 
-        default:
-            return 'bg-yellow-900/50 text-yellow-300';
-    }
-  }
 
-  if (!installation) return null;
-  const sortedObservacoes = [...(installation.observacoes || [])].sort((a,b) => (b.destaque ? 1 : -1) - (a.destaque ? 1 : -1) || new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  const eventStyleGetter = (event: CalendarEvent) => {
+    // Colore o evento se ele estiver concluído
+    const style = {
+      backgroundColor: event.resource.status === 'Concluído' ? '#198754' : '#3174ad', // Verde para concluído
+      borderRadius: '5px',
+      opacity: 0.8,
+      color: 'white',
+      border: '0px',
+      display: 'block'
+    };
+    return { style };
+  };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 p-4">
-        <div className="bg-slate-800 rounded-lg shadow-xl w-full max-w-3xl border border-slate-700">
-            <div className="p-4 border-b border-slate-700 flex justify-between items-center"><h3 className="text-lg font-medium text-white"><i className="bi bi-file-text-fill mr-2"></i>Detalhes da Solicitação</h3><button onClick={onClose} className="text-slate-400 hover:text-white text-2xl">&times;</button></div>
-            <div className="p-6 max-h-[70vh] overflow-y-auto">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-4">
-                        <h4 className="text-blue-400 font-semibold border-b border-slate-700 pb-2">Cliente e Veículo</h4>
-                        <p><strong>Cliente:</strong> {installation.nome_completo}</p>
-                        <p><strong>Contato:</strong> {installation.contato}</p>
-                        <p><strong>Veículo:</strong> {installation.modelo} ({installation.placa})</p>
-                        <p><strong>Ano/Cor:</strong> {installation.ano || 'N/A'} / {installation.cor || 'N/A'}</p>
-                        <p><strong>Endereço:</strong> {installation.endereco}</p>
-                    </div>
-                     <div className="space-y-4">
-                        <h4 className="text-blue-400 font-semibold border-b border-slate-700 pb-2">Serviço e Acesso</h4>
-                        <p><strong>Status:</strong> <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusBadgeColor(installation.status)}`}>{installation.status}</span></p>
-                        {installation.status === 'Agendado' && installation.data_instalacao && (
-                            <p><strong>Agendado para:</strong> {new Date(installation.data_instalacao + 'T00:00:00').toLocaleDateString('pt-BR')} às {installation.horario}</p>
-                        )}
-                        <p><strong>Serviço:</strong> <span className={`px-2 py-1 text-xs font-medium rounded-full ${getServiceBadgeColor(installation.tipo_servico)}`}>{installation.tipo_servico}</span></p>
-                        <p><strong>Base:</strong> {installation.base}</p>
-                        <p><strong>Usuário/Senha:</strong> {installation.usuario || 'N/A'} / {installation.senha || 'N/A'}</p>
-                        <p><strong>Bloqueio:</strong> {installation.bloqueio}</p>
-                    </div>
-                </div>
-                {sortedObservacoes.length > 0 && (
-                    <div className="mt-6">
-                        <h4 className="text-blue-400 font-semibold border-b border-slate-700 pb-2 flex items-center"><i className="bi bi-chat-left-text-fill mr-2"></i> Observações</h4>
-                        <div className="mt-2 space-y-3">
-                            {sortedObservacoes.map(obs => (
-                                <div key={obs.id} className={`p-3 rounded-lg ${obs.destaque ? 'bg-yellow-900/50 border-l-4 border-yellow-400' : 'bg-slate-700/50'}`}>
-                                    {obs.destaque && <p className="text-sm font-bold text-yellow-300 mb-1"><i className="bi bi-star-fill mr-2"></i>Destaque para o Técnico</p>}
-                                    <p className="text-slate-300">{obs.texto}</p>
-                                    <p className="text-xs text-slate-500 text-right mt-2">Adicionado por {obs.criado_por || 'N/A'} em {new Date(obs.created_at).toLocaleDateString('pt-BR')}</p>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
-            </div>
-            <div className="p-4 bg-slate-800/50 border-t border-slate-700 flex flex-wrap justify-between items-center gap-2">
-                <div className="flex items-center space-x-2">
-                    <button onClick={() => onViewHistory(installation)} className="px-4 py-2 rounded-lg bg-slate-600 hover:bg-slate-500 text-white font-medium transition-colors text-sm">Histórico</button>
-                </div>
-                <div className="flex items-center space-x-2">
-                    <button onClick={handleCopy} className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium transition-colors text-sm"><i className="bi bi-whatsapp mr-2"></i>Copiar p/ WhatsApp</button>
-                    <button onClick={onClose} className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors text-sm">Fechar</button>
-                </div>
-            </div>
-        </div>
-    </div>
-  );
-}
-
-// --- COMPONENTE PRINCIPAL ---
-export function TechnicianAgenda() {
-  const [installations, setInstallations] = useState<Installation[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [rescheduleTarget, setRescheduleTarget] = useState<Installation | null>(null);
-  const [historyTarget, setHistoryTarget] = useState<Installation | null>(null);
-  const [message, setMessage] = useState<{type: 'success' | 'danger' | 'info', text: string} | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  
-  // *** ESTADOS REMOVIDOS E ADICIONADOS ***
-  // const [openAccordions, setOpenAccordions] = useState<string[]>(['scheduled']); // REMOVIDO
-  const [returnTarget, setReturnTarget] = useState<Installation | null>(null);
-  const [returnReason, setReturnReason] = useState('');
-  const [detailsTarget, setDetailsTarget] = useState<Installation | null>(null);
-  
-  // Novos estados para o calendário
-  const [calendarView, setCalendarView] = useState<'month' | 'week' | 'day'>('month');
-  const [calendarDate, setCalendarDate] = useState(new Date());
-  // *** FIM DAS MUDANÇAS DE ESTADO ***
-
-  const fetchInstallations = useCallback(async () => {
-    setLoading(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Usuário não autenticado.');
-
-      const response = await fetch('/.netlify/functions/get-installations', {
-        headers: { 'Authorization': `Bearer ${session.access_token}` },
-      });
-      if (!response.ok) throw new Error('Falha ao buscar dados.');
-      const data: Installation[] = await response.json();
-      setInstallations(data);
-    } catch (err: any) {
-      setError(err.message || 'Não foi possível carregar as instalações.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-  
-  useEffect(() => { fetchInstallations(); }, [fetchInstallations]);
-
-  // REMOVIDO toggleAccordion
-  
-  const handleUpdate = async (id: number, options: { 
-    action: 'return_to_pending' | 'reschedule_self' | 'complete_installation' | 'complete_maintenance' | 'complete_removal', 
-    date?: string; 
-    time?: string; 
-    nova_observacao_texto?: string; 
-    nova_observacao_destaque?: boolean; 
-  }) => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Usuário não autenticado.');
-
-      const { action, date, time, nova_observacao_texto, nova_observacao_destaque } = options;
-      let completionType: string | undefined = undefined;
+    <Container fluid className="mt-3" style={{ height: '80vh' }}>
+      {error && <Alert variant="danger" onClose={() => setError(null)} dismissible>{error}</Alert>}
+      {loading && <div className="text-center"><Spinner animation="border" /></div>}
       
-      if(action === 'complete_installation') completionType = 'installation';
-      if(action === 'complete_maintenance') completionType = 'maintenance';
-      if(action === 'complete_removal') completionType = 'removal';
+      <Calendar
+        localizer={localizer}
+        events={events}
+        startAccessor="start"
+        endAccessor="end"
+        style={{ height: '100%' }}
+        onSelectEvent={handleSelectEvent} // <-- Isso abre o modal
+        messages={messages}
+        eventPropGetter={eventStyleGetter}
+        defaultView="week"
+      />
 
-      const response = await fetch('/.netlify/functions/update-installation', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
-        body: JSON.stringify({ id, action, date, time, completionType, nova_observacao_texto, nova_observacao_destaque }),
-      });
-      
-      if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Falha na operação.');
-      }
-      setMessage({type: 'success', text: `Operação realizada com sucesso!`});
-      setRescheduleTarget(null); 
-      setReturnTarget(null); 
-      await fetchInstallations();
-    } catch (error: any) {
-        setMessage({type: 'danger', text: error.message || 'Erro ao processar a solicitação.'});
-    }
-  };
+      {/* Modal de Detalhes do Evento (ATUALIZADO) */}
+      {selectedEvent && (
+        <Modal show={modalShow} onHide={handleCloseModal} centered>
+          <Modal.Header closeButton>
+            <Modal.Title>{selectedEvent.title}</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            {copySuccess && <Alert variant={copySuccess.includes('Falha') ? 'danger' : 'success'}>{copySuccess}</Alert>}
 
-  const handleReturnSubmit = () => {
-    if (!returnTarget || !returnReason.trim()) {
-      setMessage({ type: 'danger', text: 'Por favor, informe o motivo da devolução.' });
-      return;
-    }
-    
-    handleUpdate(returnTarget.id, { 
-      action: 'return_to_pending', 
-      nova_observacao_texto: returnReason,
-      nova_observacao_destaque: true 
-    });
-    
-    setReturnTarget(null);
-    setReturnReason('');
-  };
+            <h5><i className="bi bi-person-fill"></i> Cliente</h5>
+            <p>{selectedEvent.resource.cliente.nome}</p>
+            
+            <h5><i className="bi bi-geo-alt-fill"></i> Endereço</h5>
+            <p>{selectedEvent.resource.cliente.endereco}</p>
 
-  // *** NOVO HANDLER PARA O CALENDÁRIO ***
-  const handleSelectEvent = (event: { resource: Installation }) => {
-    setDetailsTarget(event.resource);
-  };
+            <h5><i className="bi bi-telephone-fill"></i> Telefone</h5>
+            <p>{selectedEvent.resource.cliente.telefone}</p>
 
-  const filteredInstallations = useMemo(() =>
-    installations.filter(inst =>
-      inst.nome_completo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      inst.placa.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      inst.modelo.toLowerCase().includes(searchTerm.toLowerCase())
-    ),
-  [installations, searchTerm]);
+            <h5><i className="bi bi-car-front-fill"></i> Veículo</h5>
+            <p>{selectedEvent.resource.veiculo.marca} {selectedEvent.resource.veiculo.modelo} ({selectedEvent.resource.veiculo.placa})</p>
+            <p>Cor: {selectedEvent.resource.veiculo.cor} | Ano: {selectedEvent.resource.ano}</p>
+            
+            {/* *** NOME DO TÉCNICO (INSTALADOR) ADICIONADO *** */}
+            {session.user.app_metadata?.role === 'admin' && (
+              <>
+                <h5><i className="bi bi-person-badge"></i> Instalador</h5>
+                <p>{selectedEvent.resource.profiles?.full_name || 'Não atribuído'}</p>
+              </>
+            )}
+            
+            <h5><i className="bi bi-building"></i> Base</h5>
+            <p>{selectedEvent.resource.base || 'N/A'}</p>
 
-  const scheduled = filteredInstallations.filter(inst => inst.status === 'Agendado');
-
-  // *** NOVO MEMO PARA OS EVENTOS DO CALENDÁRIO ***
-  const calendarEvents = useMemo(() => {
-    return scheduled.map(inst => {
-      if (!inst.data_instalacao || !inst.horario) {
-        return null;
-      }
-      try {
-        const startDateTime = moment(`${inst.data_instalacao} ${inst.horario}`, 'YYYY-MM-DD HH:mm').toDate();
-        if (isNaN(startDateTime.getTime())) {
-          console.error("Data/hora inválida:", inst.data_instalacao, inst.horario);
-          return null;
-        }
-        // Define um 'end' (ex: 1 hora depois).
-        const endDateTime = moment(startDateTime).add(1, 'hour').toDate();
-
-        return {
-          title: `${inst.profiles?.full_name || 'Técnico'}: ${inst.nome_completo} (${inst.placa})`,
-          start: startDateTime,
-          end: endDateTime,
-          resource: inst, // Guarda a instalação original
-        };
-      } catch(e) {
-        console.error("Erro ao processar data/hora:", e);
-        return null;
-      }
-    }).filter(Boolean) as { title: string, start: Date, end: Date, resource: Installation }[];
-  }, [scheduled]);
-
-  // *** FUNÇÃO renderTable E getServiceBadgeColor REMOVIDAS ***
-  // (Elas não são mais necessárias pois o AccordionItem foi removido)
-
-  if (loading) return <div className="text-center p-5"> <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mx-auto"></div></div>;
-  if (error) return <div className="p-4 text-sm text-red-400 bg-red-500/10 border border-red-500/30 rounded-lg">{error}</div>;
-
-  return (
-    <div className="space-y-6">
-      <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-6 shadow-lg">
-        <h1 className="text-2xl font-bold text-white mb-4"><i className="bi bi-calendar-week mr-3"></i>Agenda de Serviços</h1>
-        <div className="relative">
-            <i className="bi bi-search text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
-            <input 
-                type="text" 
-                className="w-full p-2.5 pl-10 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Buscar por cliente, placa ou modelo..."
-                value={searchTerm} 
-                onChange={(e) => setSearchTerm(e.target.value)} 
-            />
-        </div>
-      </div>
-
-      {message && <div onClick={() => setMessage(null)} className={`cursor-pointer p-4 mb-4 text-sm rounded-lg ${message.type === 'success' ? 'bg-green-800/50 text-green-300 border border-green-700' : 'bg-red-800/50 text-red-300 border border-red-700'}`} role="alert">{message.text}</div>}
-      
-      {/* *** BLOCo DO ACORDEÃO SUBSTITUÍDO PELO CALENDÁRIO ***
-      */}
-      <div className="bg-slate-800/50 border border-slate-700 rounded-lg shadow-lg p-4" style={{ height: '70vh' }}>
-        <Calendar
-          localizer={localizer}
-          events={calendarEvents}
-          startAccessor="start"
-          endAccessor="end"
-          style={{ height: '100%' }}
-          messages={{
-            next: "Próximo",
-            previous: "Anterior",
-            today: "Hoje",
-            month: "Mês",
-            week: "Semana",
-            day: "Dia",
-            agenda: "Agenda",
-            date: "Data",
-            time: "Hora",
-            event: "Evento",
-          }}
-          onSelectEvent={handleSelectEvent}
-          view={calendarView}
-          onView={(view) => setCalendarView(view as 'month' | 'week' | 'day')}
-          date={calendarDate}
-          onNavigate={(date) => setCalendarDate(date)}
-          popup // Adiciona popup para dias com muitos eventos
-        />
-      </div>
-      {/* *** FIM DO BLOCO DO CALENDÁRIO *** */}
-      
-      {rescheduleTarget && (
-        <RescheduleModal 
-            isOpen={!!rescheduleTarget} 
-            onClose={() => setRescheduleTarget(null)} 
-            installation={rescheduleTarget}
-            onReschedule={(id, date, time) => {
-                handleUpdate(id, { action: 'reschedule_self', date, time });
-            }}
-        />
+            <h5><i className="bi bi-card-text"></i> Observações</h5>
+            {selectedEvent.resource.observacoes && selectedEvent.resource.observacoes.length > 0 ? (
+              <ul className="list-unstyled">
+                {selectedEvent.resource.observacoes.slice().reverse().map((obs, index) => (
+                  <li key={index} className="mb-2">
+                    <small className="text-muted">{new Date(obs.data).toLocaleString('pt-BR')}</small>
+                    <p className="mb-0">{obs.observacao}</p>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p>Nenhuma observação.</p>
+            )}
+          </Modal.Body>
+          <Modal.Footer className="justify-content-between">
+            {/* *** BOTÃO DE COPIAR ADICIONADO *** */}
+            <Button variant="success" onClick={handleCopy} className="text-white">
+              <i className="bi bi-whatsapp"></i> Copiar
+            </Button>
+            <Row className="g-2">
+              {/* Botões de Ação */}
+              {selectedEvent.resource.status === 'Agendado' && (
+                <>
+                  <Col xs="auto">
+                    <Button variant="danger" onClick={handleReschedule}>
+                      <i className="bi bi-arrow-return-left"></i> Devolver
+                    </Button>
+                  </Col>
+                  <Col xs="auto">
+                    <Button variant="primary" onClick={handleComplete}>
+                      <i className="bi bi-check-circle"></i> Concluir
+                    </Button>
+                  </Col>
+                </>
+              )}
+              {selectedEvent.resource.status === 'Concluído' && (
+                 <Col xs="auto">
+                    <Badge bg="success" className="p-2">Serviço Concluído</Badge>
+                 </Col>
+              )}
+            </Row>
+          </Modal.Footer>
+        </Modal>
       )}
-      {historyTarget && <HistoryModal isOpen={!!historyTarget} onClose={() => setHistoryTarget(null)} installation={historyTarget} />}
       
+      {/* *** RENDERIZAÇÃO DO MODAL DE MOTIVO *** */}
       <ReturnReasonModal 
-        isOpen={!!returnTarget}
-        onClose={() => { setReturnTarget(null); setReturnReason(''); setMessage(null); }}
+        isOpen={showReturnModal}
+        onClose={() => { setShowReturnModal(false); setReturnReason(''); }}
         reason={returnReason}
         setReason={setReturnReason}
         onSubmit={handleReturnSubmit}
       />
 
-      {detailsTarget && (
-        <DetailsModal
-          installation={detailsTarget}
-          onClose={() => setDetailsTarget(null)}
-          onViewHistory={(inst) => {
-            setDetailsTarget(null);
-            setHistoryTarget(inst);
-          }}
-          setMessage={setMessage}
-        />
-      )}
-    </div>
+    </Container>
   );
-}
+};
+
+// ... e mantido o export default que eu tinha colocado na última correção
+// que o App.tsx (dfa04706...) espera.
+// *** CORREÇÃO: Vamos manter o export NOMEADO como o App.tsx (765b98f) espera. ***
+// Removendo o export default.
