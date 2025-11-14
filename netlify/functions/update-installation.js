@@ -60,9 +60,19 @@ exports.handler = async function(event) {
     else if (status && !data.nome_completo) {
         updatePayload = { status };
         if (status === 'Concluído') {
-            if (completionType === 'maintenance') eventoText = 'Manutenção Concluída';
-            else if (completionType === 'removal') eventoText = 'Remoção Concluída';
-            else eventoText = 'Instalação Concluída';
+            
+            // --- INÍCIO DA CORREÇÃO ---
+            // O frontend envia 'instalação', 'manutenção' ou 'remoção' em minúsculas.
+            // A verificação anterior estava procurando por 'maintenance' e 'removal' (inglês).
+            if (completionType === 'manutenção') {
+                eventoText = 'Manutenção Concluída';
+            } else if (completionType === 'remoção') {
+                eventoText = 'Remoção Concluída';
+            } else {
+                eventoText = 'Instalação Concluída';
+            }
+            // --- FIM DA CORREÇÃO ---
+
             updatePayload.tecnico_id = null;
         } else if (status === 'Agendado') {
             updatePayload.data_instalacao = date;
